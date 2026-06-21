@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Animal;
 use App\Models\AnimalPhoto;
+use App\Services\CloudinaryUploader;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Writer\SvgWriter;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class AnimalController extends Controller
@@ -147,7 +147,7 @@ class AnimalController extends Controller
         if ($photos) {
             foreach ($photos as $i => $file) {
                 $animal->photos()->create([
-                    'photo_url' => $file->store('animals', 'public'),
+                    'photo_url' => CloudinaryUploader::uploadFile($file, 'animals'),
                     'is_main' => $i === 0,
                 ]);
             }
@@ -204,7 +204,7 @@ class AnimalController extends Controller
 
         foreach ($animal->photos as $photo) {
             if ($photo->photo_url) {
-                Storage::disk('public')->delete($photo->photo_url);
+                CloudinaryUploader::delete($photo->photo_url);
             }
         }
         $animal->photos()->delete();
@@ -229,7 +229,7 @@ class AnimalController extends Controller
 
         foreach ($request->file('photos') as $i => $file) {
             $created[] = $animal->photos()->create([
-                'photo_url' => $file->store('animals', 'public'),
+                'photo_url' => CloudinaryUploader::uploadFile($file, 'animals'),
                 'is_main' => !$hasMain && $i === 0,
             ]);
         }
@@ -244,7 +244,7 @@ class AnimalController extends Controller
         }
 
         if ($photo->photo_url) {
-            Storage::disk('public')->delete($photo->photo_url);
+            CloudinaryUploader::delete($photo->photo_url);
         }
         $photo->delete();
 
@@ -259,7 +259,7 @@ class AnimalController extends Controller
      */
     private function ensureQrCode(Animal $animal): ?string
     {
-        if ($animal->qr_code_path && Storage::disk('public')->exists($animal->qr_code_path)) {
+        if ($animal->qr_code_path) {
             return $animal->qr_code_path;
         }
 
@@ -272,8 +272,7 @@ class AnimalController extends Controller
             margin: 10,
         ))->build();
 
-        $path = "qr-codes/{$animal->id}.svg";
-        Storage::disk('public')->put($path, $result->getString());
+        $path = CloudinaryUploader::uploadContent($result->getString(), 'qr-codes', 'image/svg+xml', 'svg');
         $animal->update(['qr_code_path' => $path]);
 
         return $path;

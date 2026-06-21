@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Setting;
+use App\Services\CloudinaryUploader;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -54,8 +55,15 @@ class SettingController extends Controller
             return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
         }
 
-        $path = $request->file('image')->store('settings', 'public');
-        Setting::setMany([$request->input('key') => $path]);
+        $key = $request->input('key');
+        $existing = Setting::getAll()[$key] ?? null;
+
+        $path = CloudinaryUploader::uploadFile($request->file('image'), 'settings');
+        Setting::setMany([$key => $path]);
+
+        if ($existing) {
+            CloudinaryUploader::delete($existing);
+        }
 
         return response()->json(['settings' => Setting::getAll()]);
     }
