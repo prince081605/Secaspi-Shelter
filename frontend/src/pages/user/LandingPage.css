@@ -101,7 +101,7 @@ html { scroll-behavior: smooth; }
 .ss-donor-name{font-size:1.05rem;font-weight:700;color:var(--ink);margin-bottom:0.25rem}
 .ss-donor-amt{font-size:0.9rem;color:var(--muted)}
 
-.ss-rescue{display:grid;grid-template-columns:1fr;max-width:680px;margin:4rem auto;padding:3.5rem 3rem;background:var(--brand-soft);border:1px solid var(--card-border);border-radius:28px}
+.ss-rescue{display:grid;grid-template-columns:1fr;max-width:680px;margin:4rem auto;padding:3.5rem 3rem;background:var(--brand-soft);border:2px solid var(--brand);border-radius:28px}
 .ss-file-label{display:block;font-size:0.85rem;color:var(--ink-soft);margin-top:0.5rem}
 .ss-form-r{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
 .ss-form-f{margin-bottom:1rem}
