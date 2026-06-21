@@ -11,10 +11,14 @@ import RescueReportsAdmin from '../admin/RescueReportsAdmin';
 import DonationsAdmin from '../admin/DonationsAdmin';
 import UsersAdmin from '../admin/UsersAdmin';
 import { adminGetOverview } from '../../lib/dashboardApi';
+import { adminListRescueReports } from '../../lib/rescueApi';
+import { adminListAdoptionApplications, adminListFosterApplications } from '../../lib/animalsApi';
+import { adminListDonations } from '../../lib/donationsApi';
 import VolunteersAdmin from '../admin/VolunteersAdmin';
 import ReportsAdmin from '../admin/ReportsAdmin';
 import SettingsAdmin from '../admin/SettingsAdmin';
 import StatusBadge from '../../components/StatusBadge';
+import NotificationBell from '../../components/NotificationBell';
 
 const fallbackRole = 'user';
 
@@ -232,6 +236,10 @@ export default function Dashboard() {
   const [applications, setApplications] = useState([]);
   const [appsLoading, setAppsLoading] = useState(true);
   const [overview, setOverview] = useState(null);
+  const [pendingRescueCount, setPendingRescueCount] = useState(0);
+  const [pendingAdoptionCount, setPendingAdoptionCount] = useState(0);
+  const [pendingFosterCount, setPendingFosterCount] = useState(0);
+  const [pendingDonationCount, setPendingDonationCount] = useState(0);
 
   // keep empty when data isn't available
   const isAdminRole = role === 'admin';
@@ -307,6 +315,31 @@ export default function Dashboard() {
     };
   }, [isAdminRole]);
 
+  useEffect(() => {
+    if (!isAdminRole) return;
+    let mounted = true;
+    const fetchPendingCounts = () => {
+      adminListRescueReports({ status: 'pending', per_page: 1 })
+        .then((data) => { if (mounted) setPendingRescueCount(data?.total || 0); })
+        .catch(() => { if (mounted) setPendingRescueCount(0); });
+      adminListAdoptionApplications({ status: 'pending', per_page: 1 })
+        .then((data) => { if (mounted) setPendingAdoptionCount(data?.total || 0); })
+        .catch(() => { if (mounted) setPendingAdoptionCount(0); });
+      adminListFosterApplications({ status: 'pending', per_page: 1 })
+        .then((data) => { if (mounted) setPendingFosterCount(data?.total || 0); })
+        .catch(() => { if (mounted) setPendingFosterCount(0); });
+      adminListDonations({ status: 'pending', per_page: 1 })
+        .then((data) => { if (mounted) setPendingDonationCount(data?.total || 0); })
+        .catch(() => { if (mounted) setPendingDonationCount(0); });
+    };
+    fetchPendingCounts();
+    const interval = setInterval(fetchPendingCounts, 30000);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, [isAdminRole]);
+
   const userStats = useMemo(() => {
     const total = applications.length;
     const approved = applications.filter((a) => ['approved', 'active', 'completed'].includes(a.status)).length;
@@ -333,10 +366,10 @@ export default function Dashboard() {
   const navItems = [
     { key: 'dashboard', label: 'Dashboard', icon: '🏠' },
     { key: 'animals', label: 'Animals', icon: '🐶', show: isAdminRole },
-    { key: 'requests', label: 'Adoption Requests', icon: '📩', show: isAdminRole },
-    { key: 'fosters', label: 'Foster Requests', icon: '🏡', show: isAdminRole },
-    { key: 'rescues', label: 'Rescue Reports', icon: '🚨', show: isAdminRole },
-    { key: 'donations', label: 'Donations', icon: '💰', show: isAdminRole },
+    { key: 'requests', label: 'Adoption Requests', icon: '📩', show: isAdminRole, badge: pendingAdoptionCount },
+    { key: 'fosters', label: 'Foster Requests', icon: '🏡', show: isAdminRole, badge: pendingFosterCount },
+    { key: 'rescues', label: 'Rescue Reports', icon: '🚨', show: isAdminRole, badge: pendingRescueCount },
+    { key: 'donations', label: 'Donations', icon: '💰', show: isAdminRole, badge: pendingDonationCount },
     { key: 'volunteers', label: 'Volunteers', icon: '🤝', show: isAdminRole },
     { key: 'users', label: 'Users', icon: '👥', show: isAdminRole },
     { key: 'reports', label: 'Reports', icon: '📈', show: isAdminRole },
@@ -380,6 +413,7 @@ export default function Dashboard() {
                 onClick={() => setActiveNav(item.key)}
               >
                 {item.icon} {item.label}
+                {item.badge > 0 ? <span className="dashNavBadge">{item.badge > 99 ? '99+' : item.badge}</span> : null}
               </button>
             ))}
             {!isAdminRole ? (
@@ -407,16 +441,19 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="dashTabs">
-              {dashboardTabs.map((t) => (
-                <button
-                  key={t.key}
-                  className={"dashTab " + (activeTab === t.key ? 'dashTabActive' : '')}
-                  onClick={() => setTab(t.key)}
-                >
-                  {t.label}
-                </button>
-              ))}
+            <div className="dashTopRowActions">
+              <div className="dashTabs">
+                {dashboardTabs.map((t) => (
+                  <button
+                    key={t.key}
+                    className={"dashTab " + (activeTab === t.key ? 'dashTabActive' : '')}
+                    onClick={() => setTab(t.key)}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+              <NotificationBell />
             </div>
           </div>
 
