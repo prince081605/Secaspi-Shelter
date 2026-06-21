@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Animal;
 use App\Models\Intake;
 use App\Models\IntakeDocument;
-use App\Services\CloudinaryUploader;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class IntakeController extends Controller
@@ -67,7 +67,7 @@ class IntakeController extends Controller
         if ($documents) {
             foreach ($documents as $file) {
                 $intake->documents()->create([
-                    'file_path' => CloudinaryUploader::uploadFile($file, 'intakes'),
+                    'file_path' => $file->store('intakes', 'public'),
                     'original_name' => $file->getClientOriginalName(),
                 ]);
             }
@@ -134,7 +134,7 @@ class IntakeController extends Controller
     public function adminDestroy(Intake $intake)
     {
         foreach ($intake->documents as $doc) {
-            CloudinaryUploader::delete($doc->file_path);
+            Storage::disk('public')->delete($doc->file_path);
         }
         $intake->delete();
 
@@ -155,7 +155,7 @@ class IntakeController extends Controller
         $created = [];
         foreach ($request->file('documents') as $file) {
             $created[] = $intake->documents()->create([
-                'file_path' => CloudinaryUploader::uploadFile($file, 'intakes'),
+                'file_path' => $file->store('intakes', 'public'),
                 'original_name' => $file->getClientOriginalName(),
             ]);
         }
@@ -169,7 +169,7 @@ class IntakeController extends Controller
             return response()->json(['message' => 'Document not found for this intake'], 404);
         }
 
-        CloudinaryUploader::delete($document->file_path);
+        Storage::disk('public')->delete($document->file_path);
         $document->delete();
 
         return response()->json(['message' => 'Document deleted']);

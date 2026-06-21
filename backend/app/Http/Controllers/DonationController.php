@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Donation;
-use App\Services\CloudinaryUploader;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
@@ -28,7 +28,7 @@ class DonationController extends Controller
 
         try {
             $proofPath = $request->hasFile('proof_image')
-                ? CloudinaryUploader::uploadFile($request->file('proof_image'), 'donations')
+                ? $request->file('proof_image')->store('donations', 'public')
                 : null;
 
             $donation = Donation::create([
