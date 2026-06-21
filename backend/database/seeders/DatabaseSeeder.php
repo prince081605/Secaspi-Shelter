@@ -16,26 +16,27 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Admin seed (only if not already present)
-        $adminEmail = 'prince.estrella16@gmail.com';
-        $adminPassword = 'prince13161729';
+        // Admin seed (only if not already present), credentials supplied via env
+        $adminEmail = env('ADMIN_EMAIL');
+        $adminPassword = env('ADMIN_PASSWORD');
 
-        $existingAdmin = User::where('email', $adminEmail)->first();
+        if ($adminEmail && $adminPassword) {
+            $existingAdmin = User::where('email', $adminEmail)->first();
 
-        if (!$existingAdmin) {
-            // Avoid updated_at if the users table doesn't include it
-            User::insert([
-                [
-                    'full_name' => 'Prince Estrella',
-                    'email' => $adminEmail,
-                    'password' => Hash::make($adminPassword),
-                    'role' => 'admin',
-                    'status' => 'active',
-                    'email_verified' => 1,
-                    'created_at' => now(),
-                ],
-            ]);
-
+            if (!$existingAdmin) {
+                // Avoid updated_at if the users table doesn't include it
+                User::insert([
+                    [
+                        'full_name' => env('ADMIN_NAME', 'Admin'),
+                        'email' => $adminEmail,
+                        'password' => Hash::make($adminPassword),
+                        'role' => 'admin',
+                        'status' => 'active',
+                        'email_verified' => 1,
+                        'created_at' => now(),
+                    ],
+                ]);
+            }
         }
 
         // Existing demo user (no factory to avoid schema mismatch)
