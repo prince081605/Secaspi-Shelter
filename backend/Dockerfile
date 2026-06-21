@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y \
     zip unzip curl git nodejs npm \
     libpq-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev libzip-dev libonig-dev \
     && docker-php-ext-configure gd --with-jpeg --with-freetype \
-    && docker-php-ext-install -j$(nproc) pdo_pgsql mbstring xml gd zip bcmath \
+    && docker-php-ext-install -j$(nproc) pdo_pgsql mbstring gd zip bcmath \
     && rm -rf /var/lib/apt/lists/*
 
 COPY . .
