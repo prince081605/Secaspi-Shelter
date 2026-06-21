@@ -374,7 +374,7 @@ function SiteFooter({ shelterName, settings, address }) {
           </div>
           <div className="lp-footer-col">
             <h4>Get involved</h4>
-            <ul><li><a href="#">Volunteer</a></li><li><a href="#report">Report a stray</a></li><li><a href="#">Foster a dog</a></li></ul>
+            <ul><li><a href="/register">Volunteer</a></li><li><a href="#report">Report a stray</a></li><li><a href="/adopt">Foster a dog</a></li></ul>
           </div>
           <div className="lp-footer-col">
             <h4>Contact</h4>

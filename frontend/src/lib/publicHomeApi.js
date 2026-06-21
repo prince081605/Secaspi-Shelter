@@ -1,13 +1,6 @@
 import { api } from './api';
 
 // API endpoints intended for public Home page content.
-// These may be backed by real DB queries later; for now we keep mockable shapes.
-
-export async function getHomeStats() {
-  // Expected shape:
-  // { items: [{ value: '200+', label: 'Animals currently helped' }, ...] }
-  return api.get('/home/stats');
-}
 
 export async function getFeaturedAnimals() {
   // Expected shape:
