@@ -81,7 +81,7 @@ function Navbar({ shelterName, isLoggedIn, menuOpen, scrolled, onToggleMenu, onN
         </ul>
         <div className="lp-nav-actions">
           <button className="lp-nav-ghost" onClick={() => onNavigate(isLoggedIn ? "/dashboard" : "/login")}>
-            {isLoggedIn ? "Profile" : "Login"}
+            {isLoggedIn ? "Dashboard" : "Login"}
           </button>
           <a href="#report" className="lp-nav-cta">Report a stray</a>
           <button
@@ -101,7 +101,7 @@ function Navbar({ shelterName, isLoggedIn, menuOpen, scrolled, onToggleMenu, onN
         <a href="#impact" onClick={onToggleMenu}>Impact</a>
         <a href="#donate" onClick={onToggleMenu}>Donate</a>
         <a href="#report" onClick={onToggleMenu}>Report a stray</a>
-        <a href={isLoggedIn ? "/dashboard" : "/login"} onClick={onToggleMenu}>{isLoggedIn ? "Profile" : "Login"}</a>
+        <a href={isLoggedIn ? "/dashboard" : "/login"} onClick={onToggleMenu}>{isLoggedIn ? "Dashboard" : "Login"}</a>
       </div>
     </header>
   );
