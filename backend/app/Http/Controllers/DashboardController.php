@@ -58,7 +58,9 @@ class DashboardController extends Controller
                 'type' => 'donation',
                 'label' => 'Donation ' . $d->reference_no . ' (₱' . number_format($d->amount, 2) . ')',
                 'status' => $d->status,
-                'created_at' => $d->created_at,
+                // The donations table timestamps as `donated_at`, not `created_at`; without this
+                // the activity row showed a blank date and sorted to the bottom.
+                'created_at' => $d->donated_at,
             ]))
             ->merge(AdoptionApplication::orderByDesc('id')->limit(5)->get()->map(fn ($a) => [
                 'type' => 'adoption_application',

@@ -26,7 +26,7 @@ Route::post('/reset-password',  [AuthController::class, 'resetPassword']);
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/me',           [AuthController::class, 'me']);
+    // Current user is exposed as GET /api/user (see routes/api.php).
     Route::post('/logout',      [AuthController::class, 'logout']);
     Route::get('/donations',                 [DonationController::class, 'index']);
     Route::post('/donations',                [DonationController::class, 'store']);

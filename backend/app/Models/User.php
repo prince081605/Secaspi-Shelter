@@ -12,14 +12,15 @@ class User extends Authenticatable
 
     public $timestamps = false;
 
+    // Only user-settable fields are mass-assignable. Privileged/system fields (role, status,
+    // email_verified) are intentionally excluded so a stray update($request->all()) can never
+    // escalate privileges; admin changes to role/status go through an explicit forceFill in
+    // UserController::adminUpdate.
     protected $fillable = [
         'full_name',
         'email',
         'password',
         'phone',
-        'role',
-        'status',
-        'email_verified',
     ];
 
     protected $hidden = [

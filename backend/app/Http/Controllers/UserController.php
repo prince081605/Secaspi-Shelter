@@ -62,7 +62,9 @@ class UserController extends Controller
             return response()->json(['message' => 'You cannot change your own role or suspend your own account.'], 422);
         }
 
-        $user->update($data);
+        // role/status are not mass-assignable on the model (privilege-escalation guard), so set
+        // them explicitly here. $data is whitelisted by the validator above to role/status only.
+        $user->forceFill($data)->save();
 
         return response()->json([
             'user' => [
