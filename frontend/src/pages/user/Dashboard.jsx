@@ -505,16 +505,7 @@ export default function Dashboard() {
               {activeNav === 'volunteers' ? <VolunteersAdmin /> : null}
               {activeNav === 'reports' ? <ReportsAdmin /> : null}
               {activeNav === 'users' ? <UsersAdmin currentUserId={user?.id} /> : null}
-              {activeNav === 'settings' ? (
-                <>
-                  <div className="dashSectionTitle">⚙️ Settings</div>
-                  <div className="dashCard" style={{ marginTop: 10 }}>
-                    <div className="dashCardLabel" style={{ fontSize: 14 }}>
-                      Settings not configured yet.
-                    </div>
-                  </div>
-                </>
-              ) : null}
+              {activeNav === 'settings' ? <UserProfile key={user?.id} user={user} onProfileUpdated={setUser} /> : null}
             </div>
           ) : (
             <div>
