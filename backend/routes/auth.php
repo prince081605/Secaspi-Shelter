@@ -15,6 +15,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\VolunteerController;
 use App\Http\Controllers\IntakeController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SettingController;
 
 
 // Public routes
@@ -89,6 +90,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/admin/intakes/{intake}/convert',    [IntakeController::class, 'adminConvert'])->middleware('admin');
     Route::post('/admin/intakes/{intake}/documents',  [IntakeController::class, 'addDocuments'])->middleware('admin');
     Route::delete('/admin/intakes/{intake}/documents/{document}', [IntakeController::class, 'destroyDocument'])->middleware('admin');
+
+    // ---- Site settings ----
+    Route::get('/admin/settings',           [SettingController::class, 'adminIndex'])->middleware('admin');
+    Route::put('/admin/settings',           [SettingController::class, 'adminUpdate'])->middleware('admin');
+    Route::post('/admin/settings/image',    [SettingController::class, 'adminUploadImage'])->middleware('admin');
 
     // ---- Reports & exports (Phase 7) ----
     Route::get('/admin/reports/adoption',    [ReportController::class, 'adoption'])->middleware('admin');

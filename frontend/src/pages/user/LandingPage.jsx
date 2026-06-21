@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getFeaturedAnimals, getImpactStats } from "../../lib/publicHomeApi.js";
 import { createReport } from "../../lib/rescueApi.js";
 import { auth } from "../../lib/auth.js";
+import { getPublicSettings, settingImageUrl } from "../../lib/settingsApi.js";
 import "./LandingPage.css";
 
 const TAG_VARIANT = { av: "brand", urg: "amber", new: "sky" };
@@ -27,6 +28,7 @@ export default function LandingPage() {
   const [amt, setAmt] = useState(donationAmounts[1]);
   const [animals, setAnimals] = useState(animalsFallback);
   const [impact, setImpact] = useState(null);
+  const [settings, setSettings] = useState({});
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -70,6 +72,25 @@ export default function LandingPage() {
     })();
     return () => { mounted = false; };
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const data = await getPublicSettings();
+        if (mounted) setSettings(data || {});
+      } catch (err) {
+        console.error("Failed to load site settings:", err);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  const shelterName = settings.shelter_name || "SECASPI Shelter";
+  const heroTitle = settings.hero_title || "Every Aspin deserves a forever home.";
+  const heroSubtitle = settings.hero_subtitle || "We rescue, rehabilitate, and rehome native Philippine dogs. Your adoption changes two lives: theirs, and yours.";
+  const bannerImage = settings.banner_image_path ? settingImageUrl(settings.banner_image_path) : "/hero-dog.jpg";
+  const address = settings.address || "Calamba, Laguna, Philippines";
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -120,7 +141,7 @@ export default function LandingPage() {
   return (
     <div className="landingPage">
       <nav className={`ss-nav${scrolled ? " scrolled" : ""}`}>
-        <div className="ss-logo">SECASPI <span>Shelter</span></div>
+        <div className="ss-logo">{shelterName}</div>
         <ul className="ss-nav-links">
           <li><a href="/adopt">Adopt</a></li>
           <li><a href="#rescue">Rescue</a></li>
@@ -163,8 +184,8 @@ export default function LandingPage() {
       <section className="ss-hero">
         <div className="ss-hero-left">
           <span className="ss-eyebrow">🐾 Rescuing Aspins since 2018</span>
-          <h1 className="ss-hero-title">Every Aspin deserves a <span className="accent">forever home.</span></h1>
-          <p className="ss-hero-sub">We rescue, rehabilitate, and rehome native Philippine dogs. Your adoption changes two lives: theirs, and yours.</p>
+          <h1 className="ss-hero-title">{heroTitle}</h1>
+          <p className="ss-hero-sub">{heroSubtitle}</p>
           <div className="ss-hero-actions">
             <button className="ss-btn-primary" onClick={() => scrollTo("animals")}>Meet Our Dogs</button>
             <button className="ss-btn-secondary" onClick={() => scrollTo("rescue")}>Report a Rescue</button>
@@ -173,7 +194,7 @@ export default function LandingPage() {
         <div className="ss-hero-right">
           <div className="ss-hero-visual">
             <img
-              src="/hero-dog.jpg"
+              src={bannerImage}
               alt="A rescued dog ready for adoption"
               className="ss-hero-photo"
               onError={(e) => { e.currentTarget.style.display = "none"; }}
@@ -301,8 +322,15 @@ export default function LandingPage() {
       <footer className="ss-footer" id="about">
         <div className="ss-footM">
           <div className="ss-footB">
-            <div className="ss-logo">SECASPI <span>Shelter</span></div>
-            <p>Rescuing and rehoming Aspins since 2018. Based in Calamba, Laguna.</p>
+            <div className="ss-logo">{shelterName}</div>
+            <p>{settings.about_us_content || "Rescuing and rehoming Aspins since 2018."}</p>
+            {(settings.social_facebook || settings.social_instagram || settings.social_twitter) && (
+              <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+                {settings.social_facebook && <a href={settings.social_facebook} target="_blank" rel="noreferrer">Facebook</a>}
+                {settings.social_instagram && <a href={settings.social_instagram} target="_blank" rel="noreferrer">Instagram</a>}
+                {settings.social_twitter && <a href={settings.social_twitter} target="_blank" rel="noreferrer">Twitter</a>}
+              </div>
+            )}
           </div>
           <div className="ss-footCol">
             <h4>Adopt</h4>
@@ -313,13 +341,17 @@ export default function LandingPage() {
             <ul><li><a href="#donate">Donate</a></li><li><a href="#">Volunteer</a></li><li><a href="#rescue">Report Rescue</a></li></ul>
           </div>
           <div className="ss-footCol">
-            <h4>About</h4>
-            <ul><li><a href="#">Our Story</a></li><li><a href="#">Contact</a></li><li><a href="#">Privacy</a></li></ul>
+            <h4>Contact</h4>
+            <ul>
+              {settings.contact_email && <li><a href={`mailto:${settings.contact_email}`}>{settings.contact_email}</a></li>}
+              {settings.contact_phone && <li>{settings.contact_phone}</li>}
+              <li>{address}</li>
+            </ul>
           </div>
         </div>
         <div className="ss-footBot">
-          <p>© {new Date().getFullYear()} SECASPI Shelter. All rights reserved.</p>
-          <p>Calamba, Laguna, Philippines</p>
+          <p>© {new Date().getFullYear()} {shelterName}. All rights reserved.</p>
+          <p>{address}</p>
         </div>
       </footer>
     </div>

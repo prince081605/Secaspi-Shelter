@@ -14,6 +14,7 @@ import UsersAdmin from '../admin/UsersAdmin';
 import { adminGetOverview } from '../../lib/dashboardApi';
 import VolunteersAdmin from '../admin/VolunteersAdmin';
 import ReportsAdmin from '../admin/ReportsAdmin';
+import SettingsAdmin from '../admin/SettingsAdmin';
 import StatusBadge from '../../components/StatusBadge';
 
 const fallbackRole = 'user';
@@ -505,7 +506,14 @@ export default function Dashboard() {
               {activeNav === 'volunteers' ? <VolunteersAdmin /> : null}
               {activeNav === 'reports' ? <ReportsAdmin /> : null}
               {activeNav === 'users' ? <UsersAdmin currentUserId={user?.id} /> : null}
-              {activeNav === 'settings' ? <UserProfile key={user?.id} user={user} onProfileUpdated={setUser} /> : null}
+              {activeNav === 'settings' ? (
+                <>
+                  <SettingsAdmin />
+                  <div style={{ marginTop: 20 }}>
+                    <UserProfile key={user?.id} user={user} onProfileUpdated={setUser} />
+                  </div>
+                </>
+              ) : null}
             </div>
           ) : (
             <div>

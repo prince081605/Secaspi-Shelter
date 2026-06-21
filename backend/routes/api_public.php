@@ -3,6 +3,9 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AnimalController;
 use App\Http\Controllers\RescueReportController;
+use App\Http\Controllers\SettingController;
+
+Route::get('/home/settings', [SettingController::class, 'publicIndex']);
 
 Route::get('/test', function () {
     return response()->json([
