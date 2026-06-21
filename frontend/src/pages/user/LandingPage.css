@@ -56,12 +56,15 @@ html { scroll-behavior: smooth; }
 .ss-btn-secondary{background:#fff;color:var(--brand);border:1px solid var(--brand);padding:1rem 2rem;border-radius:50px;font-size:0.98rem;font-weight:600;cursor:pointer;transition:0.2s}
 .ss-btn-secondary:hover{background:var(--brand);color:#fff;box-shadow:var(--shadow-sm)}
 .ss-hero-right{position:relative;display:flex;justify-content:center}
-.ss-hero-visual{width:100%;max-width:420px;aspect-ratio:1/1;border-radius:28px;background:radial-gradient(circle at 35% 30%,var(--brand-soft-2),var(--brand-soft) 60%,#fff 100%);border:1px solid var(--card-border);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-lg);position:relative}
+.ss-hero-right:before{content:'';position:absolute;width:240px;height:240px;border-radius:50%;background:var(--sky-soft);filter:blur(32px);top:-1rem;right:1rem;z-index:0}
+.ss-hero-right:after{content:'';position:absolute;width:160px;height:160px;border-radius:50%;background:var(--amber-soft);filter:blur(32px);bottom:-1rem;left:1rem;z-index:0}
+.ss-hero-visual{width:100%;max-width:420px;aspect-ratio:1/1;border-radius:28px;background:radial-gradient(circle at 35% 30%,var(--brand-soft-2),var(--brand-soft) 60%,#fff 100%);border:1px solid var(--card-border);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-lg);position:relative;z-index:1}
 .ss-hero-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:28px}
 .ss-hero-dog{font-size:7rem}
 
 .ss-stats{margin:0 6vw;transform:translateY(-2.5rem);position:relative;z-index:2}
-.ss-stats-inner{display:grid;grid-template-columns:repeat(3,1fr);background:#fff;border:1px solid var(--card-border);border-radius:var(--radius);box-shadow:var(--shadow-md);overflow:hidden}
+.ss-stats-inner{display:grid;grid-template-columns:repeat(3,1fr);background:#fff;border:1px solid var(--card-border);border-radius:var(--radius);box-shadow:var(--shadow-md);overflow:hidden;position:relative}
+.ss-stats-inner:before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--brand) 0%,var(--sky) 50%,var(--amber) 100%)}
 .ss-stat{padding:2.25rem 1rem;text-align:center;position:relative}
 .ss-stat:not(:last-child):after{content:'';position:absolute;right:0;top:25%;bottom:25%;width:1px;background:var(--line)}
 .ss-stat-num{font-size:2.25rem;font-weight:800;color:var(--ink)}
@@ -90,6 +93,11 @@ html { scroll-behavior: smooth; }
 .ss-step-card{background:#fff;border:1px solid var(--card-border);border-radius:var(--radius);padding:2rem 1.5rem;text-align:left;transition:0.25s}
 .ss-step-card:hover{box-shadow:var(--shadow-md);transform:translateY(-3px);border-color:var(--brand)}
 .ss-step-icon{width:56px;height:56px;background:var(--brand-soft);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;margin-bottom:1.25rem}
+.ss-step-card:nth-child(2) .ss-step-icon{background:var(--sky-soft)}
+.ss-step-card:nth-child(3) .ss-step-icon{background:var(--amber-soft)}
+.ss-step-card:nth-child(4) .ss-step-icon{background:var(--brand-soft-2)}
+.ss-step-card:nth-child(2) .ss-step-num{color:var(--sky)}
+.ss-step-card:nth-child(3) .ss-step-num{color:var(--amber)}
 .ss-step-num{font-size:0.72rem;font-weight:700;color:var(--brand);letter-spacing:0.08em;margin-bottom:0.5rem;text-transform:uppercase}
 .ss-step-title{font-size:1.08rem;font-weight:700;color:var(--ink);margin-bottom:0.5rem}
 .ss-step-desc{font-size:0.9rem;color:var(--ink-soft);line-height:1.6}
@@ -97,7 +105,9 @@ html { scroll-behavior: smooth; }
 .ss-donors{display:grid;grid-template-columns:repeat(5,1fr);gap:1.25rem;max-width:980px;margin:0 auto}
 .ss-donor-card{background:#fff;border:1px solid var(--card-border);border-radius:var(--radius);padding:1.5rem 1rem;text-align:center;transition:0.25s}
 .ss-donor-card:hover{box-shadow:var(--shadow-md);transform:translateY(-3px);border-color:var(--brand)}
+.ss-donor-card:first-child{background:var(--amber-soft);border-color:var(--amber)}
 .ss-donor-rank{font-size:0.78rem;font-weight:700;color:var(--brand);letter-spacing:0.06em;margin-bottom:0.5rem}
+.ss-donor-card:first-child .ss-donor-rank{color:var(--amber)}
 .ss-donor-name{font-size:1.05rem;font-weight:700;color:var(--ink);margin-bottom:0.25rem}
 .ss-donor-amt{font-size:0.9rem;color:var(--muted)}
 
