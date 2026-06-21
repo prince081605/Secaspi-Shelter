@@ -68,7 +68,18 @@ function photoSrc(path) {
 
 function AnimalForm({ initial, onCancel, onSaved }) {
   const isEdit = Boolean(initial?.id);
-  const [form, setForm] = useState(initial ? { ...emptyForm, ...initial } : emptyForm);
+  const [form, setForm] = useState(() => {
+    if (!initial) return emptyForm;
+    // The API returns null for unset nullable fields (age, breed, gender, ...), but a null
+    // `value` on a controlled <input> makes React treat it as uncontrolled, then flips it to
+    // controlled on the first keystroke — dropping that keystroke. Coerce nulls to the empty
+    // strings emptyForm already uses so every field stays controlled from the first render.
+    const merged = { ...emptyForm, ...initial };
+    for (const key of Object.keys(emptyForm)) {
+      if (merged[key] === null || merged[key] === undefined) merged[key] = emptyForm[key];
+    }
+    return merged;
+  });
   const [photoFiles, setPhotoFiles] = useState(null);
   const [state, setState] = useState({ status: 'idle', error: '' });
 
