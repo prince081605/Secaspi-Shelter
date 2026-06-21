@@ -84,19 +84,21 @@ function ApplicationRow({ application, onChanged }) {
         <td>{application.start_date || '—'} → {application.end_date || '—'}</td>
         <td>{(application.created_at || '').slice(0, 10)}</td>
         <td className="dashActionsCell">
-          {application.status === 'pending' && (
-            <button className="dashBtn dashBtnPrimary" onClick={() => setStatus('approved')}>Approve</button>
-          )}
-          {application.status === 'approved' && (
-            <button className="dashBtn dashBtnPrimary" onClick={() => setStatus('active')}>Start fostering</button>
-          )}
-          {application.status === 'active' && (
-            <button className="dashBtn" onClick={() => setStatus('completed')}>Mark completed</button>
-          )}
-          {application.status !== 'declined' && application.status !== 'completed' && (
-            <button className="dashBtn dashBtnDanger" onClick={() => setStatus('declined')}>Decline</button>
-          )}
-          <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Monitor'}</button>
+          <span className="dashActionsRow">
+            {application.status === 'pending' && (
+              <button className="dashBtn dashBtnPrimary" onClick={() => setStatus('approved')}>Approve</button>
+            )}
+            {application.status === 'approved' && (
+              <button className="dashBtn dashBtnPrimary" onClick={() => setStatus('active')}>Start fostering</button>
+            )}
+            {application.status === 'active' && (
+              <button className="dashBtn" onClick={() => setStatus('completed')}>Mark completed</button>
+            )}
+            {application.status !== 'declined' && application.status !== 'completed' && (
+              <button className="dashBtn dashBtnDanger" onClick={() => setStatus('declined')}>Decline</button>
+            )}
+            <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Monitor'}</button>
+          </span>
         </td>
       </tr>
       {expanded && (

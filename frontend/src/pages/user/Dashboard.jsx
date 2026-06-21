@@ -372,7 +372,7 @@ export default function Dashboard() {
   const navItems = [
     { key: 'dashboard', label: 'Dashboard', icon: '🏠' },
     { key: 'animals', label: 'Animals', icon: '🐶', show: isAdminRole },
-    { key: 'requests', label: 'Adoption Requests', icon: '📩', show: isAdminRole, badge: pendingAdoptionCount },
+    { key: 'requests', label: 'Adoption', icon: '📩', show: isAdminRole, badge: pendingAdoptionCount },
     { key: 'fosters', label: 'Foster Requests', icon: '🏡', show: isAdminRole, badge: pendingFosterCount },
     { key: 'rescues', label: 'Rescue Reports', icon: '🚨', show: isAdminRole, badge: pendingRescueCount },
     { key: 'donations', label: 'Donations', icon: '💰', show: isAdminRole, badge: pendingDonationCount },

@@ -118,8 +118,18 @@ class AdoptionApplicationController extends Controller
             $data['read_at'] = now();
         }
 
+        $previousStatus = $application->status;
         $application->update($data);
         $statusChanged = $application->wasChanged('status');
+
+        if ($statusChanged && $application->status === 'approved') {
+            // Once approved, the animal is reserved for this adopter and should disappear
+            // from the public adoption listing until/unless the application is later declined.
+            $application->animal()->update(['status' => 'adopted']);
+        } elseif ($statusChanged && $application->status === 'declined' && $previousStatus === 'approved') {
+            $application->animal()->update(['status' => 'available']);
+        }
+
         $application = $application->fresh(['animal.mainPhoto', 'user']);
 
         if ($statusChanged) {
@@ -163,6 +173,9 @@ class AdoptionApplicationController extends Controller
             'animal' => $a->animal ? [
                 'id' => $a->animal->id,
                 'name' => $a->animal->name,
+                'species' => $a->animal->species,
+                'breed' => $a->animal->breed,
+                'age' => $a->animal->age,
                 'photo' => optional($a->animal->mainPhoto)->photo_url,
             ] : null,
             'applicant' => $a->user ? [

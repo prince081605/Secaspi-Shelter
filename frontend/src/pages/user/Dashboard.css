@@ -266,8 +266,16 @@
   margin-bottom: 12px;
 }
 
-/* Shared "Actions" table-cell layout for rows with one or more buttons. */
+/* Shared "Actions" table-cell. Deliberately NOT display:flex on the <td> itself —
+   that drops it out of table layout sizing, so the cell shrinks to its content's
+   height instead of stretching to match the row, breaking vertical centering.
+   Cells keep default table-cell behavior (and the vertical-align: middle from
+   .dashTable td); the flex/gap/wrap layout lives on the inner .dashActionsRow. */
 .dashActionsCell {
+  text-align: left;
+}
+
+.dashActionsRow {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -409,6 +417,81 @@
 .dashExpandPanel {
   background: var(--bg-soft);
   padding: 14px 16px;
+}
+
+/* Card-style detail view used inside a dashExpandPanel for richer review content
+   (currently the adoption application "Review" panel) — separates it from the flat
+   table background with its own border/shadow instead of plain stacked text. */
+.dashReviewCard {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.06));
+  padding: 22px 24px;
+  animation: dashReviewIn 0.18s var(--ease);
+}
+
+@keyframes dashReviewIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dashReviewSection + .dashReviewSection {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.dashReviewSectionTitle {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+.dashInfoList {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin: 0;
+}
+
+.dashInfoList > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dashInfoList dt {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.dashInfoList dd {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+.dashInfoFull {
+  grid-column: 1 / -1;
+}
+
+.dashActionRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
 }
 
 .dashThumbSm {

@@ -16,7 +16,9 @@ class AnimalController extends Controller
 
     public function index(Request $request)
     {
-        $query = Animal::query()->where('status', '!=', 'archived');
+        // Public adoption browsing should never surface animals that are already adopted
+        // or archived — they aren't available to apply for.
+        $query = Animal::query()->whereNotIn('status', ['archived', 'adopted']);
 
         if ($q = $request->query('q')) {
             $this->applySearch($query, $q);
@@ -29,6 +31,7 @@ class AnimalController extends Controller
         }
 
         $animals = $query->with('mainPhoto')
+            ->orderByRaw("CASE WHEN status = 'available' THEN 0 ELSE 1 END")
             ->orderByDesc('id')
             ->paginate(12)
             ->withQueryString();

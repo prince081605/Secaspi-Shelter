@@ -25,7 +25,7 @@ function tagVariant(status) {
   return 'ui-tag-muted';
 }
 
-const STATUS_OPTIONS = ['available', 'adopted', 'fostered', 'medical', 'quarantine'];
+const STATUS_OPTIONS = ['available', 'fostered', 'medical', 'quarantine'];
 const GENDER_OPTIONS = ['male', 'female'];
 const SIZE_OPTIONS = ['small', 'medium', 'large'];
 

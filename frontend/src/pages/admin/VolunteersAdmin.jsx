@@ -152,12 +152,14 @@ function TasksPanel({ volunteer, onChanged }) {
                   <td><StatusBadge status={t.status} /></td>
                   <td>{t.assigned_date || '—'}</td>
                   <td className="dashActionsCell">
-                    {NEXT_TASK_STATUS[t.status] && (
-                      <button className="dashBtn dashBtnPrimary" onClick={() => advanceTask(t)}>
-                        Mark {NEXT_TASK_STATUS[t.status]}
-                      </button>
-                    )}
-                    <button className="dashBtn dashBtnDanger" aria-label="Delete task" onClick={() => deleteTask(t)}>✕</button>
+                    <span className="dashActionsRow">
+                      {NEXT_TASK_STATUS[t.status] && (
+                        <button className="dashBtn dashBtnPrimary" onClick={() => advanceTask(t)}>
+                          Mark {NEXT_TASK_STATUS[t.status]}
+                        </button>
+                      )}
+                      <button className="dashBtn dashBtnDanger" aria-label="Delete task" onClick={() => deleteTask(t)}>✕</button>
+                    </span>
                   </td>
                 </tr>
               ))}
@@ -205,13 +207,17 @@ function VolunteerRow({ volunteer, onChanged }) {
         <td>{volunteer.user?.full_name}<br /><span style={{ fontSize: 12, color: 'var(--muted)' }}>{volunteer.user?.email}</span></td>
         <td>{volunteer.availability || '—'}</td>
         <td className="dashActionsCell">
-          <input className="ui-input" type="number" min="0" style={{ width: 80 }} value={hours} onChange={(e) => setHours(e.target.value)} />
-          <button className="dashBtn" onClick={saveHours}>Save</button>
+          <span className="dashActionsRow">
+            <input className="ui-input" type="number" min="0" style={{ width: 80 }} value={hours} onChange={(e) => setHours(e.target.value)} />
+            <button className="dashBtn" onClick={saveHours}>Save</button>
+          </span>
         </td>
         <td>{volunteer.tasks.length}</td>
         <td className="dashActionsCell">
-          <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Tasks'}</button>
-          <ConfirmButton confirmLabel={`Remove ${volunteer.user?.full_name}?`} onConfirm={remove}>Remove</ConfirmButton>
+          <span className="dashActionsRow">
+            <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Tasks'}</button>
+            <ConfirmButton confirmLabel={`Remove ${volunteer.user?.full_name}?`} onConfirm={remove}>Remove</ConfirmButton>
+          </span>
         </td>
       </tr>
       {error && (

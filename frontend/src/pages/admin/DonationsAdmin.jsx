@@ -133,12 +133,14 @@ export default function DonationsAdmin() {
                   </td>
                   <td><StatusBadge status={d.status} /></td>
                   <td className="dashActionsCell">
-                    {d.status === 'pending' && (
-                      <>
-                        <button className="dashBtn dashBtnPrimary" onClick={() => handleVerify(d, 'verified')}>Verify</button>
-                        <button className="dashBtn dashBtnDanger" onClick={() => handleVerify(d, 'rejected')}>Reject</button>
-                      </>
-                    )}
+                    <span className="dashActionsRow">
+                      {d.status === 'pending' && (
+                        <>
+                          <button className="dashBtn dashBtnPrimary" onClick={() => handleVerify(d, 'verified')}>Verify</button>
+                          <button className="dashBtn dashBtnDanger" onClick={() => handleVerify(d, 'rejected')}>Reject</button>
+                        </>
+                      )}
+                    </span>
                   </td>
                 </tr>
               ))}
