@@ -188,19 +188,13 @@ class AnimalController extends Controller
 
     public function destroy(Animal $animal)
     {
-        // The DB's FKs on medical_records/vaccinations/adoption_applications/foster_applications
-        // are all ON DELETE CASCADE, so a raw delete() would silently wipe this animal's entire
-        // history with no warning. Block it explicitly instead of relying on a constraint violation.
-        $hasDependents = $animal->medicalRecords()->exists()
-            || $animal->vaccinations()->exists()
-            || $animal->adoptionApplications()->exists()
-            || $animal->fosterApplications()->exists();
-
-        if ($hasDependents) {
-            return response()->json([
-                'message' => 'This animal has related records (medical history, applications, etc.) and cannot be deleted. Archive it instead.',
-            ], 409);
-        }
+        // The frontend gates this behind a "type DELETE to confirm" modal, so once the
+        // request reaches here we cascade for real: medical history, vaccinations, and
+        // applications tied to this animal are removed along with it, not just blocked.
+        $animal->medicalRecords()->delete();
+        $animal->vaccinations()->delete();
+        $animal->adoptionApplications()->delete();
+        $animal->fosterApplications()->delete();
 
         foreach ($animal->photos as $photo) {
             if ($photo->photo_url) {
