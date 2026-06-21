@@ -6,7 +6,9 @@ return [
 
     'guard' => ['web'],
 
-    'expiration' => env('SESSION_EXPIRATION', null),
+    // Token lifetime in minutes. Default 14 days so a leaked bearer token can't live forever
+    // (previously null = never expired). Override per-environment via SANCTUM_TOKEN_EXPIRATION.
+    'expiration' => (int) env('SANCTUM_TOKEN_EXPIRATION', 60 * 24 * 14),
 
 ];
 
