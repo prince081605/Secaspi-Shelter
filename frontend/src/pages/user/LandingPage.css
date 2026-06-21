@@ -99,7 +99,10 @@ html { scroll-behavior: smooth; }
 .lp-hamburger.open span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
 .lp-hamburger.open span:nth-child(2) { opacity: 0; }
 .lp-hamburger.open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
-.lp-mobile-menu { display: flex; flex-direction: column; gap: var(--space-4); position: fixed; top: 64px; left: 0; right: 0; bottom: 0; background: var(--paper); padding: var(--space-5); z-index: 49; border-top: 1px solid var(--lp-line); opacity: 0; transform: translateY(-12px); pointer-events: none; transition: opacity .2s var(--ease), transform .2s var(--ease); }
+/* Anchored with top:100% to the header's bottom edge (the header is the containing block
+   because its backdrop-filter establishes one), so it always sits exactly below the header
+   regardless of header height — no magic pixel offset that can overlap or leave a gap. */
+.lp-mobile-menu { display: flex; flex-direction: column; gap: var(--space-4); position: absolute; top: 100%; left: 0; right: 0; height: 100vh; overflow-y: auto; background: var(--paper); padding: var(--space-5); z-index: 49; border-top: 1px solid var(--lp-line); opacity: 0; transform: translateY(-8px); pointer-events: none; transition: opacity .2s var(--ease), transform .2s var(--ease); }
 .lp-mobile-menu.open { opacity: 1; transform: translateY(0); pointer-events: auto; }
 .lp-mobile-menu a { font-size: 20px; font-weight: 600; transition: color .15s var(--ease); }
 .lp-mobile-menu a:hover { color: var(--terracotta-dark); }
@@ -259,6 +262,9 @@ html { scroll-behavior: smooth; }
   .lp-nav-links { display: none; }
   .lp-nav-actions .lp-nav-cta, .lp-nav-actions .lp-nav-ghost { display: none; }
   .lp-hamburger { display: flex; }
+  /* The horizontal step connector only makes sense in the single 4-across row; once the
+     grid wraps it dangles into empty space, so drop it. */
+  .lp-step:not(:last-child)::after { display: none; }
 }
 @media (max-width: 560px) {
   .lp-container, .lp-nav, .lp-hero { padding-left: var(--space-4); padding-right: var(--space-4); }

@@ -22,6 +22,17 @@
   .dashboardLayout { grid-template-columns: 1fr; }
 }
 
+/* Phone: trim the stacked paddings (page + main + module) so content isn't crushed, and let
+   the title/tabs stack instead of competing for one row. */
+@media (max-width: 560px) {
+  .dashboardPage { padding: 12px; }
+  .dashMain { padding: 14px; }
+  .dashSidebar { padding: 12px; }
+  .dashTopRow { flex-direction: column; align-items: stretch; }
+  .dashTabs { width: 100%; }
+  .dashTab { flex: 1; text-align: center; }
+}
+
 .dashSidebar {
   border: 1px solid var(--line);
   background: var(--paper);
