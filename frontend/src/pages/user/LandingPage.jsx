@@ -137,14 +137,7 @@ function Hero({ eyebrow, heroTitle, heroSubtitle, bannerImage, stats, onMeetDogs
         style={{ "--reveal-delay": "0.12s" }}
       >
         <div className="photo-block">
-          {bannerImage ? <img src={bannerImage} alt="A rescued Aspin ready for adoption" /> : "Photo placeholder — Aspin portrait"}
-        </div>
-        <div className="tag-row">
-          <div>
-            <div className="id-tag">Bantay</div>
-            <div className="meta"><span>2 yrs</span><span>Male</span><span>Medium</span></div>
-          </div>
-          <span className="status-pill">Available</span>
+          {bannerImage ? <img src={bannerImage} alt="SECASPI Shelter logo" /> : "Photo placeholder — Aspin portrait"}
         </div>
       </div>
     </section>
