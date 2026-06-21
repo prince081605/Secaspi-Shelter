@@ -31,7 +31,11 @@ function StatsCards() {
     { key: 'verified', label: 'Verified total', value: money(stats.verified_total), sub: `${stats.counts.verified} donations` },
     { key: 'pending', label: 'Pending review', value: money(stats.pending_total), sub: `${stats.counts.pending} donations` },
     { key: 'rejected', label: 'Rejected', value: stats.counts.rejected, sub: 'donations' },
-    { key: 'gcash', label: 'Verified via GCash', value: money(stats.by_method?.gcash || 0) },
+    ...Object.entries(stats.by_method || {}).map(([method, total]) => ({
+      key: method,
+      label: `Verified via ${method.replace('_', ' ')}`,
+      value: money(total),
+    })),
   ];
 
   return (

@@ -1,19 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
-import { dashboardMock } from '../lib/dashboardMockData';
-import { auth } from '../lib/auth';
-import { listMyAdoptionApplications, listMyFosterApplications } from '../lib/animalsApi';
-import { updateProfile, changePassword } from '../lib/profileApi';
-import AnimalsAdmin from './admin/AnimalsAdmin';
-import AdoptionRequestsAdmin from './admin/AdoptionRequestsAdmin';
-import FosterRequestsAdmin from './admin/FosterRequestsAdmin';
-import RescueReportsAdmin from './admin/RescueReportsAdmin';
-import DonationsAdmin from './admin/DonationsAdmin';
-import UsersAdmin from './admin/UsersAdmin';
-import { adminGetOverview } from '../lib/dashboardApi';
-import VolunteersAdmin from './admin/VolunteersAdmin';
-import StatusBadge from '../components/StatusBadge';
+import { dashboardMock } from '../../lib/dashboardMockData';
+import { auth } from '../../lib/auth';
+import { listMyAdoptionApplications, listMyFosterApplications } from '../../lib/animalsApi';
+import { updateProfile, changePassword } from '../../lib/profileApi';
+import AnimalsAdmin from '../admin/AnimalsAdmin';
+import AdoptionRequestsAdmin from '../admin/AdoptionRequestsAdmin';
+import FosterRequestsAdmin from '../admin/FosterRequestsAdmin';
+import RescueReportsAdmin from '../admin/RescueReportsAdmin';
+import DonationsAdmin from '../admin/DonationsAdmin';
+import UsersAdmin from '../admin/UsersAdmin';
+import { adminGetOverview } from '../../lib/dashboardApi';
+import VolunteersAdmin from '../admin/VolunteersAdmin';
+import ReportsAdmin from '../admin/ReportsAdmin';
+import StatusBadge from '../../components/StatusBadge';
 
 const fallbackRole = 'user';
 
@@ -43,29 +44,6 @@ function OverviewCards({ cards }) {
   );
 }
 
-
-function AdminAnalytics({ analytics }) {
-  return (
-    <>
-      <div className="dashSectionTitle">📈 Reports / Analytics</div>
-      {!analytics || analytics.length === 0 ? (
-        <div className="ui-empty">No animal data yet.</div>
-      ) : (
-        <div className="dashBars">
-          {analytics.map((b) => (
-            <div className="dashBarRow" key={b.label}>
-              <div className="dashBarLbl">{b.label}</div>
-              <div className="dashBarTrack">
-                <div className="dashBarFill" style={{ width: `${b.value}%` }} />
-              </div>
-              <div className="dashBarCount">{b.count}</div>
-            </div>
-          ))}
-        </div>
-      )}
-    </>
-  );
-}
 
 function ActivityFeed({ activity }) {
   return (
@@ -444,7 +422,12 @@ export default function Dashboard() {
       <div className="dashboardLayout">
         <aside className="dashSidebar">
           <div className="dashBrand">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}
+              aria-label="Back to landing page"
+            >
               <div className="dashLogo" aria-hidden="true" />
               <div>
                 <div className="dashBrandTitle">SECASPI</div>
@@ -452,11 +435,14 @@ export default function Dashboard() {
                   Shelter Admin
                 </div>
               </div>
-            </div>
+            </button>
             <div className="dashRoleChip">{role ? `Role: ${role}` : 'Role: —'}</div>
           </div>
 
           <nav className="dashNav">
+            <button className="dashNavBtn" onClick={() => navigate('/')}>
+              ⬅️ Back to Home
+            </button>
             {navItems.map((item) => (
               <button
                 key={item.key}
@@ -517,7 +503,7 @@ export default function Dashboard() {
               {activeNav === 'rescues' ? <RescueReportsAdmin /> : null}
               {activeNav === 'donations' ? <DonationsAdmin /> : null}
               {activeNav === 'volunteers' ? <VolunteersAdmin /> : null}
-              {activeNav === 'reports' ? <AdminAnalytics analytics={overview?.analytics} /> : null}
+              {activeNav === 'reports' ? <ReportsAdmin /> : null}
               {activeNav === 'users' ? <UsersAdmin currentUserId={user?.id} /> : null}
               {activeNav === 'settings' ? (
                 <>

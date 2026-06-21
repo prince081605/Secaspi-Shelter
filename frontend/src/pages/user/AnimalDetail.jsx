@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getAnimal } from '../lib/animalsApi';
+import { getAnimal } from '../../lib/animalsApi';
 
 const styles = `
   .detBody { padding: 3rem 6vw; display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; }

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getFeaturedAnimals } from "../lib/publicHomeApi.js";
-import { createReport } from "../lib/rescueApi.js";
-import { auth } from "../lib/auth.js";
+import { getFeaturedAnimals, getImpactStats } from "../../lib/publicHomeApi.js";
+import { createReport } from "../../lib/rescueApi.js";
+import { auth } from "../../lib/auth.js";
 import "./LandingPage.css";
 
 const TAG_VARIANT = { av: "brand", urg: "amber", new: "sky" };
@@ -26,6 +26,7 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const [amt, setAmt] = useState(donationAmounts[1]);
   const [animals, setAnimals] = useState(animalsFallback);
+  const [impact, setImpact] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -39,6 +40,19 @@ export default function LandingPage() {
         setAnimals(Array.isArray(data?.animals) ? data.animals : animalsFallback);
       } catch (err) {
         console.error("Failed to load featured animals:", err);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const data = await getImpactStats();
+        if (mounted) setImpact(data);
+      } catch (err) {
+        console.error("Failed to load impact stats:", err);
       }
     })();
     return () => { mounted = false; };
@@ -165,19 +179,15 @@ export default function LandingPage() {
               onError={(e) => { e.currentTarget.style.display = "none"; }}
             />
             <div className="ss-hero-dog">🐾</div>
-            <div className="ss-hero-badge">
-              <div className="ss-badge-num">347</div>
-              <div className="ss-badge-label">Dogs placed<br/>this year</div>
-            </div>
           </div>
         </div>
       </section>
 
       <section className="ss-stats">
         <div className="ss-stats-inner">
-          <div className="ss-stat"><div className="ss-stat-num">1,200+</div><div className="ss-stat-label">Dogs Rescued</div></div>
-          <div className="ss-stat"><div className="ss-stat-num">890+</div><div className="ss-stat-label">Successful Adoptions</div></div>
-          <div className="ss-stat"><div className="ss-stat-num">98%</div><div className="ss-stat-label">Success Rate</div></div>
+          <div className="ss-stat"><div className="ss-stat-num">{impact ? `${impact.animals_rescued}+` : "1,200+"}</div><div className="ss-stat-label">Dogs Rescued</div></div>
+          <div className="ss-stat"><div className="ss-stat-num">{impact ? `${impact.animals_adopted}+` : "890+"}</div><div className="ss-stat-label">Successful Adoptions</div></div>
+          <div className="ss-stat"><div className="ss-stat-num">{impact?.success_rate != null ? `${impact.success_rate}%` : "98%"}</div><div className="ss-stat-label">Success Rate</div></div>
         </div>
       </section>
 
@@ -225,10 +235,6 @@ export default function LandingPage() {
       </section>
 
       <section className="ss-rescue" id="rescue">
-        <div className="ss-rescueV">
-          <div className="ss-rescueE">🚑</div>
-          <div className="ss-rescueQ">"No Aspin should sleep on the street."</div>
-        </div>
         <div>
           <p className="ss-eyebrow-c">Emergency Rescue</p>
           <h2 className="ss-section-title">Spotted a dog in distress?</h2>
@@ -258,6 +264,25 @@ export default function LandingPage() {
           </form>
         </div>
       </section>
+
+      {impact?.top_donors?.length > 0 && (
+        <section className="ss-section">
+          <div className="ss-section-header">
+            <p className="ss-eyebrow-c">Community Impact</p>
+            <h2 className="ss-section-title">Our Top Supporters</h2>
+            <p className="ss-section-sub">Donors who've gone above and beyond for our rescues.</p>
+          </div>
+          <div className="ss-donors">
+            {impact.top_donors.map((d, i) => (
+              <div className="ss-donor-card" key={`${d.name}-${i}`}>
+                <div className="ss-donor-rank">#{i + 1}</div>
+                <div className="ss-donor-name">{d.name}</div>
+                <div className="ss-donor-amt">₱{d.total.toLocaleString()}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="ss-donate" id="donate">
         <div className="ss-donate-card">

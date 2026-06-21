@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getDonation } from '../lib/donationsApi';
+import { getDonation } from '../../lib/donationsApi';
 
 const styles = `
   .receiptBody { max-width: 560px; margin: 0 auto; padding: 3rem 1.5rem; }

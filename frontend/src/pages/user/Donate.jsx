@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { createDonation } from '../lib/donationsApi';
+import { createDonation } from '../../lib/donationsApi';
 
 const styles = `
   .donateBody { max-width: 640px; margin: 0 auto; padding: 3rem 1.5rem; }
   .donateAmounts { display: flex; gap: 0.7rem; flex-wrap: wrap; margin-bottom: 1.2rem; }
   .donateSuccess { padding: 2.5rem; text-align: center; }
   .donateProofPreview { width: 120px; height: 120px; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); margin-top: 0.6rem; }
+  .donatePaymentSheetLink { display: block; margin-bottom: 1.2rem; }
+  .donatePaymentSheet { width: 100%; border-radius: 12px; border: 1px solid var(--line); display: block; }
+  .donatePaymentSheetCaption { font-size: 0.82rem; color: var(--muted); margin-top: 0.4rem; text-align: center; }
 `;
 
 const PRESET_AMOUNTS = [100, 300, 500, 1000, 2500];
@@ -83,9 +86,14 @@ export default function Donate() {
             <h2 className="ui-h2" style={{ marginBottom: '0.6rem' }}>Thank you for your donation!</h2>
             <p className="ui-muted">Your support helps us rescue and care for more Aspins.</p>
             <p style={{ marginTop: '0.8rem' }}>Reference number: <strong style={{ color: 'var(--brand)' }}>{result.reference_no}</strong></p>
-            <button className="ui-btn-primary" style={{ marginTop: '1.5rem' }} onClick={() => navigate('/donations')}>
-              View Donation History
-            </button>
+            <div style={{ display: 'flex', gap: '0.7rem', justifyContent: 'center', marginTop: '1.5rem', flexWrap: 'wrap' }}>
+              <button className="ui-btn-primary" onClick={() => navigate('/donations')}>
+                View Donation History
+              </button>
+              <button className="ui-btn-secondary" onClick={() => navigate('/')}>
+                Back to Website
+              </button>
+            </div>
           </div>
         ) : (
           <>
@@ -131,20 +139,33 @@ export default function Donate() {
                 </select>
               </div>
 
-              {paymentMethod === 'gcash' && (
-                <div className="ui-field">
-                  <label className="ui-label ui-label-required">GCash payment proof (screenshot)</label>
-                  <input
-                    className="ui-input"
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setProofImage(e.target.files?.[0] || null)}
-                    required
-                  />
-                  {proofPreviewUrl && (
-                    <img src={proofPreviewUrl} alt="Payment proof preview" className="donateProofPreview" />
-                  )}
-                </div>
+              {paymentMethod !== 'cash' && (
+                <>
+                  <a href="/payment-gateway.jpg" target="_blank" rel="noopener noreferrer" className="donatePaymentSheetLink">
+                    <img
+                      src="/payment-gateway.jpg"
+                      alt="Second Chance Aspin Shelter Philippines official payment details: bank accounts, GCash, Maya, PayPal"
+                      className="donatePaymentSheet"
+                    />
+                    <div className="donatePaymentSheetCaption">Tap to view full size</div>
+                  </a>
+
+                  <div className="ui-field">
+                    <label className={'ui-label' + (paymentMethod === 'gcash' ? ' ui-label-required' : '')}>
+                      Payment proof (screenshot){paymentMethod === 'gcash' ? '' : ' (optional)'}
+                    </label>
+                    <input
+                      className="ui-input"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setProofImage(e.target.files?.[0] || null)}
+                      required={paymentMethod === 'gcash'}
+                    />
+                    {proofPreviewUrl && (
+                      <img src={proofPreviewUrl} alt="Payment proof preview" className="donateProofPreview" />
+                    )}
+                  </div>
+                </>
               )}
 
               <button className="ui-btn-primary" style={{ width: '100%' }} type="submit" disabled={submitting || !amount}>

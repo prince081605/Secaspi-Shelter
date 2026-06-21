@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth } from '../lib/auth';
-import AuthLayout from '../components/AuthLayout';
+import { auth } from '../../lib/auth';
+import AuthLayout from '../../components/AuthLayout';
 
 export default function Login() {
   const navigate = useNavigate();

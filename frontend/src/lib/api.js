@@ -47,3 +47,33 @@ export const api = {
   delete: (path) => request(path, { method: 'DELETE' }),
 };
 
+// Sanctum auth is a Bearer header, not a cookie, so a plain <a href> download
+// link can't carry it — fetch the file ourselves (with the header) and hand
+// back a Blob the caller can save via a temporary object URL.
+export async function downloadFile(path) {
+  const token = getAuthToken();
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  if (!res.ok) {
+    let message = 'Export failed';
+    try {
+      const data = await res.json();
+      message = data?.message || message;
+    } catch {
+      // response wasn't JSON; keep the default message
+    }
+    throw new Error(message);
+  }
+
+  const disposition = res.headers.get('content-disposition') || '';
+  const match = disposition.match(/filename="?([^"]+)"?/);
+  const filename = match ? match[1] : 'export';
+  const blob = await res.blob();
+
+  return { blob, filename };
+}
+

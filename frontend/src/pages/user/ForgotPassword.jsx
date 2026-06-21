@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { auth } from '../lib/auth';
-import AuthLayout from '../components/AuthLayout';
+import { auth } from '../../lib/auth';
+import AuthLayout from '../../components/AuthLayout';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');

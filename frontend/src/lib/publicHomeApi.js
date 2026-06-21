@@ -16,4 +16,11 @@ export async function getFeaturedAnimals() {
   return api.get('/api/home/featured-animals');
 }
 
+export async function getImpactStats() {
+  // Expected shape:
+  // { animals_rescued, animals_adopted, donations_raised, rescue_reports_handled,
+  //   success_rate, top_donors: [{ name, total }, ...] }
+  return api.get('/api/home/impact');
+}
+
 

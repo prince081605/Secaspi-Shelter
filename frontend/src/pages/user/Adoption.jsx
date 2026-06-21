@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { browseAnimals } from '../lib/animalsApi';
+import { browseAnimals } from '../../lib/animalsApi';
 
 const styles = `
   .adoptGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }

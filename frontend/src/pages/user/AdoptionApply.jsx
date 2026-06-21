@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { applyForAdoption } from '../lib/animalsApi';
+import { applyForAdoption } from '../../lib/animalsApi';
 
 const styles = `
   .applyBody { max-width: 640px; margin: 0 auto; padding: 3rem 1.5rem; }

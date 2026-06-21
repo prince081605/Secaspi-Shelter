@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { listDonations } from '../lib/donationsApi';
+import { listDonations } from '../../lib/donationsApi';
 
 const styles = `
   .donHistTableWrap { overflow-x: auto; }

@@ -55,6 +55,49 @@ Route::get('/home/stats', function () {
     ]);
 });
 
+Route::get('/home/impact', function () {
+    $animalsRescued = DB::table('animals')->count();
+    $animalsAdopted = DB::table('animals')->where('status', 'adopted')->count();
+    $donationsRaised = (float) DB::table('donations')->where('status', 'verified')->sum('amount');
+    $rescueReportsHandled = DB::table('rescue_reports')->count();
+
+    $completedApplications = DB::table('adoption_applications')->where('status', 'completed')->count();
+    $declinedApplications = DB::table('adoption_applications')->where('status', 'declined')->count();
+    $decidedApplications = $completedApplications + $declinedApplications;
+    $successRate = $decidedApplications > 0 ? round(($completedApplications / $decidedApplications) * 100) : null;
+
+    $topDonors = DB::table('donations')
+        ->join('users', 'users.id', '=', 'donations.user_id')
+        ->where('donations.status', 'verified')
+        ->select('users.full_name', DB::raw('SUM(donations.amount) as total'))
+        ->groupBy('users.id', 'users.full_name')
+        ->orderByDesc('total')
+        ->limit(5)
+        ->get()
+        ->map(function ($row) {
+            // Show "First L." rather than a donor's full legal name on a public page.
+            $parts = preg_split('/\s+/', trim($row->full_name));
+            $displayName = $parts[0];
+            if (count($parts) > 1) {
+                $displayName .= ' ' . mb_substr(end($parts), 0, 1) . '.';
+            }
+            return [
+                'name' => $displayName,
+                'total' => (float) $row->total,
+            ];
+        })
+        ->values();
+
+    return response()->json([
+        'animals_rescued' => $animalsRescued,
+        'animals_adopted' => $animalsAdopted,
+        'donations_raised' => $donationsRaised,
+        'rescue_reports_handled' => $rescueReportsHandled,
+        'success_rate' => $successRate,
+        'top_donors' => $topDonors,
+    ]);
+});
+
 Route::get('/home/featured-animals', function () {
     try {
         // In case tables/columns are not created yet, keep frontend alive.

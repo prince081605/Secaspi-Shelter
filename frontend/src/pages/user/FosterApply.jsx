@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { applyForFoster } from '../lib/animalsApi';
+import { applyForFoster } from '../../lib/animalsApi';
 
 const styles = `
   .applyBody { max-width: 640px; margin: 0 auto; padding: 3rem 1.5rem; }

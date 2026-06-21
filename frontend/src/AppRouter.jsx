@@ -1,19 +1,19 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
-import Login from './pages/Login';
-import Register from './pages/Register';
-import ForgotPassword from './pages/ForgotPassword';
-import Home from './pages/Home';
-import Adoption from './pages/Adoption';
-import AnimalDetail from './pages/AnimalDetail';
-import AdoptionApply from './pages/AdoptionApply';
-import FosterApply from './pages/FosterApply';
-import Dashboard from './pages/Dashboard';
-import Donate from './pages/Donate';
-import DonationHistory from './pages/DonationHistory';
-import Receipt from './pages/Receipt';
-import NotFound from './pages/NotFound';
+import Login from './pages/user/Login';
+import Register from './pages/user/Register';
+import ForgotPassword from './pages/user/ForgotPassword';
+import Home from './pages/user/Home';
+import Adoption from './pages/user/Adoption';
+import AnimalDetail from './pages/user/AnimalDetail';
+import AdoptionApply from './pages/user/AdoptionApply';
+import FosterApply from './pages/user/FosterApply';
+import Dashboard from './pages/user/Dashboard';
+import Donate from './pages/user/Donate';
+import DonationHistory from './pages/user/DonationHistory';
+import Receipt from './pages/user/Receipt';
+import NotFound from './pages/user/NotFound';
 import { auth } from './lib/auth';
 
 function RequireAuth({ children }) {

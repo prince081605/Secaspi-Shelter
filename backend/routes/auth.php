@@ -14,6 +14,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\VolunteerController;
 use App\Http\Controllers\IntakeController;
+use App\Http\Controllers\ReportController;
 
 
 // Public routes
@@ -88,4 +89,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/admin/intakes/{intake}/convert',    [IntakeController::class, 'adminConvert'])->middleware('admin');
     Route::post('/admin/intakes/{intake}/documents',  [IntakeController::class, 'addDocuments'])->middleware('admin');
     Route::delete('/admin/intakes/{intake}/documents/{document}', [IntakeController::class, 'destroyDocument'])->middleware('admin');
+
+    // ---- Reports & exports (Phase 7) ----
+    Route::get('/admin/reports/adoption',    [ReportController::class, 'adoption'])->middleware('admin');
+    Route::get('/admin/reports/animals',     [ReportController::class, 'animals'])->middleware('admin');
+    Route::get('/admin/reports/medical',     [ReportController::class, 'medical'])->middleware('admin');
+    Route::get('/admin/reports/donations',   [ReportController::class, 'donations'])->middleware('admin');
+    Route::get('/admin/reports/volunteers',  [ReportController::class, 'volunteers'])->middleware('admin');
+    Route::get('/admin/reports/rescue',      [ReportController::class, 'rescue'])->middleware('admin');
+    Route::get('/admin/reports/export/csv',  [ReportController::class, 'exportCsv'])->middleware('admin');
+    Route::get('/admin/reports/export/pdf',  [ReportController::class, 'exportPdf'])->middleware('admin');
 });
