@@ -25,6 +25,7 @@ import {
 } from '../../lib/intakesApi';
 import StatusBadge from '../../components/StatusBadge';
 import ConfirmButton from '../../components/ConfirmButton';
+import TypeToConfirmButton from '../../components/TypeToConfirmButton';
 
 const STATUSES = ['available', 'adopted', 'fostered', 'medical', 'quarantine', 'archived'];
 const GENDERS = ['male', 'female'];
@@ -942,7 +943,12 @@ export default function AnimalsAdmin() {
                   ) : (
                     <button className="dashBtn" onClick={() => handleArchive(a)}>Archive</button>
                   )}
-                  <ConfirmButton confirmLabel={`Delete ${a.name}?`} onConfirm={() => handleDelete(a)}>Delete</ConfirmButton>
+                  <TypeToConfirmButton
+                    warningLabel={`Delete ${a.name}? This cannot be undone.`}
+                    onConfirm={() => handleDelete(a)}
+                  >
+                    Delete
+                  </TypeToConfirmButton>
                 </div>
                 {photosOpenFor === a.id && <PhotoManager animalId={a.id} onChanged={refresh} />}
                 {medicalOpenFor === a.id && <MedicalManager animalId={a.id} onChanged={refresh} />}
