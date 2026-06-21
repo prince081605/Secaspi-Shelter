@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import {
   adminListAnimals,
   adminGetAnimal,
@@ -26,6 +26,7 @@ import {
 import StatusBadge from '../../components/StatusBadge';
 import ConfirmButton from '../../components/ConfirmButton';
 import TypeToConfirmButton from '../../components/TypeToConfirmButton';
+import './AnimalsAdmin.css';
 
 const STATUSES = ['available', 'adopted', 'fostered', 'medical', 'quarantine', 'archived'];
 const GENDERS = ['male', 'female'];
@@ -799,13 +800,15 @@ export default function AnimalsAdmin() {
   const [animals, setAnimals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filters, setFilters] = useState({ q: '', species: '', status: '' });
+  const [filters, setFilters] = useState({ q: '', species: '', status: '', size: '' });
   const [showCreate, setShowCreate] = useState(false);
   const [editingAnimal, setEditingAnimal] = useState(null);
   const [photosOpenFor, setPhotosOpenFor] = useState(null);
   const [medicalOpenFor, setMedicalOpenFor] = useState(null);
   const [qrOpenFor, setQrOpenFor] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [viewMode, setViewMode] = useState('table');
+  const [stats, setStats] = useState({ total: 0, available: 0, adopted: 0, archived: 0 });
 
   useEffect(() => {
     let mounted = true;
@@ -825,6 +828,29 @@ export default function AnimalsAdmin() {
       });
     return () => { mounted = false; };
   }, [filters, refreshKey]);
+
+  // Stat strip reflects true totals across all animals (not just the current filtered
+  // page), so it's fetched separately from the main listing using paginate()'s `total`.
+  useEffect(() => {
+    let mounted = true;
+    Promise.all([
+      adminListAnimals({}),
+      adminListAnimals({ status: 'available' }),
+      adminListAnimals({ status: 'adopted' }),
+      adminListAnimals({ status: 'archived' }),
+    ])
+      .then(([all, available, adopted, archived]) => {
+        if (!mounted) return;
+        setStats({
+          total: all?.total ?? 0,
+          available: available?.total ?? 0,
+          adopted: adopted?.total ?? 0,
+          archived: archived?.total ?? 0,
+        });
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, [refreshKey]);
 
   const refresh = () => {
     setShowCreate(false);
@@ -859,39 +885,100 @@ export default function AnimalsAdmin() {
     }
   };
 
-  return (
+  const renderActions = (a) => (
     <>
+      <button className="dashBtn" onClick={() => { setEditingAnimal(a); setShowCreate(false); }}>Edit</button>
+      <button className="dashBtn" onClick={() => setPhotosOpenFor(photosOpenFor === a.id ? null : a.id)}>Photos</button>
+      <button className="dashBtn" onClick={() => setMedicalOpenFor(medicalOpenFor === a.id ? null : a.id)}>Medical</button>
+      <button className="dashBtn" onClick={() => setQrOpenFor(qrOpenFor === a.id ? null : a.id)}>QR Code</button>
+      {a.status === 'archived' ? (
+        <button className="dashBtn dashBtnPrimary" onClick={() => handleRestore(a)}>Restore</button>
+      ) : (
+        <button className="dashBtn" onClick={() => handleArchive(a)}>Archive</button>
+      )}
+      <TypeToConfirmButton
+        warningLabel={`Delete ${a.name}? This cannot be undone.`}
+        onConfirm={() => handleDelete(a)}
+      >
+        Delete
+      </TypeToConfirmButton>
+    </>
+  );
+
+  const renderExpanded = (a) => (
+    <>
+      {photosOpenFor === a.id && <PhotoManager animalId={a.id} onChanged={refresh} />}
+      {medicalOpenFor === a.id && <MedicalManager animalId={a.id} onChanged={refresh} />}
+      {qrOpenFor === a.id && <QrCodeViewer animalId={a.id} />}
+    </>
+  );
+
+  const hasExpanded = (a) => photosOpenFor === a.id || medicalOpenFor === a.id || qrOpenFor === a.id;
+
+  return (
+    <div className="aa-module">
       <IntakesSection onConverted={refresh} />
 
-      <div className="dashSectionTitle" style={{ marginTop: 24 }}>🐶 Animal Management</div>
-
-      {error && <div className="ui-error">{error}</div>}
-
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 8 }}>
-        <input
-          className="ui-input"
-          style={{ maxWidth: 220 }}
-          placeholder="Search name/species/breed"
-          aria-label="Search animals by name, species, or breed"
-          value={filters.q}
-          onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))}
-        />
-        <select
-          className="ui-input"
-          style={{ maxWidth: 160 }}
-          aria-label="Filter animals by status"
-          value={filters.status}
-          onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
-        >
-          <option value="">All statuses</option>
-          {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
+      <div className="aa-header" style={{ marginTop: 24 }}>
+        <div>
+          <span className="aa-eyebrow">Admin · Animal Management</span>
+          <h2>Manage Animal Listings</h2>
+          <p>Create, edit, and retire adoption profiles for Aspins currently in shelter care.</p>
+        </div>
         <button
           className="dashBtn dashBtnPrimary"
           onClick={() => { setShowCreate((v) => !v); setEditingAnimal(null); }}
         >
-          {showCreate ? 'Close' : '+ Add animal'}
+          {showCreate ? 'Close' : '+ Add Animal'}
         </button>
+      </div>
+
+      {error && <div className="ui-error">{error}</div>}
+
+      <div className="aa-stat-strip">
+        <div className="aa-stat-card"><div className="num">{stats.total}</div><div className="label">Total listings</div></div>
+        <div className="aa-stat-card"><div className="num">{stats.available}</div><div className="label">Available</div></div>
+        <div className="aa-stat-card"><div className="num">{stats.adopted}</div><div className="label">Adopted</div></div>
+        <div className="aa-stat-card"><div className="num">{stats.archived}</div><div className="label">Archived</div></div>
+      </div>
+
+      <div className="aa-toolbar">
+        <div className="aa-toolbar-left">
+          <div className="aa-search">
+            <span aria-hidden="true">🔍</span>
+            <input
+              type="text"
+              placeholder="Search name/species/breed"
+              aria-label="Search animals by name, species, or breed"
+              value={filters.q}
+              onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))}
+            />
+          </div>
+          <select
+            className="ui-input"
+            style={{ maxWidth: 160 }}
+            aria-label="Filter animals by status"
+            value={filters.status}
+            onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
+          >
+            <option value="">All statuses</option>
+            {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <select
+            className="ui-input"
+            style={{ maxWidth: 140 }}
+            aria-label="Filter animals by size"
+            value={filters.size}
+            onChange={(e) => setFilters((f) => ({ ...f, size: e.target.value }))}
+          >
+            <option value="">All sizes</option>
+            {SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <div className="aa-view-toggle" role="group" aria-label="Switch view">
+          <button className={viewMode === 'table' ? 'active' : ''} onClick={() => setViewMode('table')}>Table</button>
+          <button className={viewMode === 'cards' ? 'active' : ''} onClick={() => setViewMode('cards')}>Cards</button>
+        </div>
       </div>
 
       {showCreate && <AnimalForm onCancel={() => setShowCreate(false)} onSaved={refresh} />}
@@ -903,6 +990,50 @@ export default function AnimalsAdmin() {
         <div className="ui-empty">Loading…</div>
       ) : animals.length === 0 ? (
         <div className="ui-empty">No animals match these filters.</div>
+      ) : viewMode === 'table' ? (
+        <div className="dashTableWrap">
+          <table className="dashTable">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Age</th>
+                <th>Sex</th>
+                <th>Size</th>
+                <th>Status</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {animals.map((a) => (
+                <Fragment key={a.id}>
+                  <tr>
+                    <td>
+                      <div className="aa-row-name">
+                        <div className="aa-row-photo" aria-hidden="true">
+                          {a.photo ? <img src={photoSrc(a.photo)} alt="" /> : '🐕'}
+                        </div>
+                        <div>
+                          <div className="name">{a.name}</div>
+                          <div className="sub">{a.species}{a.breed ? ` • ${a.breed}` : ''}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>{a.age ? `${a.age} yrs` : '—'}</td>
+                    <td>{a.gender || '—'}</td>
+                    <td>{a.size || '—'}</td>
+                    <td><StatusBadge status={a.status} /></td>
+                    <td><div className="aa-row-actions">{renderActions(a)}</div></td>
+                  </tr>
+                  {hasExpanded(a) && (
+                    <tr>
+                      <td colSpan={6} className="dashExpandPanel">{renderExpanded(a)}</td>
+                    </tr>
+                  )}
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : (
         <div className="dashAnimalGrid">
           {animals.map((a) => (
@@ -919,45 +1050,14 @@ export default function AnimalsAdmin() {
                   <StatusBadge status={a.status} />
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
-                  <button className="dashBtn" onClick={() => { setEditingAnimal(a); setShowCreate(false); }}>Edit</button>
-                  <button
-                    className="dashBtn"
-                    onClick={() => setPhotosOpenFor(photosOpenFor === a.id ? null : a.id)}
-                  >
-                    Photos
-                  </button>
-                  <button
-                    className="dashBtn"
-                    onClick={() => setMedicalOpenFor(medicalOpenFor === a.id ? null : a.id)}
-                  >
-                    Medical
-                  </button>
-                  <button
-                    className="dashBtn"
-                    onClick={() => setQrOpenFor(qrOpenFor === a.id ? null : a.id)}
-                  >
-                    QR Code
-                  </button>
-                  {a.status === 'archived' ? (
-                    <button className="dashBtn dashBtnPrimary" onClick={() => handleRestore(a)}>Restore</button>
-                  ) : (
-                    <button className="dashBtn" onClick={() => handleArchive(a)}>Archive</button>
-                  )}
-                  <TypeToConfirmButton
-                    warningLabel={`Delete ${a.name}? This cannot be undone.`}
-                    onConfirm={() => handleDelete(a)}
-                  >
-                    Delete
-                  </TypeToConfirmButton>
+                  {renderActions(a)}
                 </div>
-                {photosOpenFor === a.id && <PhotoManager animalId={a.id} onChanged={refresh} />}
-                {medicalOpenFor === a.id && <MedicalManager animalId={a.id} onChanged={refresh} />}
-                {qrOpenFor === a.id && <QrCodeViewer animalId={a.id} />}
+                {renderExpanded(a)}
               </div>
             </div>
           ))}
         </div>
       )}
-    </>
+    </div>
   );
 }

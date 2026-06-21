@@ -2,25 +2,8 @@ import { useState } from 'react';
 
 const REQUIRED_WORD = 'DELETE';
 
-const overlayStyle = {
-  position: 'fixed',
-  inset: 0,
-  background: 'rgba(15, 23, 42, 0.55)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  zIndex: 1000,
-};
-
-const modalStyle = {
-  background: '#fff',
-  borderRadius: 'var(--radius, 12px)',
-  boxShadow: '0 20px 40px rgba(0,0,0,0.25)',
-  padding: 24,
-  width: '90%',
-  maxWidth: 380,
-};
-
+// Layout/positioning lives here since it's structural; colors and fonts are left to
+// whatever page wraps this (currently only AnimalsAdmin.css, the sole consumer).
 export default function TypeToConfirmButton({
   onConfirm,
   children,
@@ -43,11 +26,12 @@ export default function TypeToConfirmButton({
       </button>
 
       {step === 'warn' && (
-        <div style={overlayStyle} onClick={reset}>
-          <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontWeight: 600, marginBottom: 8 }}>Confirm deletion</div>
-            <p style={{ marginTop: 0, marginBottom: 16 }}>{warningLabel}</p>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+        <div className="confirm-overlay" onClick={reset}>
+          <div className="confirm-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="confirm-icon" aria-hidden="true">⚠️</div>
+            <h2>Confirm deletion</h2>
+            <p>{warningLabel}</p>
+            <div className="confirm-actions">
               <button type="button" className="dashBtn" onClick={reset}>Cancel</button>
               <button type="button" className="dashBtn dashBtnDanger" onClick={() => setStep('type')}>
                 Yes, continue
@@ -58,22 +42,20 @@ export default function TypeToConfirmButton({
       )}
 
       {step === 'type' && (
-        <div style={overlayStyle} onClick={reset}>
-          <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontWeight: 600, marginBottom: 8 }}>Type {REQUIRED_WORD} to confirm</div>
-            <p style={{ marginTop: 0, marginBottom: 12 }}>
-              This action is permanent. Type <strong>{REQUIRED_WORD}</strong> below to proceed.
-            </p>
+        <div className="confirm-overlay" onClick={reset}>
+          <div className="confirm-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="confirm-icon" aria-hidden="true">⚠️</div>
+            <h2>Type {REQUIRED_WORD} to confirm</h2>
+            <p>This action is permanent. Type <strong>{REQUIRED_WORD}</strong> below to proceed.</p>
             <input
-              className="ui-input"
-              style={{ width: '100%', marginBottom: 16 }}
+              className="ui-input confirm-type-input"
               placeholder={REQUIRED_WORD}
               aria-label={`Type ${REQUIRED_WORD} to confirm`}
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
               autoFocus
             />
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <div className="confirm-actions">
               <button type="button" className="dashBtn" onClick={reset}>Cancel</button>
               <button
                 type="button"
