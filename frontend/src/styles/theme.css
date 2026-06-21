@@ -1,34 +1,63 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&display=swap');
 
+/*
+ * Global design system. The whole app (every user page + the admin dashboard) is driven by
+ * these tokens, so the cream/terracotta look is defined once here and inherited everywhere.
+ * The landing page (.landingPage) and the animal admin module (.aa-module) define their own
+ * scoped tokens on top of this, so changes here never fight those.
+ *
+ * Palette: warm cream surfaces, terracotta primary accent, sage for positive/"good" states,
+ * Fraunces serif for headings + Work Sans for body — matching the landing page.
+ */
 :root {
-  --bg: #ffffff;
-  --bg-soft: #f7f8f7;
-  --bg-soft-2: #f1f4f2;
-  --ink: #14181a;
-  --ink-soft: #475467;
-  --muted: #5b6472;
-  --line: #e6e8e6;
-  --line-soft: #eef0ee;
-  --brand: #15803d;
-  --brand-2: #16a34a;
-  --brand-soft: #e8f6ec;
-  --brand-soft-2: #d7f0de;
-  --amber: #b45309;
-  --amber-soft: #fef3e2;
-  --sky: #0369a1;
-  --sky-soft: #e7f3fb;
-  --footer-bg: #11201a;
-  --footer-line: rgba(255, 255, 255, 0.08);
-  --footer-text: #aab8b0;
-  --brand-light: #6ee7a0;
-  --radius: 18px;
-  --shadow-sm: 0 1px 2px rgba(15, 23, 18, 0.05), 0 1px 1px rgba(15, 23, 18, 0.04);
-  --shadow-md: 0 12px 28px rgba(15, 23, 18, 0.08);
-  --shadow-lg: 0 24px 48px rgba(15, 23, 18, 0.12);
+  /* surfaces */
+  --bg: #f6f1e7;          /* cream page background */
+  --bg-soft: #efe6d4;     /* slightly deeper cream */
+  --bg-soft-2: #eae0cc;
+  --paper: #fffcf6;       /* card / input paper */
+
+  /* ink */
+  --ink: #2b2420;
+  --ink-soft: #5c5246;
+  --muted: #8c8071;
+  --line: #ddd0b8;
+  --line-soft: #e7dcc6;
+
+  /* primary accent — terracotta */
+  --brand: #c1612e;
+  --brand-2: #9b4a22;
+  --brand-soft: #f2dfcb;
+  --brand-soft-2: #ead6b8;
+  --brand-light: #e9c39b;
+
+  /* secondary — sage (positive / success states) */
+  --sage: #7c8b6b;
+  --sage-dark: #4f5c41;
+  --sage-soft: #e3e8d9;
+
+  /* semantic accents, kept inside the warm palette */
+  --amber: #9b4a22;
+  --amber-soft: #f4e3d2;
+  --sky: #6e7f92;
+  --sky-soft: #e7eaee;
+  --danger: #b3432f;
+  --danger-soft: #f4dad3;
+
+  --footer-bg: #2b2420;
+  --footer-line: rgba(255, 255, 255, 0.1);
+  --footer-text: #c9bba6;
+
+  --radius: 16px;
+  --radius-sm: 10px;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --shadow-sm: 0 1px 2px rgba(43, 36, 32, 0.06), 0 1px 1px rgba(43, 36, 32, 0.04);
+  --shadow-md: 0 12px 28px -12px rgba(43, 36, 32, 0.18);
+  --shadow-lg: 0 24px 48px -18px rgba(43, 36, 32, 0.22);
 }
 
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Work Sans', sans-serif;
   background: var(--bg);
   color: var(--ink-soft);
   line-height: 1.6;
@@ -43,6 +72,22 @@ body {
   border-inline: none;
   display: block;
 }
+
+/* ---- motion ---- */
+/* Use the independent `translate` property (not `transform`) for entrance animations so they
+   compose with — rather than override — any `transform` hover/active lift on the same element
+   (e.g. interactive .ui-card / .adoptCard). */
+@keyframes uiFadeUp {
+  from { opacity: 0; translate: 0 12px; }
+  to { opacity: 1; translate: 0 0; }
+}
+
+@keyframes uiFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.ui-animate-in { animation: uiFadeUp 0.5s var(--ease-out) both; }
 
 /* ---- layout shells ---- */
 .ui-page {
@@ -70,7 +115,7 @@ body {
   justify-content: space-between;
   gap: 1rem;
   padding: 1.1rem 6vw;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(246, 241, 231, 0.92);
   backdrop-filter: blur(10px);
   position: sticky;
   top: 0;
@@ -79,9 +124,10 @@ body {
 }
 
 .ui-logo {
-  font-size: 1.3rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-family: 'Fraunces', serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--ink);
 }
 
@@ -91,28 +137,28 @@ body {
 
 /* ---- typography ---- */
 .ui-h1 {
-  font-family: 'Inter', sans-serif;
-  font-weight: 800;
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
   color: var(--ink);
-  letter-spacing: -0.02em;
-  font-size: clamp(1.8rem, 3vw, 2.4rem);
-  line-height: 1.2;
+  letter-spacing: -0.01em;
+  font-size: clamp(1.9rem, 3vw, 2.5rem);
+  line-height: 1.15;
 }
 
 .ui-h2 {
-  font-family: 'Inter', sans-serif;
-  font-weight: 800;
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
   color: var(--ink);
-  letter-spacing: -0.02em;
-  font-size: clamp(1.4rem, 2.2vw, 1.8rem);
-  line-height: 1.25;
+  letter-spacing: -0.01em;
+  font-size: clamp(1.45rem, 2.2vw, 1.9rem);
+  line-height: 1.2;
 }
 
 .ui-h3 {
-  font-family: 'Inter', sans-serif;
-  font-weight: 700;
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
   color: var(--ink);
-  font-size: 1.1rem;
+  font-size: 1.15rem;
 }
 
 .ui-muted {
@@ -124,12 +170,12 @@ body {
   align-items: center;
   gap: 0.5rem;
   background: var(--brand-soft);
-  color: var(--brand);
+  color: var(--brand-2);
   padding: 0.45rem 1rem;
   border-radius: 50px;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
@@ -137,20 +183,27 @@ body {
 .ui-btn-primary {
   background: var(--brand);
   color: #fff;
-  border: none;
+  border: 1px solid transparent;
   padding: 0.85rem 1.8rem;
   border-radius: 50px;
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
-  transition: 0.2s;
+  transition: background 0.18s var(--ease), transform 0.18s var(--ease), box-shadow 0.18s var(--ease);
   box-shadow: var(--shadow-sm);
-  font-family: 'Inter', sans-serif;
+  font-family: 'Work Sans', sans-serif;
+  will-change: transform;
 }
 
 .ui-btn-primary:hover {
+  background: var(--brand-2);
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
+}
+
+.ui-btn-primary:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: none;
 }
 
 .ui-btn-primary:disabled {
@@ -161,7 +214,7 @@ body {
 }
 
 .ui-btn-secondary {
-  background: #fff;
+  background: var(--paper);
   color: var(--ink);
   border: 1px solid var(--line);
   padding: 0.85rem 1.8rem;
@@ -169,14 +222,17 @@ body {
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
-  transition: 0.2s;
-  font-family: 'Inter', sans-serif;
+  transition: border-color 0.18s var(--ease), color 0.18s var(--ease), transform 0.18s var(--ease);
+  font-family: 'Work Sans', sans-serif;
 }
 
 .ui-btn-secondary:hover {
-  border-color: var(--brand);
-  color: var(--brand);
-  box-shadow: var(--shadow-sm);
+  border-color: var(--ink);
+  transform: translateY(-2px);
+}
+
+.ui-btn-secondary:active {
+  transform: translateY(0) scale(0.98);
 }
 
 .ui-btn-secondary:disabled {
@@ -199,7 +255,7 @@ body {
 
 .ui-label-required::after {
   content: ' *';
-  color: var(--amber);
+  color: var(--brand);
 }
 
 .ui-input,
@@ -208,13 +264,13 @@ body {
   width: 100%;
   padding: 0.8rem 1.1rem;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   font-size: 0.95rem;
-  font-family: 'Inter', sans-serif;
-  background: #fff;
+  font-family: 'Work Sans', sans-serif;
+  background: var(--paper);
   color: var(--ink);
   outline: none;
-  transition: 0.2s;
+  transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease);
 }
 
 .ui-input:focus,
@@ -236,21 +292,21 @@ body {
 
 /* ---- feedback ---- */
 .ui-error {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #b91c1c;
+  background: var(--danger-soft);
+  border: 1px solid var(--danger);
+  color: var(--danger);
   padding: 0.8rem 1rem;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   margin-bottom: 1rem;
   font-size: 0.9rem;
 }
 
 .ui-success-msg {
-  background: var(--brand-soft);
-  border: 1px solid var(--brand-soft-2);
-  color: var(--brand);
+  background: var(--sage-soft);
+  border: 1px solid var(--sage);
+  color: var(--sage-dark);
   padding: 0.8rem 1rem;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   margin-bottom: 1rem;
   font-size: 0.9rem;
 }
@@ -267,10 +323,11 @@ body {
 
 /* ---- cards ---- */
 .ui-card {
-  background: #fff;
+  background: var(--paper);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow-sm);
+  animation: uiFadeUp 0.45s var(--ease-out) both;
 }
 
 /* ---- tags ---- */
@@ -284,7 +341,19 @@ body {
   letter-spacing: 0.03em;
 }
 
-.ui-tag-brand { background: var(--brand-soft); color: var(--brand); }
+.ui-tag-brand { background: var(--brand-soft); color: var(--brand-2); }
 .ui-tag-amber { background: var(--amber-soft); color: var(--amber); }
-.ui-tag-sky { background: var(--sky-soft); color: var(--sky); }
+.ui-tag-sky { background: var(--sage-soft); color: var(--sage-dark); }
 .ui-tag-muted { background: var(--bg-soft-2); color: var(--muted); }
+
+/* ---- reduced motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  .ui-card,
+  .ui-empty,
+  .ui-animate-in {
+    animation: none !important;
+  }
+  * {
+    scroll-behavior: auto !important;
+  }
+}

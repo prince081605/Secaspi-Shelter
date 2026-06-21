@@ -1,6 +1,11 @@
+/*
+ * Admin dashboard shell + shared admin primitives (dash* classes). Colors, fonts, radii and
+ * shadows all come from the global tokens in theme.css, so this inherits the cream/terracotta
+ * theme automatically; what's set here is layout and the handful of surface/badge specifics.
+ */
 .dashboardPage {
   min-height: 100vh;
-  background: var(--bg-soft);
+  background: var(--bg);
   color: var(--ink-soft);
   padding: 24px;
 }
@@ -19,10 +24,12 @@
 
 .dashSidebar {
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--paper);
   border-radius: var(--radius);
   padding: 16px;
   box-shadow: var(--shadow-sm);
+  align-self: start;
+  animation: uiFadeUp 0.45s var(--ease-out) both;
 }
 
 .dashBrand {
@@ -39,12 +46,13 @@
   width: 38px;
   height: 38px;
   border-radius: 12px;
-  background: linear-gradient(135deg, var(--brand-2), var(--sky));
+  background: linear-gradient(135deg, var(--brand), var(--brand-2));
 }
 
 .dashBrandTitle {
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-family: 'Fraunces', serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--ink);
   line-height: 1.2;
 }
@@ -74,9 +82,9 @@
   background: transparent;
   color: var(--ink-soft);
   font-weight: 600;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Work Sans', sans-serif;
   font-size: 0.92rem;
-  transition: 0.16s ease;
+  transition: background 0.16s var(--ease), color 0.16s var(--ease), transform 0.16s var(--ease);
 }
 
 .dashNavBtn:hover {
@@ -84,18 +92,23 @@
   color: var(--ink);
 }
 
+.dashNavBtn:active {
+  transform: scale(0.98);
+}
+
 .dashNavBtnActive {
   border-color: var(--brand-soft-2);
   background: var(--brand-soft);
-  color: var(--brand);
+  color: var(--brand-2);
 }
 
 .dashMain {
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--paper);
   border-radius: var(--radius);
   padding: 20px;
   box-shadow: var(--shadow-sm);
+  animation: uiFadeUp 0.5s var(--ease-out) both;
 }
 
 .dashTopRow {
@@ -109,9 +122,10 @@
 
 .dashTitle {
   margin: 0;
-  font-size: 1.5rem;
-  letter-spacing: -0.02em;
-  font-weight: 800;
+  font-family: 'Fraunces', serif;
+  font-size: 1.6rem;
+  letter-spacing: -0.01em;
+  font-weight: 600;
   color: var(--ink);
 }
 
@@ -127,21 +141,26 @@
 }
 
 .dashTab {
-  padding: 10px 14px;
+  padding: 10px 16px;
   border-radius: 50px;
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--paper);
   color: var(--ink-soft);
   cursor: pointer;
   font-weight: 600;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Work Sans', sans-serif;
+  transition: background 0.16s var(--ease), border-color 0.16s var(--ease), color 0.16s var(--ease);
 }
+
+.dashTab:hover { border-color: var(--ink); }
 
 .dashTabActive {
   background: var(--brand);
   border-color: var(--brand);
   color: #fff;
 }
+
+.dashTabActive:hover { border-color: var(--brand); }
 
 .dashGridCards {
   display: grid;
@@ -156,17 +175,24 @@
   border-radius: var(--radius);
   padding: 16px;
   text-align: left;
+  transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+
+.dashGridCards .dashCard:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
 }
 
 .dashCardGreen {
-  background: var(--brand-soft);
-  border-color: var(--brand-soft-2);
+  background: var(--sage-soft);
+  border-color: #cdd8be;
 }
 
 .dashCardValue {
-  font-size: 1.7rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-family: 'Fraunces', serif;
+  font-size: 1.8rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--ink);
 }
 
@@ -186,7 +212,8 @@
 .dashSectionTitle {
   margin-top: 20px;
   margin-bottom: 10px;
-  font-weight: 800;
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--ink);
 }
@@ -201,7 +228,13 @@
   border: 1px solid var(--line);
   border-radius: var(--radius);
   overflow: hidden;
-  background: #fff;
+  background: var(--paper);
+  transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+
+.dashAnimalCard:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
 }
 
 .dashAnimalPhoto {
@@ -220,7 +253,8 @@
 }
 
 .dashAnimalName {
-  font-weight: 700;
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
   color: var(--ink);
 }
 
@@ -230,7 +264,7 @@
   margin: 2px 0 8px;
 }
 
-/* Wrap any <table className="dashTable"> in this on narrow viewports the table scrolls
+/* Wrap any <table className="dashTable"> in this so on narrow viewports the table scrolls
    horizontally instead of overflowing the page or crushing its columns. */
 .dashTableWrap {
   overflow-x: auto;
@@ -245,7 +279,7 @@
   overflow: hidden;
   border-radius: var(--radius);
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--paper);
 }
 
 .dashTable th,
@@ -263,30 +297,38 @@
   background: var(--bg-soft);
 }
 
+.dashTable tbody tr {
+  transition: background 0.15s var(--ease);
+}
+
+.dashTable tbody tr:hover { background: var(--bg-soft); }
+
 .dashTable tr:last-child td { border-bottom: none; }
 
 .badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 10px;
+  padding: 5px 11px;
   border-radius: 999px;
-  border: 1px solid var(--line);
+  border: none;
   font-size: 12px;
+  font-weight: 600;
   color: var(--muted);
   background: var(--bg-soft);
 }
 
-.badgeGreen { border-color: var(--brand-soft-2); background: var(--brand-soft); color: var(--brand); }
-.badgeOrange { border-color: #fde2c2; background: var(--amber-soft); color: var(--amber); }
-.badgeSky { border-color: #bfe3f7; background: var(--sky-soft); color: var(--sky); }
-.badgeViolet { border-color: #e6d9f7; background: #f3ecfb; color: #7c3aed; }
+/* Positive = sage, in-progress = terracotta tint, attention/negative = neutral gray. */
+.badgeGreen { background: var(--sage-soft); color: var(--sage-dark); }
+.badgeOrange { background: #e6ddcf; color: var(--ink-soft); }
+.badgeSky { background: var(--brand-soft); color: var(--brand-2); }
+.badgeViolet { background: #ece3d3; color: var(--amber); }
 
 /* Shared admin form/layout primitives, replacing repeated inline style={{...}} blocks */
 .dashFormGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
+  gap: 16px;
 }
 
 .dashFlexRow {
@@ -315,29 +357,41 @@
 }
 
 .dashBtn {
-  padding: 8px 12px;
+  padding: 8px 14px;
   border-radius: 50px;
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--paper);
   color: var(--ink);
   cursor: pointer;
   font-weight: 600;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Work Sans', sans-serif;
   font-size: 0.85rem;
+  transition: background 0.15s var(--ease), border-color 0.15s var(--ease), color 0.15s var(--ease), transform 0.15s var(--ease);
 }
 
-.dashBtn:hover { background: var(--bg-soft); }
+.dashBtn:hover { border-color: var(--ink); background: var(--bg-soft); }
+.dashBtn:active { transform: scale(0.97); }
 
 .dashBtnPrimary {
-  border-color: var(--brand-soft-2);
-  background: var(--brand-soft);
-  color: var(--brand);
+  border-color: var(--brand);
+  background: var(--brand);
+  color: #fff;
+}
+
+.dashBtnPrimary:hover {
+  border-color: var(--brand-2);
+  background: var(--brand-2);
 }
 
 .dashBtnDanger {
-  border-color: #fde2c2;
-  background: var(--amber-soft);
-  color: var(--amber);
+  border-color: var(--danger);
+  background: transparent;
+  color: var(--danger);
+}
+
+.dashBtnDanger:hover {
+  background: var(--danger-soft);
+  border-color: var(--danger);
 }
 
 .dashBars {
