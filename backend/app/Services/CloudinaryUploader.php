@@ -2,10 +2,8 @@
 
 namespace App\Services;
 
-use Illuminate\Http\Client\Response;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class CloudinaryUploader
@@ -33,7 +31,7 @@ class CloudinaryUploader
                 'signature' => $signature,
             ]);
 
-        return self::secureUrl($response);
+        return $response->json('secure_url');
     }
 
     public static function uploadContent(string $binary, string $folder, string $mime = 'image/png', string $extension = 'png'): string
@@ -54,22 +52,7 @@ class CloudinaryUploader
             'signature' => $signature,
         ]);
 
-        return self::secureUrl($response);
-    }
-
-    private static function secureUrl(Response $response): string
-    {
-        $url = $response->json('secure_url');
-
-        if (!$url) {
-            Log::error('Cloudinary upload failed', [
-                'status' => $response->status(),
-                'body' => $response->body(),
-            ]);
-            throw new \RuntimeException('Cloudinary upload failed: '.($response->json('error.message') ?? $response->body()));
-        }
-
-        return $url;
+        return $response->json('secure_url');
     }
 
     public static function delete(?string $value): void
