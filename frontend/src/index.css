@@ -1,0 +1,38 @@
+/*
+ * This is the leftover Vite scaffold base stylesheet. theme.css (imported right after this
+ * file) is the real design system and already overrides every visual property below that it
+ * cares about (see the "#root" comment in theme.css). What's left here is just the handful of
+ * resets that theme.css doesn't redeclare itself. Previously this file also defined its own
+ * --text/--bg/--accent/etc. variables plus a `prefers-color-scheme: dark` override block and
+ * `color-scheme: light dark` — none of that ever did anything visible to page content (theme.css's
+ * unconditional :root block always wins), but `color-scheme: light dark` was still live and could
+ * make browser-native chrome (scrollbars, date pickers) render dark on a dark-mode OS while the
+ * page itself stayed light. Removed along with the rest of the dead scaffold styles.
+ */
+
+:root {
+  font-size: 18px;
+  letter-spacing: 0.18px;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (max-width: 1024px) {
+  :root {
+    font-size: 16px;
+  }
+}
+
+body {
+  margin: 0;
+}
+
+#root {
+  box-sizing: border-box;
+}
+
+p {
+  margin: 0;
+}

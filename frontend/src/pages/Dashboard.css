@@ -1,0 +1,380 @@
+.dashboardPage {
+  min-height: 100vh;
+  background: var(--bg-soft);
+  color: var(--ink-soft);
+  padding: 24px;
+}
+
+.dashboardLayout {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 1024px) {
+  .dashboardLayout { grid-template-columns: 1fr; }
+}
+
+.dashSidebar {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.dashBrand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 6px 14px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 14px;
+}
+
+.dashLogo {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--brand-2), var(--sky));
+}
+
+.dashBrandTitle {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  line-height: 1.2;
+}
+
+.dashRoleChip {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg-soft);
+  color: var(--muted);
+}
+
+.dashNav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dashNavBtn {
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-soft);
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.92rem;
+  transition: 0.16s ease;
+}
+
+.dashNavBtn:hover {
+  background: var(--bg-soft);
+  color: var(--ink);
+}
+
+.dashNavBtnActive {
+  border-color: var(--brand-soft-2);
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.dashMain {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.dashTopRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.dashTitle {
+  margin: 0;
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.dashSubtitle {
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.dashTabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dashTab {
+  padding: 10px 14px;
+  border-radius: 50px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+}
+
+.dashTabActive {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+
+.dashGridCards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.dashCard {
+  border: 1px solid var(--line);
+  background: var(--bg-soft);
+  border-radius: var(--radius);
+  padding: 16px;
+  text-align: left;
+}
+
+.dashCardGreen {
+  background: var(--brand-soft);
+  border-color: var(--brand-soft-2);
+}
+
+.dashCardValue {
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.dashCardLabel {
+  margin-top: 4px;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.dashCardSub {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.dashSectionTitle {
+  margin-top: 20px;
+  margin-bottom: 10px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.dashAnimalGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.dashAnimalCard {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #fff;
+}
+
+.dashAnimalPhoto {
+  height: 120px;
+  background: var(--bg-soft-2);
+}
+
+.dashAnimalPhoto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dashAnimalBody {
+  padding: 10px 12px;
+}
+
+.dashAnimalName {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.dashAnimalMeta {
+  color: var(--muted);
+  font-size: 0.82rem;
+  margin: 2px 0 8px;
+}
+
+/* Wrap any <table className="dashTable"> in this on narrow viewports the table scrolls
+   horizontally instead of overflowing the page or crushing its columns. */
+.dashTableWrap {
+  overflow-x: auto;
+}
+
+.dashTable {
+  width: 100%;
+  min-width: 560px;
+  margin-top: 10px;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+.dashTable th,
+.dashTable td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+
+.dashTable th {
+  color: var(--muted);
+  font-weight: 700;
+  background: var(--bg-soft);
+}
+
+.dashTable tr:last-child td { border-bottom: none; }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--bg-soft);
+}
+
+.badgeGreen { border-color: var(--brand-soft-2); background: var(--brand-soft); color: var(--brand); }
+.badgeOrange { border-color: #fde2c2; background: var(--amber-soft); color: var(--amber); }
+.badgeSky { border-color: #bfe3f7; background: var(--sky-soft); color: var(--sky); }
+.badgeViolet { border-color: #e6d9f7; background: #f3ecfb; color: #7c3aed; }
+
+/* Shared admin form/layout primitives, replacing repeated inline style={{...}} blocks */
+.dashFormGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.dashFlexRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dashExpandPanel {
+  background: var(--bg-soft);
+  padding: 14px 16px;
+}
+
+.dashThumbSm {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.dashThumbLg {
+  width: 96px;
+  height: 96px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.dashBtn {
+  padding: 8px 12px;
+  border-radius: 50px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+}
+
+.dashBtn:hover { background: var(--bg-soft); }
+
+.dashBtnPrimary {
+  border-color: var(--brand-soft-2);
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.dashBtnDanger {
+  border-color: #fde2c2;
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+
+.dashBars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.dashBarRow {
+  display: grid;
+  grid-template-columns: 140px 1fr 50px;
+  align-items: center;
+  gap: 10px;
+}
+
+.dashBarLbl {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.dashBarTrack {
+  height: 10px;
+  border-radius: 50px;
+  background: var(--bg-soft-2);
+  overflow: hidden;
+}
+
+.dashBarFill {
+  height: 100%;
+  border-radius: 50px;
+  background: var(--brand);
+}
+
+.dashBarCount {
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-align: right;
+}

@@ -1,0 +1,8 @@
+# Personal/local tool config — not project content
+.claude/
+.vscode/*
+!.vscode/extensions.json
+
+# OS junk
+.DS_Store
+Thumbs.db
