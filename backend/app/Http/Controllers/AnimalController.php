@@ -19,11 +19,7 @@ class AnimalController extends Controller
         $query = Animal::query()->where('status', '!=', 'archived');
 
         if ($q = $request->query('q')) {
-            $query->where(function ($w) use ($q) {
-                $w->where('name', 'like', "%{$q}%")
-                    ->orWhere('species', 'like', "%{$q}%")
-                    ->orWhere('breed', 'like', "%{$q}%");
-            });
+            $this->applySearch($query, $q);
         }
 
         foreach (['species', 'gender', 'size', 'status'] as $field) {
@@ -49,11 +45,7 @@ class AnimalController extends Controller
         $query = Animal::query();
 
         if ($q = $request->query('q')) {
-            $query->where(function ($w) use ($q) {
-                $w->where('name', 'like', "%{$q}%")
-                    ->orWhere('species', 'like', "%{$q}%")
-                    ->orWhere('breed', 'like', "%{$q}%");
-            });
+            $this->applySearch($query, $q);
         }
 
         foreach (['species', 'gender', 'size', 'status'] as $field) {
@@ -251,6 +243,21 @@ class AnimalController extends Controller
      * after creation, via toAdminDetail()) and animals that already existed before this feature
      * shipped (generated lazily the first time their detail page is viewed) — no backfill script.
      */
+    /**
+     * Case-insensitive regardless of the DB's collation: LIKE alone is only
+     * case-insensitive if the column happens to use a *_ci collation, so this
+     * lowercases both sides explicitly instead of relying on that.
+     */
+    private function applySearch($query, string $q): void
+    {
+        $needle = '%' . mb_strtolower($q) . '%';
+        $query->where(function ($w) use ($needle) {
+            $w->whereRaw('LOWER(name) LIKE ?', [$needle])
+                ->orWhereRaw('LOWER(species) LIKE ?', [$needle])
+                ->orWhereRaw('LOWER(breed) LIKE ?', [$needle]);
+        });
+    }
+
     private function ensureQrCode(Animal $animal): ?string
     {
         if ($animal->qr_code_path && Storage::disk('public')->exists($animal->qr_code_path)) {
