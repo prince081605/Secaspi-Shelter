@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getFeaturedAnimals, getImpactStats } from "../../lib/publicHomeApi.js";
 import { createReport } from "../../lib/rescueApi.js";
@@ -6,22 +6,27 @@ import { auth } from "../../lib/auth.js";
 import { getPublicSettings, settingImageUrl } from "../../lib/settingsApi.js";
 import "./LandingPage.css";
 
-const TAG_VARIANT = { av: "brand", urg: "amber", new: "sky" };
-
 const animalsFallback = [
-  {id:1,name:"Bingo",gender:"Male",age:"2 yrs",size:"Medium",status:"Available",tag:"av",tagLabel:"Available",photo:null},
-  {id:2,name:"Maya",gender:"Female",age:"1 yr",size:"Small",status:"Urgent",tag:"urg",tagLabel:"Urgent",photo:null},
-  {id:3,name:"Boss",gender:"Male",age:"3 yrs",size:"Large",status:"New",tag:"new",tagLabel:"New",photo:null}
+  { id: 1, name: "Bingo", age: "2 yrs", species: "Dog", status: "Available for adoption", photo: null },
+  { id: 2, name: "Maya", age: "1 yr", species: "Dog", status: "Available for adoption", photo: null },
+  { id: 3, name: "Boss", age: "3 yrs", species: "Dog", status: "Available for adoption", photo: null },
+  { id: 4, name: "Luna", age: "6 mos", species: "Dog", status: "Available for adoption", photo: null },
 ];
 
-const steps = [
-  {num:"STEP 1",icon:"🔍",title:"Browse & Choose",desc:"Explore our available Aspins and find your perfect match."},
-  {num:"STEP 2",icon:"📝",title:"Submit Application",desc:"Fill out our adoption form. We check to ensure the right fit."},
-  {num:"STEP 3",icon:"🤝",title:"Meet & Greet",desc:"Visit our shelter to meet your potential new best friend."},
-  {num:"STEP 4",icon:"🏠",title:"Welcome Home",desc:"Complete paperwork and bring your Aspin to their forever home."}
+const pathways = [
+  { key: "adopt", icon: "🏡", title: "Adopt", desc: "Browse profiles of vaccinated, vetted Aspins ready for a forever home.", linkLabel: "View adoptable dogs →", target: "animals" },
+  { key: "donate", icon: "🐾", title: "Donate", desc: "Fund food, vaccines, and medical care for dogs currently in intake. Every peso is tracked and reported.", linkLabel: "Support the shelter →", target: "donate" },
+  { key: "report", icon: "📍", title: "Report a stray", desc: "Spotted an Aspin in need? Submit a rescue report with location and photos so our team can respond quickly.", linkLabel: "File a report →", target: "report" },
 ];
 
-const donationAmounts = ["₱100","₱300","₱500","₱1,000","₱2,500"];
+const processSteps = [
+  { title: "Intake", desc: "A stray is reported or surrendered and brought in for a health and temperament assessment." },
+  { title: "Care", desc: "Vaccination, deworming, and recovery time with our volunteer-run medical team." },
+  { title: "Matching", desc: "Profile goes live for adoption, matched against applicant lifestyle and home setup." },
+  { title: "Homecoming", desc: "Home check, adoption agreement, and a follow-up visit within the first month." },
+];
+
+const donationAmounts = ["₱100", "₱300", "₱500", "₱1,000", "₱2,500"];
 
 const URGENCY_BY_CONDITION = {
   "Injured or sick": "high",
@@ -31,26 +36,56 @@ const URGENCY_BY_CONDITION = {
   "Other": "medium",
 };
 
-function Navbar({ shelterName, isLoggedIn, scrolled, menuOpen, onToggleMenu, onNavigate }) {
+function animalPhotoSrc(photo) {
+  if (!photo) return null;
+  return photo.startsWith("http") ? photo : `${import.meta.env.VITE_API_BASE_URL}/storage/${photo}`;
+}
+
+// Fires once an element scrolls into view, used to trigger the fade/slide-up reveal CSS.
+function useInView() {
+  const ref = useRef(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.15 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return [ref, inView];
+}
+
+function Navbar({ shelterName, isLoggedIn, menuOpen, scrolled, onToggleMenu, onNavigate }) {
   return (
-    <header>
-      <nav className={`ss-nav${scrolled ? " scrolled" : ""}`}>
-        <div className="ss-logo">{shelterName}</div>
-        <ul className="ss-nav-links">
+    <header className={`lp-header${scrolled ? " scrolled" : ""}`}>
+      <nav className="lp-nav" aria-label="Primary">
+        <a href="/" className="lp-logo">
+          <span className="lp-logo-mark" aria-hidden="true">🐾</span>
+          {shelterName}
+        </a>
+        <ul className="lp-nav-links">
           <li><a href="/adopt">Adopt</a></li>
-          <li><a href="#rescue">Rescue</a></li>
+          <li><a href="#how">How it works</a></li>
+          <li><a href="#impact">Impact</a></li>
           <li><a href="#donate">Donate</a></li>
-          <li><a href="#about">About</a></li>
         </ul>
-        <div className="ss-nav-actions">
-          {isLoggedIn ? (
-            <button className="ss-nav-ghost" onClick={() => onNavigate("/dashboard")}>Profile</button>
-          ) : (
-            <button className="ss-nav-ghost" onClick={() => onNavigate("/login")}>Login</button>
-          )}
-          <button className="ss-nav-cta" onClick={() => onNavigate("/adopt")}>Find a Dog</button>
+        <div className="lp-nav-actions">
+          <button className="lp-nav-ghost" onClick={() => onNavigate(isLoggedIn ? "/dashboard" : "/login")}>
+            {isLoggedIn ? "Profile" : "Login"}
+          </button>
+          <a href="#report" className="lp-nav-cta">Report a stray</a>
           <button
-            className={`ss-hamburger${menuOpen ? " open" : ""}`}
+            className={`lp-hamburger${menuOpen ? " open" : ""}`}
             onClick={onToggleMenu}
             aria-label="Toggle menu"
             aria-expanded={menuOpen}
@@ -60,121 +95,185 @@ function Navbar({ shelterName, isLoggedIn, scrolled, menuOpen, onToggleMenu, onN
         </div>
       </nav>
 
-      {menuOpen && (
-        <div className="ss-mobile-menu open">
-          <a href="/adopt" onClick={onToggleMenu}>Adopt</a>
-          <a href="#rescue" onClick={onToggleMenu}>Rescue</a>
-          <a href="#donate" onClick={onToggleMenu}>Donate</a>
-          <a href="#about" onClick={onToggleMenu}>About</a>
-          {isLoggedIn ? (
-            <a href="/dashboard" onClick={onToggleMenu}>Profile</a>
-          ) : (
-            <a href="/login" onClick={onToggleMenu}>Login</a>
-          )}
-          <button className="ss-nav-cta" onClick={() => onNavigate("/adopt")}>Find a Dog</button>
-        </div>
-      )}
+      <div className={`lp-mobile-menu${menuOpen ? " open" : ""}`}>
+        <a href="/adopt" onClick={onToggleMenu}>Adopt</a>
+        <a href="#how" onClick={onToggleMenu}>How it works</a>
+        <a href="#impact" onClick={onToggleMenu}>Impact</a>
+        <a href="#donate" onClick={onToggleMenu}>Donate</a>
+        <a href="#report" onClick={onToggleMenu}>Report a stray</a>
+        <a href={isLoggedIn ? "/dashboard" : "/login"} onClick={onToggleMenu}>{isLoggedIn ? "Profile" : "Login"}</a>
+      </div>
     </header>
   );
 }
 
-function Hero({ heroTitle, heroSubtitle, bannerImage, onMeetDogs, onReportRescue }) {
+function Hero({ eyebrow, heroTitle, heroSubtitle, bannerImage, stats, onMeetDogs, onReportStray }) {
+  const [textRef, textIn] = useInView();
+  const [cardRef, cardIn] = useInView();
+
   return (
-    <section className="ss-hero">
-      <div className="ss-hero-left">
-        <span className="ss-eyebrow">🐾 Rescuing Aspins since 2018</span>
-        <h1 className="ss-hero-title">{heroTitle}</h1>
-        <p className="ss-hero-sub">{heroSubtitle}</p>
-        <div className="ss-hero-actions">
-          <button className="ss-btn-primary" onClick={onMeetDogs}>Meet Our Dogs</button>
-          <button className="ss-btn-secondary" onClick={onReportRescue}>Report a Rescue</button>
+    <section className="lp-hero">
+      <div ref={textRef} className={`lp-reveal${textIn ? " is-visible" : ""}`}>
+        <span className="lp-eyebrow">{eyebrow}</span>
+        <h1>{heroTitle}</h1>
+        <p className="lead">{heroSubtitle}</p>
+        <div className="lp-hero-actions">
+          <button className="lp-btn lp-btn-primary" onClick={onMeetDogs}>Browse adoptable Aspins</button>
+          <button className="lp-btn lp-btn-ghost" onClick={onReportStray}>Report a stray</button>
+        </div>
+        <div className="lp-hero-stats">
+          {stats.map((s) => (
+            <div className="lp-hero-stat" key={s.label}>
+              <div className="num">{s.value}</div>
+              <div className="label">{s.label}</div>
+            </div>
+          ))}
         </div>
       </div>
-      <div className="ss-hero-right">
-        <div className="ss-hero-visual">
-          <img
-            src={bannerImage}
-            alt="A rescued dog ready for adoption"
-            className="ss-hero-photo"
-            onError={(e) => { e.currentTarget.style.display = "none"; }}
-          />
-          <div className="ss-hero-dog">🐾</div>
+
+      <div
+        ref={cardRef}
+        className={`lp-hero-card lp-reveal${cardIn ? " is-visible" : ""}`}
+        style={{ "--reveal-delay": "0.12s" }}
+      >
+        <div className="photo-block">
+          {bannerImage ? <img src={bannerImage} alt="A rescued Aspin ready for adoption" /> : "Photo placeholder — Aspin portrait"}
+        </div>
+        <div className="tag-row">
+          <div>
+            <div className="id-tag">Bantay</div>
+            <div className="meta"><span>2 yrs</span><span>Male</span><span>Medium</span></div>
+          </div>
+          <span className="status-pill">Available</span>
         </div>
       </div>
     </section>
   );
 }
 
-function StatsBar({ impact }) {
+function Pathways({ onNavigateTo }) {
+  const [headRef, headIn] = useInView();
+  const [gridRef, gridIn] = useInView();
+
   return (
-    <section className="ss-stats" aria-label="Shelter impact statistics">
-      <div className="ss-stats-inner">
-        <div className="ss-stat"><div className="ss-stat-num">{impact ? `${impact.animals_rescued}+` : "1,200+"}</div><div className="ss-stat-label">Dogs Rescued</div></div>
-        <div className="ss-stat"><div className="ss-stat-num">{impact ? `${impact.animals_adopted}+` : "890+"}</div><div className="ss-stat-label">Successful Adoptions</div></div>
-        <div className="ss-stat"><div className="ss-stat-num">{impact?.success_rate != null ? `${impact.success_rate}%` : "98%"}</div><div className="ss-stat-label">Success Rate</div></div>
+    <section id="how">
+      <div className="lp-container">
+        <div ref={headRef} className={`lp-section-head lp-reveal${headIn ? " is-visible" : ""}`}>
+          <span className="lp-eyebrow">Three ways to help</span>
+          <h2>Whatever you can give, it matters</h2>
+          <p>Adoption isn't the only way to change an Aspin's story. Every pathway below directly supports a dog in our care.</p>
+        </div>
+        <div ref={gridRef} className={`lp-pathways lp-reveal-group${gridIn ? " is-visible" : ""}`}>
+          {pathways.map((p) => (
+            <div className={`lp-pathway-card lp-reveal-item ${p.key}`} key={p.key}>
+              <div className="lp-pathway-icon" aria-hidden="true">{p.icon}</div>
+              <h3>{p.title}</h3>
+              <p>{p.desc}</p>
+              <button className="link" onClick={() => onNavigateTo(p.target)}>{p.linkLabel}</button>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
 }
 
 function FeaturedAnimals({ animals, onAdopt }) {
+  const [headRef, headIn] = useInView();
+  const [gridRef, gridIn] = useInView();
+
   return (
-    <section className="ss-section" id="animals">
-      <div className="ss-section-header">
-        <p className="ss-eyebrow-c">Available for Adoption</p>
-        <h2 className="ss-section-title">Meet your new best friend</h2>
-        <p className="ss-section-sub">All our dogs are vaccinated, dewormed, and ready for a loving home.</p>
-      </div>
-      <div className="ss-animals">
-        {animals.slice(0, 3).map((a) => (
-          <div className="ss-animal-card" key={a.name ?? a.id}>
-            <div className="ss-animal-img">
-              {a.photo ? <img src={a.photo.startsWith('http') ? a.photo : `${import.meta.env.VITE_API_BASE_URL}/storage/${a.photo}`} alt={a.name} /> : "🐕"}
-            </div>
-            <div className="ss-animal-info">
-              <div className="ss-animal-name">{a.name}</div>
-              <div className="ss-animal-meta"><span>{a.gender}</span><span>{a.age}</span><span>{a.size}</span></div>
-              <span className={`ui-tag ui-tag-${TAG_VARIANT[a.tag] || 'muted'}`}>{a.tagLabel}</span>
-              <button className="ss-adopt-btn" onClick={onAdopt}>Start Adoption</button>
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="ss-view-all">
-        <button className="ss-btn-secondary" onClick={onAdopt}>View All Dogs →</button>
+    <section id="animals">
+      <div className="lp-container">
+        <div ref={headRef} className={`lp-section-head lp-reveal${headIn ? " is-visible" : ""}`}>
+          <span className="lp-eyebrow">Meet the dogs</span>
+          <h2>Currently looking for homes</h2>
+          <p>A few of the Aspins waiting in our shelter right now.</p>
+        </div>
+        <div ref={gridRef} className={`lp-featured-grid lp-reveal-group${gridIn ? " is-visible" : ""}`}>
+          {animals.slice(0, 4).map((a) => {
+            const photo = animalPhotoSrc(a.photo);
+            return (
+              <article className="lp-intake-card lp-reveal-item" key={a.id ?? a.name} onClick={onAdopt} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter") onAdopt(); }}>
+                <div className="photo-block">
+                  {photo ? <img src={photo} alt={a.name} /> : "Photo placeholder"}
+                </div>
+                <div className="body">
+                  <div className="top-row">
+                    <span className="name">{a.name}</span>
+                    <span className="age">{a.age}</span>
+                  </div>
+                  <div className="tags">
+                    {a.species && <span className="tag">{a.species}</span>}
+                    {a.status && <span className="tag">{a.status}</span>}
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+        <div className="lp-featured-foot">
+          <button className="lp-btn lp-btn-ghost" onClick={onAdopt}>See all available Aspins</button>
+        </div>
       </div>
     </section>
   );
 }
 
-function HowItWorks() {
+function ImpactBand({ stats }) {
+  const [ref, inView] = useInView();
+
   return (
-    <section className="ss-section alt">
-      <div className="ss-section-header">
-        <p className="ss-eyebrow-c">How It Works</p>
-        <h2 className="ss-section-title">Adopting is simple</h2>
+    <section id="impact" className="lp-section">
+      <div ref={ref} className={`lp-impact lp-reveal${inView ? " is-visible" : ""}`}>
+        <div className="lp-impact-inner">
+          {stats.map((s) => (
+            <div key={s.label}>
+              <div className="num">{s.value}</div>
+              <div className="label">{s.label}</div>
+            </div>
+          ))}
+        </div>
       </div>
-      <div className="ss-steps">
-        {steps.map((s) => (
-          <div className="ss-step-card" key={s.num}>
-            <div className="ss-step-icon">{s.icon}</div>
-            <div className="ss-step-num">{s.num}</div>
-            <div className="ss-step-title">{s.title}</div>
-            <div className="ss-step-desc">{s.desc}</div>
-          </div>
-        ))}
+    </section>
+  );
+}
+
+function Process() {
+  const [headRef, headIn] = useInView();
+  const [gridRef, gridIn] = useInView();
+
+  return (
+    <section className="lp-section">
+      <div className="lp-container">
+        <div ref={headRef} className={`lp-section-head lp-reveal${headIn ? " is-visible" : ""}`}>
+          <span className="lp-eyebrow">The process</span>
+          <h2>How a rescue becomes a homecoming</h2>
+        </div>
+        <div ref={gridRef} className={`lp-process lp-reveal-group${gridIn ? " is-visible" : ""}`}>
+          {processSteps.map((s) => (
+            <div className="lp-step lp-reveal-item" key={s.title}>
+              <h3>{s.title}</h3>
+              <p>{s.desc}</p>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
 }
 
 function RescueForm({ form, reportPhoto, reportState, onChange, onPhotoChange, onSubmit }) {
+  const [ref, inView] = useInView();
+
   return (
-    <section className="ss-rescue" id="rescue">
-      <div>
-        <p className="ss-eyebrow-c">Emergency Rescue</p>
-        <h2 className="ss-section-title">Spotted a dog in distress?</h2>
-        <p className="ss-section-sub" style={{ marginBottom: "1.5rem" }}>Report it and our rescue team will respond fast.</p>
+    <section id="report" className="lp-section">
+      <div ref={ref} className={`lp-container lp-reveal${inView ? " is-visible" : ""}`} style={{ maxWidth: 680 }}>
+        <div className="lp-section-head">
+          <span className="lp-eyebrow">Emergency Rescue</span>
+          <h2>Spotted a dog in distress?</h2>
+          <p>Report it and our rescue team will respond fast.</p>
+        </div>
         {reportState.status === "success" && (
           <div className="ui-success-msg">Thank you — your rescue report has been submitted. Our team will respond as fast as possible.</div>
         )}
@@ -182,19 +281,19 @@ function RescueForm({ form, reportPhoto, reportState, onChange, onPhotoChange, o
           <div className="ui-error">{reportState.error}</div>
         )}
         <form onSubmit={onSubmit}>
-          <div className="ss-form-r">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
             <div><label className="ui-label">Your name</label><input className="ui-input" name="name" value={form.name} onChange={onChange} placeholder="Juan dela Cruz" /></div>
             <div><label className="ui-label">Contact</label><input className="ui-input" name="contact" value={form.contact} onChange={onChange} placeholder="09XX XXX XXXX" /></div>
           </div>
-          <div className="ss-form-f"><label className="ui-label ui-label-required">Location</label><input className="ui-input" name="location" required value={form.location} onChange={onChange} placeholder="Street, Barangay, City" /></div>
-          <div className="ss-form-f"><label className="ui-label">Condition</label><select className="ui-select" name="condition" value={form.condition} onChange={onChange}><option>Injured or sick</option><option>Stray / no owner</option><option>Abandoned</option><option>In immediate danger</option><option>Other</option></select></div>
-          <div className="ss-form-f"><label className="ui-label">Details</label><textarea className="ui-textarea" name="details" value={form.details} onChange={onChange} placeholder="Describe what you see..." /></div>
-          <div className="ss-form-f">
+          <div className="ui-field"><label className="ui-label ui-label-required">Location</label><input className="ui-input" name="location" required value={form.location} onChange={onChange} placeholder="Street, Barangay, City" /></div>
+          <div className="ui-field"><label className="ui-label">Condition</label><select className="ui-select" name="condition" value={form.condition} onChange={onChange}><option>Injured or sick</option><option>Stray / no owner</option><option>Abandoned</option><option>In immediate danger</option><option>Other</option></select></div>
+          <div className="ui-field"><label className="ui-label">Details</label><textarea className="ui-textarea" name="details" value={form.details} onChange={onChange} placeholder="Describe what you see..." /></div>
+          <div className="ui-field">
             <label className="ui-label">Photo (optional)</label>
             <input className="ui-input" type="file" accept="image/*" onChange={onPhotoChange} />
-            {reportPhoto && <span className="ss-file-label">Selected: {reportPhoto.name}</span>}
+            {reportPhoto && <span style={{ display: "block", fontSize: 13, color: "var(--lp-ink-soft)", marginTop: 6 }}>Selected: {reportPhoto.name}</span>}
           </div>
-          <button type="submit" className="ss-btn-primary" disabled={reportState.status === "loading"}>
+          <button type="submit" className="lp-btn lp-btn-primary" disabled={reportState.status === "loading"}>
             {reportState.status === "loading" ? "Sending..." : "Send Report"}
           </button>
         </form>
@@ -204,41 +303,50 @@ function RescueForm({ form, reportPhoto, reportState, onChange, onPhotoChange, o
 }
 
 function TopSupporters({ topDonors }) {
+  const [headRef, headIn] = useInView();
+  const [gridRef, gridIn] = useInView();
+
   if (!topDonors?.length) return null;
 
   return (
-    <section className="ss-section">
-      <div className="ss-section-header">
-        <p className="ss-eyebrow-c">Community Impact</p>
-        <h2 className="ss-section-title">Our Top Supporters</h2>
-        <p className="ss-section-sub">Donors who've gone above and beyond for our rescues.</p>
-      </div>
-      <div className="ss-donors">
-        {topDonors.map((d, i) => (
-          <div className="ss-donor-card" key={`${d.name}-${i}`}>
-            <div className="ss-donor-rank">#{i + 1}</div>
-            <div className="ss-donor-name">{d.name}</div>
-            <div className="ss-donor-amt">₱{d.total.toLocaleString()}</div>
-          </div>
-        ))}
+    <section className="lp-section">
+      <div className="lp-container">
+        <div ref={headRef} className={`lp-section-head lp-reveal${headIn ? " is-visible" : ""}`}>
+          <span className="lp-eyebrow">Community Impact</span>
+          <h2>Our Top Supporters</h2>
+          <p>Donors who've gone above and beyond for our rescues.</p>
+        </div>
+        <div ref={gridRef} className={`lp-donors lp-reveal-group${gridIn ? " is-visible" : ""}`}>
+          {topDonors.map((d, i) => (
+            <div className="lp-donor-card lp-reveal-item" key={`${d.name}-${i}`}>
+              <div className="lp-donor-rank">#{i + 1}</div>
+              <div className="lp-donor-name">{d.name}</div>
+              <div className="lp-donor-amt">₱{d.total.toLocaleString()}</div>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
 }
 
-function DonateCta({ amt, onSelectAmount, onDonate }) {
+function DonateCta({ amt, onSelectAmount, onDonate, onReportStray }) {
+  const [ref, inView] = useInView();
+
   return (
-    <section className="ss-donate" id="donate">
-      <div className="ss-donate-card">
-        <p className="ss-eyebrow-c">Support the Mission</p>
-        <h2 className="ss-donateT">Every peso feeds, heals, and shelters</h2>
-        <p className="ss-donateS">Your donation covers vet care, food, and shelter operations.</p>
-        <div className="ss-donateA">
+    <section id="donate" className="lp-section">
+      <div ref={ref} className={`lp-cta-banner lp-reveal${inView ? " is-visible" : ""}`}>
+        <h2>Help us rescue the next Aspin off the street.</h2>
+        <p>Your donation funds food, vaccines, and shelter for dogs waiting for their second chance.</p>
+        <div className="lp-amounts">
           {donationAmounts.map((a) => (
-            <button key={a} className={`ss-amt${amt === a ? " active" : ""}`} onClick={() => onSelectAmount(a)}>{a}</button>
+            <button key={a} className={`lp-amt${amt === a ? " active" : ""}`} onClick={() => onSelectAmount(a)}>{a}</button>
           ))}
         </div>
-        <button className="ss-donateB" onClick={onDonate}>Donate {amt}</button>
+        <div className="lp-cta-actions">
+          <button className="lp-btn lp-btn-primary" onClick={onDonate}>Donate {amt}</button>
+          <button className="lp-btn lp-btn-ghost" onClick={onReportStray}>Report a stray instead</button>
+        </div>
       </div>
     </section>
   );
@@ -246,39 +354,41 @@ function DonateCta({ amt, onSelectAmount, onDonate }) {
 
 function SiteFooter({ shelterName, settings, address }) {
   return (
-    <footer className="ss-footer" id="about">
-      <div className="ss-footM">
-        <div className="ss-footB">
-          <div className="ss-logo">{shelterName}</div>
-          <p>{settings.about_us_content || "Rescuing and rehoming Aspins since 2018."}</p>
-          {(settings.social_facebook || settings.social_instagram || settings.social_twitter) && (
-            <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
-              {settings.social_facebook && <a href={settings.social_facebook} target="_blank" rel="noreferrer">Facebook</a>}
-              {settings.social_instagram && <a href={settings.social_instagram} target="_blank" rel="noreferrer">Instagram</a>}
-              {settings.social_twitter && <a href={settings.social_twitter} target="_blank" rel="noreferrer">Twitter</a>}
-            </div>
-          )}
+    <footer className="lp-footer">
+      <div className="lp-container">
+        <div className="lp-footer-grid">
+          <div className="lp-footer-brand">
+            <a href="/" className="lp-logo"><span className="lp-logo-mark" aria-hidden="true">🐾</span>{shelterName}</a>
+            <p>{settings.about_us_content || "Rescuing and rehoming the Philippines' native Aspin dogs."}</p>
+            {(settings.social_facebook || settings.social_instagram || settings.social_twitter) && (
+              <div style={{ display: "flex", gap: 14, marginTop: 16 }}>
+                {settings.social_facebook && <a href={settings.social_facebook} target="_blank" rel="noreferrer">Facebook</a>}
+                {settings.social_instagram && <a href={settings.social_instagram} target="_blank" rel="noreferrer">Instagram</a>}
+                {settings.social_twitter && <a href={settings.social_twitter} target="_blank" rel="noreferrer">Twitter</a>}
+              </div>
+            )}
+          </div>
+          <div className="lp-footer-col">
+            <h4>Shelter</h4>
+            <ul><li><a href="/adopt">Adopt</a></li><li><a href="#donate">Donate</a></li><li><a href="#how">How it works</a></li></ul>
+          </div>
+          <div className="lp-footer-col">
+            <h4>Get involved</h4>
+            <ul><li><a href="#">Volunteer</a></li><li><a href="#report">Report a stray</a></li><li><a href="#">Foster a dog</a></li></ul>
+          </div>
+          <div className="lp-footer-col">
+            <h4>Contact</h4>
+            <ul>
+              {settings.contact_email && <li><a href={`mailto:${settings.contact_email}`}>{settings.contact_email}</a></li>}
+              {settings.contact_phone && <li>{settings.contact_phone}</li>}
+              <li>{address}</li>
+            </ul>
+          </div>
         </div>
-        <div className="ss-footCol">
-          <h4>Adopt</h4>
-          <ul><li><a href="#animals">Available Dogs</a></li><li><a href="#">Process</a></li><li><a href="#">FAQs</a></li></ul>
+        <div className="lp-footer-bottom">
+          <span>© {new Date().getFullYear()} {shelterName}. All rights reserved.</span>
+          <span>Built with care for Aspins everywhere.</span>
         </div>
-        <div className="ss-footCol">
-          <h4>Get Involved</h4>
-          <ul><li><a href="#donate">Donate</a></li><li><a href="#">Volunteer</a></li><li><a href="#rescue">Report Rescue</a></li></ul>
-        </div>
-        <div className="ss-footCol">
-          <h4>Contact</h4>
-          <ul>
-            {settings.contact_email && <li><a href={`mailto:${settings.contact_email}`}>{settings.contact_email}</a></li>}
-            {settings.contact_phone && <li>{settings.contact_phone}</li>}
-            <li>{address}</li>
-          </ul>
-        </div>
-      </div>
-      <div className="ss-footBot">
-        <p>© {new Date().getFullYear()} {shelterName}. All rights reserved.</p>
-        <p>{address}</p>
       </div>
     </footer>
   );
@@ -291,11 +401,18 @@ export default function LandingPage() {
   const [impact, setImpact] = useState(null);
   const [settings, setSettings] = useState({});
   const [menuOpen, setMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [form, setForm] = useState({ name: "", contact: "", location: "", condition: "Injured or sick", details: "" });
   const [reportPhoto, setReportPhoto] = useState(null);
   const [reportState, setReportState] = useState({ status: "idle", error: "" });
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -303,7 +420,7 @@ export default function LandingPage() {
       try {
         const data = await getFeaturedAnimals();
         if (!mounted) return;
-        setAnimals(Array.isArray(data?.animals) ? data.animals : animalsFallback);
+        setAnimals(Array.isArray(data?.animals) && data.animals.length ? data.animals : animalsFallback);
       } catch (err) {
         console.error("Failed to load featured animals:", err);
       }
@@ -350,17 +467,29 @@ export default function LandingPage() {
     return () => { mounted = false; };
   }, []);
 
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
   const shelterName = settings.shelter_name || "SECASPI Shelter";
-  const heroTitle = settings.hero_title || "Every Aspin deserves a forever home.";
-  const heroSubtitle = settings.hero_subtitle || "We rescue, rehabilitate, and rehome native Philippine dogs. Your adoption changes two lives: theirs, and yours.";
+  const heroTitle = settings.hero_title || "Every Aspin deserves a home, not just a street.";
+  const heroSubtitle = settings.hero_subtitle || "SECASPI rescues, rehabilitates, and rehomes the Philippines' native dogs — the Aspin — connecting stray animals with people ready to give them a second chance.";
   const bannerImage = settings.banner_image_path ? settingImageUrl(settings.banner_image_path) : "/hero-dog.jpg";
   const address = settings.address || "Calamba, Laguna, Philippines";
+  const eyebrow = address.split(",").slice(0, 2).join(",").trim() || "Calamba, Laguna";
+
+  // Derived "currently in care" = rescued minus already-adopted, since the public API
+  // doesn't expose a literal in-care count. Used for both the hero and impact band.
+  const inCare = impact ? Math.max(0, (impact.animals_rescued ?? 0) - (impact.animals_adopted ?? 0)) : null;
+
+  const heroStats = [
+    { label: "Aspins rehomed", value: impact ? `${impact.animals_adopted}` : "312" },
+    { label: "Currently in care", value: inCare != null ? `${inCare}` : "48" },
+    { label: "Active volunteers", value: impact?.volunteers_count != null ? `${impact.volunteers_count}` : "96" },
+  ];
+
+  const impactStats = [
+    { label: "Dogs rehomed since 2021", value: impact ? `${impact.animals_adopted}` : "312" },
+    { label: "In active care today", value: inCare != null ? `${inCare}` : "48" },
+    { label: "Registered volunteers", value: impact?.volunteers_count != null ? `${impact.volunteers_count}` : "96" },
+    { label: "Raised for shelter care", value: impact ? `₱${Number(impact.donations_raised || 0).toLocaleString()}` : "₱1.2M" },
+  ];
 
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
@@ -389,26 +518,31 @@ export default function LandingPage() {
 
   return (
     <div className="landingPage">
+      <a href="#main" className="skip-link">Skip to content</a>
+
       <Navbar
         shelterName={shelterName}
         isLoggedIn={isLoggedIn}
-        scrolled={scrolled}
         menuOpen={menuOpen}
+        scrolled={scrolled}
         onToggleMenu={() => setMenuOpen((open) => !open)}
         onNavigate={(path) => { setMenuOpen(false); navigate(path); }}
       />
 
-      <main>
+      <main id="main">
         <Hero
+          eyebrow={eyebrow}
           heroTitle={heroTitle}
           heroSubtitle={heroSubtitle}
           bannerImage={bannerImage}
+          stats={heroStats}
           onMeetDogs={() => scrollTo("animals")}
-          onReportRescue={() => scrollTo("rescue")}
+          onReportStray={() => scrollTo("report")}
         />
-        <StatsBar impact={impact} />
+        <Pathways onNavigateTo={(id) => scrollTo(id)} />
         <FeaturedAnimals animals={animals} onAdopt={() => navigate("/adopt")} />
-        <HowItWorks />
+        <ImpactBand stats={impactStats} />
+        <Process />
         <RescueForm
           form={form}
           reportPhoto={reportPhoto}
@@ -422,6 +556,7 @@ export default function LandingPage() {
           amt={amt}
           onSelectAmount={setAmt}
           onDonate={() => navigate("/donate", { state: { amount: Number(amt.replace(/[^0-9]/g, "")) } })}
+          onReportStray={() => scrollTo("report")}
         />
       </main>
 

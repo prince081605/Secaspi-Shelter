@@ -63,6 +63,7 @@ Route::get('/home/impact', function () {
     $animalsAdopted = DB::table('animals')->where('status', 'adopted')->count();
     $donationsRaised = (float) DB::table('donations')->where('status', 'verified')->sum('amount');
     $rescueReportsHandled = DB::table('rescue_reports')->count();
+    $volunteersCount = DB::table('volunteers')->count();
 
     $completedApplications = DB::table('adoption_applications')->where('status', 'completed')->count();
     $declinedApplications = DB::table('adoption_applications')->where('status', 'declined')->count();
@@ -96,6 +97,7 @@ Route::get('/home/impact', function () {
         'animals_adopted' => $animalsAdopted,
         'donations_raised' => $donationsRaised,
         'rescue_reports_handled' => $rescueReportsHandled,
+        'volunteers_count' => $volunteersCount,
         'success_rate' => $successRate,
         'top_donors' => $topDonors,
     ]);
@@ -122,7 +124,8 @@ $query = DB::table('animals')
                 'animals.status',
             ])
             ->where('animals.status', '!=', 'archived')
-            ->orderByDesc('animals.id');
+            ->orderByDesc('animals.id')
+            ->limit(8);
 
         if ($photosTableExists) {
             // Pick exactly one photo per animal (prefer is_main, else the earliest row),
