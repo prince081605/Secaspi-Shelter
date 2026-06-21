@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
-import { dashboardMock } from '../../lib/dashboardMockData';
 import { auth } from '../../lib/auth';
 import { listMyAdoptionApplications, listMyFosterApplications } from '../../lib/animalsApi';
 import { updateProfile, changePassword } from '../../lib/profileApi';
@@ -122,39 +121,6 @@ function UserApplications({ applications, loading }) {
   );
 }
 
-function UserFavorites() {
-  const favorites = dashboardMock.recentlyAdopted;
-
-  return (
-    <>
-      <div className="dashSectionTitle">🐶 Recently adopted Aspins</div>
-      <div className="dashTableWrap">
-        <table className="dashTable">
-          <thead>
-            <tr>
-              <th>Dog</th>
-              <th>Adopter</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {favorites.map((f, idx) => (
-              <tr key={idx}>
-                <td>{f.dog}</td>
-                <td>{f.adopter}</td>
-                <td>
-                  <span className={"badge " + (f.variant === 'green' ? 'badgeGreen' : f.variant === 'amber' ? 'badgeOrange' : f.variant === 'blue' ? 'badgeSky' : 'badge')}>{f.status}</span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </>
-  );
-}
-
-
 function UserProfile({ user, onProfileUpdated }) {
   const [fullName, setFullName] = useState(user?.full_name || '');
   const [phone, setPhone] = useState(user?.phone || '');
@@ -257,45 +223,6 @@ function UserProfile({ user, onProfileUpdated }) {
     </>
   );
 }
-
-function UserMessages() {
-  const reminders = dashboardMock.medicalReminders;
-
-  return (
-    <>
-      <div className="dashSectionTitle">
-        💉 Upcoming medical reminders
-      </div>
-      <div className="dashTableWrap">
-        <table className="dashTable">
-          <thead>
-            <tr>
-              <th>Dog</th>
-              <th>ID</th>
-              <th>Type</th>
-              <th>Due date</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {reminders.map((r, idx) => (
-              <tr key={idx}>
-                <td>{r.dog}</td>
-                <td>{r.id}</td>
-                <td>{r.type}</td>
-                <td>{r.dueDate}</td>
-                <td>
-                  <span className={"badge " + (r.variant === 'green' ? 'badgeGreen' : r.variant === 'red' ? 'badgeOrange' : 'badgeOrange')}>{r.status}</span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </>
-  );
-}
-
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -518,15 +445,9 @@ export default function Dashboard() {
           ) : (
             <div>
               {activeNav === 'dashboard' ? <UserApplications applications={applications} loading={appsLoading} /> : null}
-              {activeNav === 'animals' ? <UserFavorites /> : null}
-
               {activeNav === 'profile' ? <UserProfile key={user?.id} user={user} onProfileUpdated={setUser} /> : null}
-              {activeNav === 'reports' ? <UserMessages /> : null}
               {/* default user sections */}
-              {activeNav === 'dashboard' ? <UserFavorites /> : null}
               {activeNav === 'dashboard' ? <UserProfile key={user?.id} user={user} onProfileUpdated={setUser} /> : null}
-              {activeNav === 'dashboard' ? <UserMessages /> : null}
-
             </div>
           )}
         </main>
