@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/user/Login';
 import Register from './pages/user/Register';
 import ForgotPassword from './pages/user/ForgotPassword';
+import ResetPassword from './pages/user/ResetPassword';
 import Home from './pages/user/Home';
 import Adoption from './pages/user/Adoption';
 import AnimalDetail from './pages/user/AnimalDetail';
@@ -47,6 +48,7 @@ export default function AppRouter() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/" element={<Home />} />
         <Route path="/adopt" element={<Adoption />} />
         <Route path="/adopt/:id" element={<AnimalDetail />} />

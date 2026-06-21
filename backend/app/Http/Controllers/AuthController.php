@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use App\Models\User;
@@ -89,16 +91,40 @@ class AuthController extends Controller
             $token = Str::random(64);
             Cache::put("password_reset:{$email}", ['token' => $token, 'user_id' => $user->id], 30 * 60);
 
+            $resetUrl = rtrim(config('app.frontend_url'), '/')
+                . '/reset-password?email=' . urlencode($email)
+                . '&token=' . $token;
+
+            // Deliver the reset link by email. Wrapped so a mail-transport failure never
+            // 500s the request or reveals whether the address exists.
+            try {
+                Mail::raw(
+                    "Hi {$user->full_name},\n\n"
+                    . "We received a request to reset your SECASPI Shelter password. "
+                    . "Open the link below to choose a new password (valid for 30 minutes):\n\n"
+                    . "{$resetUrl}\n\n"
+                    . "If you didn't request this, you can safely ignore this email.",
+                    function ($message) use ($email) {
+                        $message->to($email)->subject('Reset your SECASPI Shelter password');
+                    }
+                );
+            } catch (\Throwable $e) {
+                Log::error('Failed to send password reset email', ['email' => $email, 'exception' => $e]);
+            }
+
+            // In local dev (mail goes to the log) also return the token directly so the flow
+            // can be exercised without a configured mail transport.
             if (app()->environment('local')) {
                 return response()->json([
-                    'message' => 'Password reset token generated (development)',
+                    'message' => 'Password reset link sent (development — token shown below).',
                     'token'   => $token,
                 ]);
             }
         }
 
+        // Always the same generic response so the endpoint can't enumerate registered accounts.
         return response()->json([
-            'message' => 'If the email exists, a password reset token will be generated.',
+            'message' => 'If that email is registered, a password reset link has been sent.',
         ]);
     }
 
