@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 return new class extends Migration {
     public function up(): void {
         DB::unprepared("
-            CREATE TABLE users (
+            CREATE TABLE IF NOT EXISTS users (
                 user_id SERIAL PRIMARY KEY,
                 full_name VARCHAR(150) NOT NULL,
                 email VARCHAR(150) UNIQUE NOT NULL,
@@ -18,7 +18,7 @@ return new class extends Migration {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
-            CREATE TABLE user_profiles (
+            CREATE TABLE IF NOT EXISTS user_profiles (
                 profile_id SERIAL PRIMARY KEY,
                 user_id INT,
                 address TEXT,
@@ -28,7 +28,7 @@ return new class extends Migration {
                 FOREIGN KEY (user_id) REFERENCES users(user_id)
             );
 
-            CREATE TABLE animals (
+            CREATE TABLE IF NOT EXISTS animals (
                 animal_id SERIAL PRIMARY KEY,
                 name VARCHAR(100),
                 species VARCHAR(50),
@@ -42,7 +42,7 @@ return new class extends Migration {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
-            CREATE TABLE animal_photos (
+            CREATE TABLE IF NOT EXISTS animal_photos (
                 photo_id SERIAL PRIMARY KEY,
                 animal_id INT,
                 photo_url TEXT,
@@ -50,7 +50,7 @@ return new class extends Migration {
                 FOREIGN KEY (animal_id) REFERENCES animals(animal_id)
             );
 
-            CREATE TABLE medical_records (
+            CREATE TABLE IF NOT EXISTS medical_records (
                 record_id SERIAL PRIMARY KEY,
                 animal_id INT,
                 type VARCHAR(20),
@@ -62,7 +62,7 @@ return new class extends Migration {
                 FOREIGN KEY (animal_id) REFERENCES animals(animal_id)
             );
 
-            CREATE TABLE vaccinations (
+            CREATE TABLE IF NOT EXISTS vaccinations (
                 vaccine_id SERIAL PRIMARY KEY,
                 animal_id INT,
                 vaccine_name VARCHAR(150),
@@ -71,7 +71,7 @@ return new class extends Migration {
                 FOREIGN KEY (animal_id) REFERENCES animals(animal_id)
             );
 
-            CREATE TABLE adoption_applications (
+            CREATE TABLE IF NOT EXISTS adoption_applications (
                 application_id SERIAL PRIMARY KEY,
                 user_id INT,
                 animal_id INT,
@@ -88,7 +88,7 @@ return new class extends Migration {
                 FOREIGN KEY (animal_id) REFERENCES animals(animal_id)
             );
 
-            CREATE TABLE foster_applications (
+            CREATE TABLE IF NOT EXISTS foster_applications (
                 foster_id SERIAL PRIMARY KEY,
                 user_id INT,
                 animal_id INT,
@@ -100,7 +100,7 @@ return new class extends Migration {
                 FOREIGN KEY (animal_id) REFERENCES animals(animal_id)
             );
 
-            CREATE TABLE donations (
+            CREATE TABLE IF NOT EXISTS donations (
                 donation_id SERIAL PRIMARY KEY,
                 user_id INT,
                 reference_no VARCHAR(100),
@@ -112,7 +112,7 @@ return new class extends Migration {
                 FOREIGN KEY (user_id) REFERENCES users(user_id)
             );
 
-            CREATE TABLE rescue_reports (
+            CREATE TABLE IF NOT EXISTS rescue_reports (
                 report_id SERIAL PRIMARY KEY,
                 reporter_name VARCHAR(150),
                 contact_number VARCHAR(50),
@@ -126,7 +126,7 @@ return new class extends Migration {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
-            CREATE TABLE volunteers (
+            CREATE TABLE IF NOT EXISTS volunteers (
                 volunteer_id SERIAL PRIMARY KEY,
                 user_id INT,
                 availability VARCHAR(100),
@@ -135,7 +135,7 @@ return new class extends Migration {
                 FOREIGN KEY (user_id) REFERENCES users(user_id)
             );
 
-            CREATE TABLE volunteer_tasks (
+            CREATE TABLE IF NOT EXISTS volunteer_tasks (
                 task_id SERIAL PRIMARY KEY,
                 volunteer_id INT,
                 task_name VARCHAR(150),
@@ -144,7 +144,7 @@ return new class extends Migration {
                 FOREIGN KEY (volunteer_id) REFERENCES volunteers(volunteer_id)
             );
 
-            CREATE TABLE notifications (
+            CREATE TABLE IF NOT EXISTS notifications (
                 notification_id SERIAL PRIMARY KEY,
                 user_id INT,
                 message TEXT,
@@ -153,7 +153,7 @@ return new class extends Migration {
                 FOREIGN KEY (user_id) REFERENCES users(user_id)
             );
 
-            CREATE TABLE audit_logs (
+            CREATE TABLE IF NOT EXISTS audit_logs (
                 log_id SERIAL PRIMARY KEY,
                 user_id INT,
                 action TEXT,
@@ -162,7 +162,7 @@ return new class extends Migration {
                 FOREIGN KEY (user_id) REFERENCES users(user_id)
             );
 
-            CREATE TABLE saved_animals (
+            CREATE TABLE IF NOT EXISTS saved_animals (
                 saved_id SERIAL PRIMARY KEY,
                 user_id INT,
                 animal_id INT,
