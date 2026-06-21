@@ -16,6 +16,7 @@ use App\Http\Controllers\VolunteerController;
 use App\Http\Controllers\IntakeController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\NotificationController;
 
 
 // Public routes
@@ -46,6 +47,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/rescue-reports/{report}/status',   [RescueReportController::class, 'updateStatus'])->middleware('admin');
     Route::put('/profile',                           [ProfileController::class, 'update']);
     Route::post('/profile/change-password',          [ProfileController::class, 'changePassword']);
+
+    // ---- Notifications (Phase 8) ----
+    Route::get('/notifications',                     [NotificationController::class, 'index']);
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead']);
+    Route::post('/notifications/read-all',           [NotificationController::class, 'markAllRead']);
 
     // ---- Animal management (Phase 6) ----
     Route::get('/admin/animals',                     [AnimalController::class, 'adminIndex'])->middleware('admin');

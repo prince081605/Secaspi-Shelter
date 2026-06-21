@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Animal;
 use App\Models\FosterApplication;
+use App\Notifications\FosterStatusChanged;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -113,8 +114,14 @@ class FosterApplicationController extends Controller
         }
 
         $application->update($validator->validated());
+        $statusChanged = $application->wasChanged('status');
+        $application = $application->fresh(['animal.mainPhoto', 'user']);
 
-        return response()->json(['application' => $this->toAdminItem($application->fresh(['animal.mainPhoto', 'user']))]);
+        if ($statusChanged) {
+            (new FosterStatusChanged($application))->sendTo($application->user);
+        }
+
+        return response()->json(['application' => $this->toAdminItem($application)]);
     }
 
     private function toAdminItem(FosterApplication $a): array

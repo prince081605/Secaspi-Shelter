@@ -5,41 +5,53 @@ namespace Database\Factories;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 /**
  * @extends Factory<User>
  */
 class UserFactory extends Factory
 {
-    /**
-     * The current password being used by the factory.
-     */
+    protected $model = User::class;
+
     protected static ?string $password;
 
     /**
-     * Define the model's default state.
+     * Matches the actual users schema (full_name, role, status, email_verified — no `name`,
+     * `email_verified_at`, or `remember_token`).
      *
      * @return array<string, mixed>
      */
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
+            'full_name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
-            'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
-            'remember_token' => Str::random(10),
+            'phone' => fake()->numerify('09#########'),
+            'role' => 'user',
+            'status' => 'active',
+            'email_verified' => true,
         ];
     }
 
-    /**
-     * Indicate that the model's email address should be unverified.
-     */
-    public function unverified(): static
+    public function admin(): static
     {
-        return $this->state(fn (array $attributes) => [
-            'email_verified_at' => null,
-        ]);
+        return $this->state(fn () => ['role' => 'admin']);
+    }
+
+    public function suspended(): static
+    {
+        return $this->state(fn () => ['status' => 'suspended']);
+    }
+
+    /**
+     * The User model guards role/status/email_verified against mass assignment (the
+     * privilege-escalation defense). Factories are trusted fixtures, so force-fill everything.
+     */
+    public function newModel(array $attributes = [])
+    {
+        $model = $this->modelName();
+
+        return (new $model)->forceFill($attributes);
     }
 }

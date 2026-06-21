@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Animal;
 use App\Models\AdoptionApplication;
+use App\Notifications\AdoptionStatusChanged;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -109,8 +110,14 @@ class AdoptionApplicationController extends Controller
         }
 
         $application->update($validator->validated());
+        $statusChanged = $application->wasChanged('status');
+        $application = $application->fresh(['animal.mainPhoto', 'user']);
 
-        return response()->json(['application' => $this->toAdminItem($application->fresh(['animal.mainPhoto', 'user']))]);
+        if ($statusChanged) {
+            (new AdoptionStatusChanged($application))->sendTo($application->user);
+        }
+
+        return response()->json(['application' => $this->toAdminItem($application)]);
     }
 
     private function toAdminItem(AdoptionApplication $a): array

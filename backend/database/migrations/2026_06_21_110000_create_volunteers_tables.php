@@ -21,10 +21,11 @@ return new class extends Migration
     {
         Schema::create('volunteers', function (Blueprint $table) {
             $table->id();
-            // users.id is a signed `int(11)` (not bigint unsigned), so the FK column must match
-            // that exact type or MySQL refuses to create the constraint (errno 150).
-            $table->integer('user_id')->unique();
-            $table->foreign('user_id')->references('id')->on('users');
+            // FK to users.id (bigint unsigned, per create_secaspi_tables). Using foreignId keeps
+            // the column type consistent with the referenced key so a fresh `migrate` succeeds on
+            // MySQL (a signed integer here mismatches and triggers errno 150).
+            $table->foreignId('user_id')->constrained('users');
+            $table->unique('user_id');
             $table->string('availability', 150)->nullable();
             $table->unsignedInteger('hours_rendered')->default(0);
             $table->text('performance_notes')->nullable();

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Volunteer;
 use App\Models\VolunteerTask;
+use App\Notifications\VolunteerTaskNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -95,6 +96,11 @@ class VolunteerController extends Controller
 
         $task = $volunteer->tasks()->create($data);
 
+        $volunteer->loadMissing('user');
+        if ($volunteer->user) {
+            (new VolunteerTaskNotification($task, 'assigned'))->sendTo($volunteer->user);
+        }
+
         return response()->json(['task' => $task], 201);
     }
 
@@ -111,6 +117,14 @@ class VolunteerController extends Controller
         }
 
         $task->update($validator->validated());
+        $statusChanged = $task->wasChanged('status');
+
+        if ($statusChanged) {
+            $task->loadMissing('volunteer.user');
+            if ($task->volunteer && $task->volunteer->user) {
+                (new VolunteerTaskNotification($task, 'updated'))->sendTo($task->volunteer->user);
+            }
+        }
 
         return response()->json(['task' => $task]);
     }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Donation;
+use App\Notifications\DonationStatusChanged;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -99,6 +100,11 @@ class DonationController extends Controller
             ]);
 
             return response()->json(['message' => 'Failed to update donation. Please try again.'], 500);
+        }
+
+        $donation->load('user');
+        if ($donation->user) {
+            (new DonationStatusChanged($donation))->sendTo($donation->user);
         }
 
         return response()->json(['donation' => $donation]);
