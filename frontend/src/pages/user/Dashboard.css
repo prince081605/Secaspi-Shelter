@@ -329,6 +329,17 @@
 
 .dashTable tr:last-child td { border-bottom: none; }
 
+/* Unread row highlight (e.g. new adoption applications) — kept subtle so it doesn't
+   clash with row hover/StatusBadge colors, but still reads as "needs attention". */
+.dashRowUnread td {
+  background: var(--brand-soft);
+  font-weight: 700;
+}
+
+.dashTable tbody tr.dashRowUnread:hover td {
+  background: var(--brand-soft);
+}
+
 .badge {
   display: inline-flex;
   align-items: center;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
 import { auth } from '../../lib/auth';
@@ -315,30 +315,34 @@ export default function Dashboard() {
     };
   }, [isAdminRole]);
 
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  const fetchPendingCounts = useCallback(() => {
+    if (!isAdminRole) return;
+    adminListRescueReports({ status: 'pending', per_page: 1 })
+      .then((data) => { if (mountedRef.current) setPendingRescueCount(data?.total || 0); })
+      .catch(() => { if (mountedRef.current) setPendingRescueCount(0); });
+    adminListAdoptionApplications({ unread: 1, per_page: 1 })
+      .then((data) => { if (mountedRef.current) setPendingAdoptionCount(data?.total || 0); })
+      .catch(() => { if (mountedRef.current) setPendingAdoptionCount(0); });
+    adminListFosterApplications({ status: 'pending', per_page: 1 })
+      .then((data) => { if (mountedRef.current) setPendingFosterCount(data?.total || 0); })
+      .catch(() => { if (mountedRef.current) setPendingFosterCount(0); });
+    adminListDonations({ status: 'pending', per_page: 1 })
+      .then((data) => { if (mountedRef.current) setPendingDonationCount(data?.total || 0); })
+      .catch(() => { if (mountedRef.current) setPendingDonationCount(0); });
+  }, [isAdminRole]);
+
   useEffect(() => {
     if (!isAdminRole) return;
-    let mounted = true;
-    const fetchPendingCounts = () => {
-      adminListRescueReports({ status: 'pending', per_page: 1 })
-        .then((data) => { if (mounted) setPendingRescueCount(data?.total || 0); })
-        .catch(() => { if (mounted) setPendingRescueCount(0); });
-      adminListAdoptionApplications({ status: 'pending', per_page: 1 })
-        .then((data) => { if (mounted) setPendingAdoptionCount(data?.total || 0); })
-        .catch(() => { if (mounted) setPendingAdoptionCount(0); });
-      adminListFosterApplications({ status: 'pending', per_page: 1 })
-        .then((data) => { if (mounted) setPendingFosterCount(data?.total || 0); })
-        .catch(() => { if (mounted) setPendingFosterCount(0); });
-      adminListDonations({ status: 'pending', per_page: 1 })
-        .then((data) => { if (mounted) setPendingDonationCount(data?.total || 0); })
-        .catch(() => { if (mounted) setPendingDonationCount(0); });
-    };
     fetchPendingCounts();
     const interval = setInterval(fetchPendingCounts, 30000);
-    return () => {
-      mounted = false;
-      clearInterval(interval);
-    };
-  }, [isAdminRole]);
+    return () => clearInterval(interval);
+  }, [isAdminRole, fetchPendingCounts]);
 
   const userStats = useMemo(() => {
     const total = applications.length;
@@ -463,7 +467,7 @@ export default function Dashboard() {
             <div>
               {activeNav === 'dashboard' ? <ActivityFeed activity={overview?.activity} /> : null}
               {activeNav === 'animals' ? <AnimalsAdmin /> : null}
-              {activeNav === 'requests' ? <AdoptionRequestsAdmin /> : null}
+              {activeNav === 'requests' ? <AdoptionRequestsAdmin onUnreadChanged={fetchPendingCounts} /> : null}
               {activeNav === 'fosters' ? <FosterRequestsAdmin /> : null}
               {activeNav === 'rescues' ? <RescueReportsAdmin /> : null}
               {activeNav === 'donations' ? <DonationsAdmin /> : null}

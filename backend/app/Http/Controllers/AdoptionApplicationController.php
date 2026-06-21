@@ -89,6 +89,10 @@ class AdoptionApplicationController extends Controller
             $query->where('status', $status);
         }
 
+        if ($request->boolean('unread')) {
+            $query->whereNull('read_at');
+        }
+
         $applications = $query->orderByDesc('id')->paginate(20)->withQueryString();
 
         $applications->getCollection()->transform(fn (AdoptionApplication $a) => $this->toAdminItem($a));
@@ -109,12 +113,31 @@ class AdoptionApplicationController extends Controller
             return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
         }
 
-        $application->update($validator->validated());
+        $data = $validator->validated();
+        if (is_null($application->read_at)) {
+            $data['read_at'] = now();
+        }
+
+        $application->update($data);
         $statusChanged = $application->wasChanged('status');
         $application = $application->fresh(['animal.mainPhoto', 'user']);
 
         if ($statusChanged) {
             (new AdoptionStatusChanged($application))->sendTo($application->user);
+        }
+
+        return response()->json(['application' => $this->toAdminItem($application)]);
+    }
+
+    /**
+     * Marks an application read the first time an admin opens its details, independent of
+     * any status-changing action — without this, an admin who only reviews (but never
+     * approves/declines) an application would never clear its unread highlight/badge count.
+     */
+    public function adminMarkRead(AdoptionApplication $application)
+    {
+        if (is_null($application->read_at)) {
+            $application->update(['read_at' => now()]);
         }
 
         return response()->json(['application' => $this->toAdminItem($application)]);
@@ -126,6 +149,7 @@ class AdoptionApplicationController extends Controller
             'id' => $a->id,
             'reference_no' => $a->reference_no,
             'status' => $a->status,
+            'read_at' => $a->read_at,
             'home_visit_status' => $a->home_visit_status,
             'home_visit_date' => $a->home_visit_date,
             'home_visit_notes' => $a->home_visit_notes,

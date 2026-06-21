@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { adminListAdoptionApplications, adminUpdateAdoptionApplication } from '../../lib/animalsApi';
+import { adminListAdoptionApplications, adminMarkAdoptionApplicationRead, adminUpdateAdoptionApplication } from '../../lib/animalsApi';
 import StatusBadge from '../../components/StatusBadge';
 
 const STATUSES = ['pending', 'approved', 'declined', 'completed'];
@@ -57,23 +57,42 @@ function HomeVisitPanel({ application, onSaved }) {
   );
 }
 
-function ApplicationRow({ application, onChanged }) {
+function ApplicationRow({ application, onChanged, onUnreadChanged }) {
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState('');
+  const isUnread = !application.read_at;
+
+  const handleInteracted = () => {
+    onChanged();
+    onUnreadChanged?.();
+  };
 
   const setStatus = async (status) => {
     setError('');
     try {
       await adminUpdateAdoptionApplication(application.id, { status });
-      onChanged();
+      handleInteracted();
     } catch (err) {
       setError(err?.message || 'Failed to update status.');
     }
   };
 
+  const toggleExpanded = async () => {
+    const next = !expanded;
+    setExpanded(next);
+    if (next && isUnread) {
+      try {
+        await adminMarkAdoptionApplicationRead(application.id);
+        handleInteracted();
+      } catch {
+        // non-critical: the unread highlight just won't clear until the next interaction
+      }
+    }
+  };
+
   return (
     <>
-      <tr>
+      <tr className={isUnread ? 'dashRowUnread' : ''}>
         <td>{application.reference_no}</td>
         <td className="dashFlexRow">
           {application.animal?.photo ? (
@@ -95,7 +114,7 @@ function ApplicationRow({ application, onChanged }) {
           {application.status === 'approved' && (
             <button className="dashBtn" onClick={() => setStatus('completed')}>Mark completed</button>
           )}
-          <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Details'}</button>
+          <button className="dashBtn" onClick={toggleExpanded}>{expanded ? 'Hide' : 'Details'}</button>
         </td>
       </tr>
       {expanded && (
@@ -112,7 +131,7 @@ function ApplicationRow({ application, onChanged }) {
             <div style={{ marginTop: 8 }}><strong>Pet experience:</strong> {application.pet_experience || '—'}</div>
             <div style={{ marginTop: 4 }}><strong>Reason:</strong> {application.reason || '—'}</div>
             <div className="dashSectionTitle" style={{ marginTop: 14, fontSize: 14 }}>🏠 Home visit tracking</div>
-            <HomeVisitPanel application={application} onSaved={onChanged} />
+            <HomeVisitPanel application={application} onSaved={handleInteracted} />
           </td>
         </tr>
       )}
@@ -120,7 +139,7 @@ function ApplicationRow({ application, onChanged }) {
   );
 }
 
-export default function AdoptionRequestsAdmin() {
+export default function AdoptionRequestsAdmin({ onUnreadChanged }) {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -180,7 +199,7 @@ export default function AdoptionRequestsAdmin() {
             </thead>
             <tbody>
               {applications.map((a) => (
-                <ApplicationRow key={a.id} application={a} onChanged={refresh} />
+                <ApplicationRow key={a.id} application={a} onChanged={refresh} onUnreadChanged={onUnreadChanged} />
               ))}
             </tbody>
           </table>

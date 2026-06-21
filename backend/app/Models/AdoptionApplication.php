@@ -21,6 +21,11 @@ class AdoptionApplication extends Model
         'home_visit_status',
         'home_visit_date',
         'home_visit_notes',
+        'read_at',
+    ];
+
+    protected $casts = [
+        'read_at' => 'datetime',
     ];
 
     public function animal()

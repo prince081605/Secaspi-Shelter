@@ -41,6 +41,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/foster-applications',      [FosterApplicationController::class, 'index']);
     Route::get('/admin/adoption-applications',        [AdoptionApplicationController::class, 'adminIndex'])->middleware('admin');
     Route::put('/admin/adoption-applications/{application}', [AdoptionApplicationController::class, 'adminUpdate'])->middleware('admin');
+    Route::post('/admin/adoption-applications/{application}/read', [AdoptionApplicationController::class, 'adminMarkRead'])->middleware('admin');
     Route::get('/admin/foster-applications',          [FosterApplicationController::class, 'adminIndex'])->middleware('admin');
     Route::put('/admin/foster-applications/{application}',   [FosterApplicationController::class, 'adminUpdate'])->middleware('admin');
     Route::get('/rescue-reports',                    [RescueReportController::class, 'index'])->middleware('admin');

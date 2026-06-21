@@ -89,6 +89,10 @@ export async function adminUpdateAdoptionApplication(id, payload) {
   return api.put(`/api/admin/adoption-applications/${id}`, payload);
 }
 
+export async function adminMarkAdoptionApplicationRead(id) {
+  return api.post(`/api/admin/adoption-applications/${id}/read`);
+}
+
 // ---- Admin: foster workflow (Phase 6) ----
 
 export async function adminListFosterApplications(params = {}) {
