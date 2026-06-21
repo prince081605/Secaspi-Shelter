@@ -71,17 +71,19 @@ function ApplicationRow({ application, onChanged }) {
   return (
     <>
       <tr>
-        <td className="dashFlexRow">
-          {application.animal?.photo ? (
-            <img src={photoSrc(application.animal.photo)} alt="" className="dashThumbSm" />
-          ) : null}
-          {application.animal?.name || 'Unknown'}
+        <td>
+          <div className="dashFlexRow">
+            {application.animal?.photo ? (
+              <img src={photoSrc(application.animal.photo)} alt="" className="dashThumbSm" />
+            ) : null}
+            {application.animal?.name || 'Unknown'}
+          </div>
         </td>
         <td>{application.applicant?.full_name || '—'}</td>
         <td><StatusBadge status={application.status} /></td>
         <td>{application.start_date || '—'} → {application.end_date || '—'}</td>
         <td>{(application.created_at || '').slice(0, 10)}</td>
-        <td style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <td className="dashActionsCell">
           {application.status === 'pending' && (
             <button className="dashBtn dashBtnPrimary" onClick={() => setStatus('approved')}>Approve</button>
           )}
@@ -99,7 +101,7 @@ function ApplicationRow({ application, onChanged }) {
       </tr>
       {expanded && (
         <tr>
-          <td colSpan={6} style={{ background: 'var(--bg-soft)' }}>
+          <td colSpan={6} className="dashExpandPanel">
             {error && <div className="ui-error">{error}</div>}
             <MonitoringPanel application={application} onSaved={onChanged} />
           </td>
@@ -139,10 +141,10 @@ export default function FosterRequestsAdmin() {
 
   return (
     <>
-      <div className="dashSectionTitle">🏡 Foster Requests</div>
+      <h2 className="dashSectionTitle">🏡 Foster Requests</h2>
       {error && <div className="ui-error">{error}</div>}
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+      <div className="dashFilterBar">
         <select className="ui-input" style={{ maxWidth: 180 }} aria-label="Filter foster requests by status" value={status} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="">All statuses</option>
           {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}

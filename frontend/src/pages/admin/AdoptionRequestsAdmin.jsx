@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { adminListAdoptionApplications, adminMarkAdoptionApplicationRead, adminUpdateAdoptionApplication } from '../../lib/animalsApi';
+import { adminListAdoptionApplications, adminUpdateAdoptionApplication } from '../../lib/animalsApi';
 import StatusBadge from '../../components/StatusBadge';
 
 const STATUSES = ['pending', 'approved', 'declined', 'completed'];
@@ -58,7 +58,6 @@ function HomeVisitPanel({ application, onSaved }) {
 }
 
 function ApplicationRow({ application, onChanged, onUnreadChanged }) {
-  const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState('');
   const isUnread = !application.read_at;
 
@@ -77,34 +76,23 @@ function ApplicationRow({ application, onChanged, onUnreadChanged }) {
     }
   };
 
-  const toggleExpanded = async () => {
-    const next = !expanded;
-    setExpanded(next);
-    if (next && isUnread) {
-      try {
-        await adminMarkAdoptionApplicationRead(application.id);
-        handleInteracted();
-      } catch {
-        // non-critical: the unread highlight just won't clear until the next interaction
-      }
-    }
-  };
-
   return (
     <>
       <tr className={isUnread ? 'dashRowUnread' : ''}>
         <td>{application.reference_no}</td>
-        <td className="dashFlexRow">
-          {application.animal?.photo ? (
-            <img src={photoSrc(application.animal.photo)} alt="" className="dashThumbSm" />
-          ) : null}
-          {application.animal?.name || 'Unknown'}
+        <td>
+          <div className="dashFlexRow">
+            {application.animal?.photo ? (
+              <img src={photoSrc(application.animal.photo)} alt="" className="dashThumbSm" />
+            ) : null}
+            {application.animal?.name || 'Unknown'}
+          </div>
         </td>
         <td>{application.applicant?.full_name || application.full_name}</td>
         <td><StatusBadge status={application.status} /></td>
         <td><StatusBadge status={application.home_visit_status} /></td>
         <td>{(application.created_at || '').slice(0, 10)}</td>
-        <td style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <td className="dashActionsCell">
           {application.status !== 'approved' && (
             <button className="dashBtn dashBtnPrimary" onClick={() => setStatus('approved')}>Approve</button>
           )}
@@ -114,24 +102,56 @@ function ApplicationRow({ application, onChanged, onUnreadChanged }) {
           {application.status === 'approved' && (
             <button className="dashBtn" onClick={() => setStatus('completed')}>Mark completed</button>
           )}
-          <button className="dashBtn" onClick={toggleExpanded}>{expanded ? 'Hide' : 'Details'}</button>
+        </td>
+      </tr>
+      {error && (
+        <tr>
+          <td colSpan={7} className="dashExpandPanel"><div className="ui-error">{error}</div></td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+function OngoingApprovedRow({ application, onChanged }) {
+  const [expanded, setExpanded] = useState(false);
+  const [error, setError] = useState('');
+
+  const markDone = async () => {
+    setError('');
+    try {
+      await adminUpdateAdoptionApplication(application.id, { status: 'completed' });
+      onChanged();
+    } catch (err) {
+      setError(err?.message || 'Failed to mark as done.');
+    }
+  };
+
+  return (
+    <>
+      <tr>
+        <td>{application.reference_no}</td>
+        <td>
+          <div className="dashFlexRow">
+            {application.animal?.photo ? (
+              <img src={photoSrc(application.animal.photo)} alt="" className="dashThumbSm" />
+            ) : null}
+            {application.animal?.name || 'Unknown'}
+          </div>
+        </td>
+        <td>{application.applicant?.full_name || application.full_name}</td>
+        <td><StatusBadge status={application.home_visit_status} /></td>
+        <td>{application.home_visit_date || '—'}</td>
+        <td className="dashActionsCell">
+          <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Track'}</button>
+          <button className="dashBtn dashBtnPrimary" onClick={markDone}>Mark as done</button>
         </td>
       </tr>
       {expanded && (
         <tr>
-          <td colSpan={7} className="dashExpandPanel">
+          <td colSpan={6} className="dashExpandPanel">
             {error && <div className="ui-error">{error}</div>}
-            <div className="dashFormGrid">
-              <div><strong>Address:</strong> {application.address || '—'}</div>
-              <div><strong>Occupation:</strong> {application.occupation || '—'}</div>
-              <div><strong>Housing type:</strong> {application.housing_type || '—'}</div>
-              <div><strong>Email:</strong> {application.applicant?.email || '—'}</div>
-              <div><strong>Phone:</strong> {application.applicant?.phone || '—'}</div>
-            </div>
-            <div style={{ marginTop: 8 }}><strong>Pet experience:</strong> {application.pet_experience || '—'}</div>
-            <div style={{ marginTop: 4 }}><strong>Reason:</strong> {application.reason || '—'}</div>
-            <div className="dashSectionTitle" style={{ marginTop: 14, fontSize: 14 }}>🏠 Home visit tracking</div>
-            <HomeVisitPanel application={application} onSaved={handleInteracted} />
+            <HomeVisitPanel application={application} onSaved={onChanged} />
           </td>
         </tr>
       )}
@@ -145,6 +165,10 @@ export default function AdoptionRequestsAdmin({ onUnreadChanged }) {
   const [error, setError] = useState('');
   const [status, setStatusFilter] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
+
+  const [approvedApplications, setApprovedApplications] = useState([]);
+  const [approvedLoading, setApprovedLoading] = useState(true);
+  const [approvedError, setApprovedError] = useState('');
 
   useEffect(() => {
     let mounted = true;
@@ -165,14 +189,64 @@ export default function AdoptionRequestsAdmin({ onUnreadChanged }) {
     return () => { mounted = false; };
   }, [status, refreshKey]);
 
+  useEffect(() => {
+    let mounted = true;
+    setApprovedLoading(true);
+    adminListAdoptionApplications({ status: 'approved' })
+      .then((data) => {
+        if (!mounted) return;
+        setApprovedApplications(data?.data || []);
+        setApprovedError('');
+      })
+      .catch((err) => {
+        if (!mounted) return;
+        setApprovedError(err?.message || 'Failed to load ongoing adoptions.');
+      })
+      .finally(() => {
+        if (mounted) setApprovedLoading(false);
+      });
+    return () => { mounted = false; };
+  }, [refreshKey]);
+
   const refresh = () => setRefreshKey((k) => k + 1);
+  // Approved requests are tracked exclusively in the "Ongoing" table below, so once
+  // a request is approved it drops out of the main list (unless explicitly filtered for).
+  const visibleApplications = status === '' ? applications.filter((a) => a.status !== 'approved') : applications;
 
   return (
     <>
-      <div className="dashSectionTitle">📩 Adoption Requests</div>
+      <h2 className="dashSectionTitle">🏠 Ongoing Approved Adoptions</h2>
+      {approvedError && <div className="ui-error">{approvedError}</div>}
+      {approvedLoading ? (
+        <div className="ui-empty">Loading…</div>
+      ) : approvedApplications.length === 0 ? (
+        <div className="ui-empty">No approved adoptions awaiting a home visit or completion.</div>
+      ) : (
+        <div className="dashTableWrap">
+          <table className="dashTable">
+            <thead>
+              <tr>
+                <th>Reference</th>
+                <th>Animal</th>
+                <th>Applicant</th>
+                <th>Home visit</th>
+                <th>Visit date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {approvedApplications.map((a) => (
+                <OngoingApprovedRow key={a.id} application={a} onChanged={refresh} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <h2 className="dashSectionTitle" style={{ marginTop: 24 }}>📩 Adoption Requests</h2>
       {error && <div className="ui-error">{error}</div>}
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+      <div className="dashFilterBar">
         <select className="ui-input" style={{ maxWidth: 180 }} aria-label="Filter adoption requests by status" value={status} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="">All statuses</option>
           {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -181,7 +255,7 @@ export default function AdoptionRequestsAdmin({ onUnreadChanged }) {
 
       {loading ? (
         <div className="ui-empty">Loading…</div>
-      ) : applications.length === 0 ? (
+      ) : visibleApplications.length === 0 ? (
         <div className="ui-empty">No adoption applications match this filter.</div>
       ) : (
         <div className="dashTableWrap">
@@ -198,7 +272,7 @@ export default function AdoptionRequestsAdmin({ onUnreadChanged }) {
               </tr>
             </thead>
             <tbody>
-              {applications.map((a) => (
+              {visibleApplications.map((a) => (
                 <ApplicationRow key={a.id} application={a} onChanged={refresh} onUnreadChanged={onUnreadChanged} />
               ))}
             </tbody>

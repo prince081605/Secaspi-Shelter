@@ -151,7 +151,7 @@ function TasksPanel({ volunteer, onChanged }) {
                   <td>{t.task_name}</td>
                   <td><StatusBadge status={t.status} /></td>
                   <td>{t.assigned_date || '—'}</td>
-                  <td style={{ display: 'flex', gap: 6 }}>
+                  <td className="dashActionsCell">
                     {NEXT_TASK_STATUS[t.status] && (
                       <button className="dashBtn dashBtnPrimary" onClick={() => advanceTask(t)}>
                         Mark {NEXT_TASK_STATUS[t.status]}
@@ -204,12 +204,12 @@ function VolunteerRow({ volunteer, onChanged }) {
       <tr>
         <td>{volunteer.user?.full_name}<br /><span style={{ fontSize: 12, color: 'var(--muted)' }}>{volunteer.user?.email}</span></td>
         <td>{volunteer.availability || '—'}</td>
-        <td style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <td className="dashActionsCell">
           <input className="ui-input" type="number" min="0" style={{ width: 80 }} value={hours} onChange={(e) => setHours(e.target.value)} />
           <button className="dashBtn" onClick={saveHours}>Save</button>
         </td>
         <td>{volunteer.tasks.length}</td>
-        <td style={{ display: 'flex', gap: 6 }}>
+        <td className="dashActionsCell">
           <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Tasks'}</button>
           <ConfirmButton confirmLabel={`Remove ${volunteer.user?.full_name}?`} onConfirm={remove}>Remove</ConfirmButton>
         </td>
@@ -262,7 +262,7 @@ export default function VolunteersAdmin() {
 
   return (
     <>
-      <div className="dashSectionTitle">🤝 Volunteer Management</div>
+      <h2 className="dashSectionTitle">🤝 Volunteer Management</h2>
       {error && <div className="ui-error">{error}</div>}
 
       <button className="dashBtn dashBtnPrimary" onClick={() => setShowAdd((v) => !v)}>

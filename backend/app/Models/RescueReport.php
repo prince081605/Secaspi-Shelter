@@ -18,5 +18,10 @@ class RescueReport extends Model
         'created_at',
         'assigned_to',
         'admin_notes',
+        'read_at',
+    ];
+
+    protected $casts = [
+        'read_at' => 'datetime',
     ];
 }

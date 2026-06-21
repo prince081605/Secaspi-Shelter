@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { adminListRescueReports, adminUpdateRescueReport } from '../../lib/rescueApi';
+import { adminListRescueReports, adminMarkRescueReportRead, adminUpdateRescueReport } from '../../lib/rescueApi';
 import StatusBadge from '../../components/StatusBadge';
 
 const STATUSES = ['pending', 'assigned', 'in_progress', 'resolved'];
@@ -74,12 +74,31 @@ function TriagePanel({ report, onSaved }) {
   );
 }
 
-function ReportRow({ report, onChanged }) {
+function ReportRow({ report, onChanged, onUnreadChanged }) {
   const [expanded, setExpanded] = useState(false);
+  const isUnread = !report.read_at;
+
+  const handleInteracted = () => {
+    onChanged();
+    onUnreadChanged?.();
+  };
+
+  const toggleExpanded = async () => {
+    const next = !expanded;
+    setExpanded(next);
+    if (next && isUnread) {
+      try {
+        await adminMarkRescueReportRead(report.id);
+        handleInteracted();
+      } catch {
+        // non-critical: the unread highlight just won't clear until the next interaction
+      }
+    }
+  };
 
   return (
     <>
-      <tr>
+      <tr className={isUnread ? 'dashRowUnread' : ''}>
         <td>{report.reporter_name || 'Anonymous'}</td>
         <td>{report.location}</td>
         <td><UrgencyBadge urgency={report.urgency} /></td>
@@ -87,13 +106,13 @@ function ReportRow({ report, onChanged }) {
         <td>{report.assigned_to || '—'}</td>
         <td>{(report.created_at || '').slice(0, 10)}</td>
         <td>
-          <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Triage'}</button>
+          <button className="dashBtn" onClick={toggleExpanded}>{expanded ? 'Hide' : 'Triage'}</button>
         </td>
       </tr>
       {expanded && (
         <tr>
           <td colSpan={7} className="dashExpandPanel">
-            <TriagePanel report={report} onSaved={onChanged} />
+            <TriagePanel report={report} onSaved={handleInteracted} />
           </td>
         </tr>
       )}
@@ -101,7 +120,7 @@ function ReportRow({ report, onChanged }) {
   );
 }
 
-export default function RescueReportsAdmin() {
+export default function RescueReportsAdmin({ onUnreadChanged }) {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -131,10 +150,10 @@ export default function RescueReportsAdmin() {
 
   return (
     <>
-      <div className="dashSectionTitle">🚨 Rescue Reports</div>
+      <h2 className="dashSectionTitle">🚨 Rescue Reports</h2>
       {error && <div className="ui-error">{error}</div>}
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+      <div className="dashFilterBar">
         <select className="ui-input" style={{ maxWidth: 180 }} aria-label="Filter rescue reports by status" value={status} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="">All statuses</option>
           {STATUSES.map((s) => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
@@ -161,7 +180,7 @@ export default function RescueReportsAdmin() {
             </thead>
             <tbody>
               {reports.map((r) => (
-                <ReportRow key={r.id} report={r} onChanged={refresh} />
+                <ReportRow key={r.id} report={r} onChanged={refresh} onUnreadChanged={onUnreadChanged} />
               ))}
             </tbody>
           </table>

@@ -31,6 +31,8 @@
   .dashTopRow { flex-direction: column; align-items: stretch; }
   .dashTabs { width: 100%; }
   .dashTab { flex: 1; text-align: center; }
+  .dashTable th,
+  .dashTable td { padding: 9px 10px; }
 }
 
 .dashSidebar {
@@ -237,9 +239,39 @@
   margin-top: 20px;
   margin-bottom: 10px;
   font-family: 'Fraunces', serif;
+  font-size: 1.2rem;
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--ink);
+}
+
+/* Nested headings within a module section (e.g. "Home visit tracking" inside an expanded
+   row) — one step down in size/weight from .dashSectionTitle so the hierarchy reads clearly. */
+.dashSubSectionTitle {
+  margin-top: 16px;
+  margin-bottom: 8px;
+  font-family: 'Work Sans', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+}
+
+/* Shared filter/search bar row sitting under a module's section title and above its table. */
+.dashFilterBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+/* Shared "Actions" table-cell layout for rows with one or more buttons. */
+.dashActionsCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .dashAnimalGrid {
@@ -308,9 +340,10 @@
 
 .dashTable th,
 .dashTable td {
-  padding: 10px 14px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--line);
   text-align: left;
+  vertical-align: middle;
   color: var(--ink-soft);
   font-weight: 500;
 }
@@ -318,7 +351,11 @@
 .dashTable th {
   color: var(--muted);
   font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   background: var(--bg-soft);
+  border-bottom: 2px solid var(--line);
 }
 
 .dashTable tbody tr {
@@ -329,15 +366,11 @@
 
 .dashTable tr:last-child td { border-bottom: none; }
 
-/* Unread row highlight (e.g. new adoption applications) — kept subtle so it doesn't
-   clash with row hover/StatusBadge colors, but still reads as "needs attention". */
-.dashRowUnread td {
-  background: var(--brand-soft);
-  font-weight: 700;
-}
-
-.dashTable tbody tr.dashRowUnread:hover td {
-  background: var(--brand-soft);
+/* Unread row indicator (e.g. new adoption/rescue submissions) — a plain red left
+   border on the row's first cell, so it doesn't clash with StatusBadge colors or
+   read as bold/highlighted text. */
+.dashRowUnread td:first-child {
+  border-left: 4px solid var(--danger);
 }
 
 .badge {
@@ -369,6 +402,7 @@
 .dashFlexRow {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
 }
 

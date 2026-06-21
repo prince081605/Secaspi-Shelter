@@ -90,17 +90,17 @@ export default function ReportsAdmin() {
 
   return (
     <>
-      <div className="dashSectionTitle">📈 Reports</div>
+      <h2 className="dashSectionTitle">📈 Reports</h2>
 
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10 }}>
+      <div className="dashFilterBar">
         <select className="ui-input" style={{ maxWidth: 220 }} aria-label="Report type" value={type} onChange={(e) => setType(e.target.value)}>
           {REPORT_TYPES.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
         </select>
 
         {config.dateRange && (
           <>
-            <input className="ui-input" style={{ maxWidth: 150 }} type="date" aria-label="From date" value={filters.from} onChange={setField('from')} />
-            <input className="ui-input" style={{ maxWidth: 150 }} type="date" aria-label="To date" value={filters.to} onChange={setField('to')} />
+            <input className="ui-input" style={{ maxWidth: 170 }} type="date" aria-label="From date" value={filters.from} onChange={setField('from')} />
+            <input className="ui-input" style={{ maxWidth: 170 }} type="date" aria-label="To date" value={filters.to} onChange={setField('to')} />
           </>
         )}
 

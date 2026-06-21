@@ -57,10 +57,10 @@ export default function UsersAdmin({ currentUserId }) {
 
   return (
     <>
-      <div className="dashSectionTitle">👥 User Management</div>
+      <h2 className="dashSectionTitle">👥 User Management</h2>
       {error && <div className="ui-error">{error}</div>}
 
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+      <div className="dashFilterBar">
         <input className="ui-input" style={{ maxWidth: 220 }} placeholder="Search name/email" aria-label="Search users by name or email" value={q} onChange={(e) => setQ(e.target.value)} />
         <select className="ui-input" style={{ maxWidth: 150 }} aria-label="Filter users by role" value={role} onChange={(e) => setRole(e.target.value)}>
           <option value="">All roles</option>

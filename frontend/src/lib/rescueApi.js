@@ -20,3 +20,7 @@ export async function adminListRescueReports(params = {}) {
 export async function adminUpdateRescueReport(id, payload) {
   return api.post(`/api/rescue-reports/${id}/status`, payload);
 }
+
+export async function adminMarkRescueReportRead(id) {
+  return api.post(`/api/rescue-reports/${id}/read`);
+}

@@ -72,7 +72,7 @@ export default function SettingsAdmin() {
 
   return (
     <>
-      <div className="dashSectionTitle">⚙️ General Settings</div>
+      <h2 className="dashSectionTitle">⚙️ General Settings</h2>
       <div className="dashCard" style={{ marginTop: 10 }}>
         {saveState.status === 'success' && <div className="ui-success-msg">Settings saved.</div>}
         {saveState.status === 'error' && <div className="ui-error">{saveState.error}</div>}
@@ -106,7 +106,7 @@ export default function SettingsAdmin() {
             <input className="ui-input" value={form.social_twitter} onChange={handleChange('social_twitter')} placeholder="https://x.com/yourpage" />
           </div>
 
-          <div className="dashSectionTitle" style={{ marginTop: 20 }}>🌐 Website Settings</div>
+          <h3 className="dashSubSectionTitle" style={{ marginTop: 20 }}>🌐 Website Settings</h3>
 
           <div className="ui-field">
             <label className="ui-label">Logo</label>

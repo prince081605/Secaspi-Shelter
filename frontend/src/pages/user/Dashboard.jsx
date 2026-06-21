@@ -52,7 +52,7 @@ function OverviewCards({ cards }) {
 function ActivityFeed({ activity }) {
   return (
     <>
-      <div className="dashSectionTitle">🕒 Recent activity</div>
+      <h2 className="dashSectionTitle">🕒 Recent activity</h2>
       {!activity || activity.length === 0 ? (
         <div className="ui-empty">No recent activity.</div>
       ) : (
@@ -81,7 +81,7 @@ function ActivityFeed({ activity }) {
 function UserApplications({ applications, loading }) {
   return (
     <>
-      <div className="dashSectionTitle">❤️ My Applications</div>
+      <h2 className="dashSectionTitle">❤️ My Applications</h2>
       {loading ? (
         <div className="ui-empty">Loading…</div>
       ) : applications.length === 0 ? (
@@ -101,15 +101,17 @@ function UserApplications({ applications, loading }) {
               {applications.map((r) => (
                 <tr key={`${r.type}-${r.id}`}>
                   <td>{r.type}</td>
-                  <td className="dashFlexRow">
-                    {r.animal?.photo ? (
-                      <img
-                        src={r.animal.photo.startsWith('http') ? r.animal.photo : `${import.meta.env.VITE_API_BASE_URL}/storage/${r.animal.photo}`}
-                        alt={r.animal?.name}
-                        className="dashThumbSm"
-                      />
-                    ) : null}
-                    {r.animal?.name || 'Unknown animal'}
+                  <td>
+                    <div className="dashFlexRow">
+                      {r.animal?.photo ? (
+                        <img
+                          src={r.animal.photo.startsWith('http') ? r.animal.photo : `${import.meta.env.VITE_API_BASE_URL}/storage/${r.animal.photo}`}
+                          alt={r.animal?.name}
+                          className="dashThumbSm"
+                        />
+                      ) : null}
+                      {r.animal?.name || 'Unknown animal'}
+                    </div>
                   </td>
                   <td>
                     <StatusBadge status={r.status} />
@@ -167,7 +169,7 @@ function UserProfile({ user, onProfileUpdated }) {
 
   return (
     <>
-      <div className="dashSectionTitle">📄 Profile</div>
+      <h2 className="dashSectionTitle">📄 Profile</h2>
       <div className="dashTableWrap">
         <table className="dashTable">
           <tbody>
@@ -187,7 +189,7 @@ function UserProfile({ user, onProfileUpdated }) {
         </table>
       </div>
 
-      <div className="dashSectionTitle">✏️ Edit profile</div>
+      <h2 className="dashSectionTitle">✏️ Edit profile</h2>
       {profileState.status === 'success' && <div className="ui-success-msg">Profile updated.</div>}
       {profileState.status === 'error' && <div className="ui-error">{profileState.error}</div>}
       <form onSubmit={handleProfileSubmit}>
@@ -204,7 +206,7 @@ function UserProfile({ user, onProfileUpdated }) {
         </button>
       </form>
 
-      <div className="dashSectionTitle">🔒 Change password</div>
+      <h2 className="dashSectionTitle">🔒 Change password</h2>
       {passwordState.status === 'success' && <div className="ui-success-msg">Password changed successfully.</div>}
       {passwordState.status === 'error' && <div className="ui-error">{passwordState.error}</div>}
       <form onSubmit={handlePasswordSubmit}>
@@ -323,7 +325,7 @@ export default function Dashboard() {
 
   const fetchPendingCounts = useCallback(() => {
     if (!isAdminRole) return;
-    adminListRescueReports({ status: 'pending', per_page: 1 })
+    adminListRescueReports({ unread: 1, per_page: 1 })
       .then((data) => { if (mountedRef.current) setPendingRescueCount(data?.total || 0); })
       .catch(() => { if (mountedRef.current) setPendingRescueCount(0); });
     adminListAdoptionApplications({ unread: 1, per_page: 1 })
@@ -469,7 +471,7 @@ export default function Dashboard() {
               {activeNav === 'animals' ? <AnimalsAdmin /> : null}
               {activeNav === 'requests' ? <AdoptionRequestsAdmin onUnreadChanged={fetchPendingCounts} /> : null}
               {activeNav === 'fosters' ? <FosterRequestsAdmin /> : null}
-              {activeNav === 'rescues' ? <RescueReportsAdmin /> : null}
+              {activeNav === 'rescues' ? <RescueReportsAdmin onUnreadChanged={fetchPendingCounts} /> : null}
               {activeNav === 'donations' ? <DonationsAdmin /> : null}
               {activeNav === 'volunteers' ? <VolunteersAdmin /> : null}
               {activeNav === 'reports' ? <ReportsAdmin /> : null}

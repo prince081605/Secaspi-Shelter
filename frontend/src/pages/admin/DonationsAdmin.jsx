@@ -90,11 +90,11 @@ export default function DonationsAdmin() {
 
   return (
     <>
-      <div className="dashSectionTitle">💰 Donation Management</div>
+      <h2 className="dashSectionTitle">💰 Donation Management</h2>
       <StatsCards />
       {error && <div className="ui-error">{error}</div>}
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+      <div className="dashFilterBar">
         <select className="ui-input" style={{ maxWidth: 180 }} aria-label="Filter donations by status" value={status} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="">All statuses</option>
           {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -132,7 +132,7 @@ export default function DonationsAdmin() {
                     ) : '—'}
                   </td>
                   <td><StatusBadge status={d.status} /></td>
-                  <td style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <td className="dashActionsCell">
                     {d.status === 'pending' && (
                       <>
                         <button className="dashBtn dashBtnPrimary" onClick={() => handleVerify(d, 'verified')}>Verify</button>

@@ -65,6 +65,10 @@ class RescueReportController extends Controller
             $query->where('status', $status);
         }
 
+        if ($request->boolean('unread')) {
+            $query->whereNull('read_at');
+        }
+
         $reports = $query->orderByDesc('id')->paginate(12)->withQueryString();
 
         return response()->json($reports);
@@ -82,16 +86,35 @@ class RescueReportController extends Controller
             return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
         }
 
+        $data = $validator->validated();
+        if (is_null($report->read_at)) {
+            $data['read_at'] = now();
+        }
+
         try {
-            $report->update($validator->validated());
+            $report->update($data);
         } catch (\Throwable $e) {
             Log::error('Failed to update rescue report', [
                 'report_id' => $report->id,
-                'payload'   => $validator->validated(),
+                'payload'   => $data,
                 'exception' => $e,
             ]);
 
             return response()->json(['message' => 'Failed to update report. Please try again.'], 500);
+        }
+
+        return response()->json(['report' => $report]);
+    }
+
+    /**
+     * Marks a report read the first time an admin opens its triage panel, independent of
+     * any status-changing action — without this, an admin who only reviews (but never
+     * assigns/resolves) a report would never clear its unread highlight/badge count.
+     */
+    public function adminMarkRead(RescueReport $report)
+    {
+        if (is_null($report->read_at)) {
+            $report->update(['read_at' => now()]);
         }
 
         return response()->json(['report' => $report]);
