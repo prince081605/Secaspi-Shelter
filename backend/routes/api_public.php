@@ -123,7 +123,7 @@ $query = DB::table('animals')
                 'animals.age',
                 'animals.status',
             ])
-            ->where('animals.status', '!=', 'archived')
+            ->whereNotIn('animals.status', ['archived', 'adopted'])
             ->orderByDesc('animals.id')
             ->limit(8);
 
