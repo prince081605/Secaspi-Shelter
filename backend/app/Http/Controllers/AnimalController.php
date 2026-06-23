@@ -91,8 +91,11 @@ class AnimalController extends Controller
                 'weight' => $animal->weight,
                 'status' => $animal->status,
                 'rescue_story' => $animal->rescue_story,
-                'qr_code' => $qrCode,
-                'photos' => $animal->photos->pluck('photo_url')->values(),
+                'qr_code' => $qrCode ? Storage::url($qrCode) : null,
+                'photos' => $animal->photos->pluck('photo_url')
+                    ->filter()
+                    ->map(fn ($path) => Storage::url($path))
+                    ->values(),
                 'medical_records' => $animal->medicalRecords->map(fn ($m) => [
                     'id' => $m->id,
                     'type' => $m->type,
@@ -142,7 +145,7 @@ class AnimalController extends Controller
         if ($photos) {
             foreach ($photos as $i => $file) {
                 $animal->photos()->create([
-                    'photo_url' => $file->store('animals', 'public'),
+                    'photo_url' => $file->store('animals'),
                     'is_main' => $i === 0,
                 ]);
             }
@@ -193,7 +196,7 @@ class AnimalController extends Controller
 
         foreach ($animal->photos as $photo) {
             if ($photo->photo_url) {
-                Storage::disk('public')->delete($photo->photo_url);
+                Storage::delete($photo->photo_url);
             }
         }
         $animal->photos()->delete();
@@ -218,7 +221,7 @@ class AnimalController extends Controller
 
         foreach ($request->file('photos') as $i => $file) {
             $created[] = $animal->photos()->create([
-                'photo_url' => $file->store('animals', 'public'),
+                'photo_url' => $file->store('animals'),
                 'is_main' => !$hasMain && $i === 0,
             ]);
         }
@@ -233,7 +236,7 @@ class AnimalController extends Controller
         }
 
         if ($photo->photo_url) {
-            Storage::disk('public')->delete($photo->photo_url);
+            Storage::delete($photo->photo_url);
         }
         $photo->delete();
 
@@ -263,7 +266,7 @@ class AnimalController extends Controller
 
     private function ensureQrCode(Animal $animal): ?string
     {
-        if ($animal->qr_code_path && Storage::disk('public')->exists($animal->qr_code_path)) {
+        if ($animal->qr_code_path && Storage::exists($animal->qr_code_path)) {
             return $animal->qr_code_path;
         }
 
@@ -277,7 +280,7 @@ class AnimalController extends Controller
         ))->build();
 
         $path = "qr-codes/{$animal->id}.svg";
-        Storage::disk('public')->put($path, $result->getString());
+        Storage::put($path, $result->getString());
         $animal->update(['qr_code_path' => $path]);
 
         return $path;
@@ -299,10 +302,10 @@ class AnimalController extends Controller
             'weight' => $animal->weight,
             'status' => $animal->status,
             'rescue_story' => $animal->rescue_story,
-            'qr_code' => $qrCode,
+            'qr_code' => $qrCode ? Storage::url($qrCode) : null,
             'photos' => $animal->photos->map(fn ($p) => [
                 'id' => $p->id,
-                'photo_url' => $p->photo_url,
+                'photo_url' => $p->photo_url ? Storage::url($p->photo_url) : null,
                 'is_main' => (bool) $p->is_main,
             ])->values(),
             'medical_records' => $animal->medicalRecords->map(fn ($m) => [
@@ -334,7 +337,9 @@ class AnimalController extends Controller
             'gender' => $animal->gender,
             'size' => $animal->size,
             'status' => $animal->status,
-            'photo' => optional($animal->mainPhoto)->photo_url,
+            'photo' => $animal->mainPhoto && $animal->mainPhoto->photo_url
+                ? Storage::url($animal->mainPhoto->photo_url)
+                : null,
         ];
     }
 }

@@ -54,7 +54,7 @@ class SettingController extends Controller
             return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
         }
 
-        $path = $request->file('image')->store('settings', 'public');
+        $path = $request->file('image')->store('settings');
         Setting::setMany([$request->input('key') => $path]);
 
         return response()->json(['settings' => Setting::getAll()]);

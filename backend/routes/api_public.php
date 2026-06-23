@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\AnimalController;
 use App\Http\Controllers\RescueReportController;
 use App\Http\Controllers\SettingController;
@@ -134,12 +135,8 @@ $query = DB::table('animals')
                 '(SELECT animal_id, photo_url, ROW_NUMBER() OVER (PARTITION BY animal_id ORDER BY is_main DESC, id ASC) AS rn FROM animal_photos) AS ranked_photos'
             ))->where('rn', 1);
 
-$query = $query->leftJoinSub($mainPhoto, 'animal_photos', 'animals.id', '=', 'animal_photos.animal_id')
-                ->addSelect([
-                    'animal_photos.photo_url',
-                    // Provide a more predictable image URL for the frontend.
-                    DB::raw("CASE WHEN animal_photos.photo_url IS NULL OR animal_photos.photo_url = '' THEN '' ELSE CONCAT(COALESCE(CONCAT('".rtrim(env('APP_URL',''),'/')."'), ''), '/', animal_photos.photo_url) END as photo_url_abs")
-                ]);
+            $query = $query->leftJoinSub($mainPhoto, 'animal_photos', 'animals.id', '=', 'animal_photos.animal_id')
+                ->addSelect('animal_photos.photo_url');
 
 
         } else {
@@ -167,8 +164,9 @@ $query = $query->leftJoinSub($mainPhoto, 'animal_photos', 'animals.id', '=', 'an
                     'species' => $a->species ?? 'Unknown',
                     'age' => is_numeric($a->age) ? ($a->age . ' yrs') : ($a->age ?? 'N/A'),
                     'status' => $statusToLabel($a->status),
-                    // Keep backward-compatible key expected by frontend.
-                    'photo' => $a->photo_url ?: '',
+                    // Keep backward-compatible key expected by frontend. Resolve the
+                    // stored key to an absolute URL so it works on any disk (local/S3).
+                    'photo' => $a->photo_url ? Storage::url($a->photo_url) : '',
                 ];
             })->all(),
         ]);

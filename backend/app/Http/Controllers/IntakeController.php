@@ -67,7 +67,7 @@ class IntakeController extends Controller
         if ($documents) {
             foreach ($documents as $file) {
                 $intake->documents()->create([
-                    'file_path' => $file->store('intakes', 'public'),
+                    'file_path' => $file->store('intakes'),
                     'original_name' => $file->getClientOriginalName(),
                 ]);
             }
@@ -134,7 +134,7 @@ class IntakeController extends Controller
     public function adminDestroy(Intake $intake)
     {
         foreach ($intake->documents as $doc) {
-            Storage::disk('public')->delete($doc->file_path);
+            Storage::delete($doc->file_path);
         }
         $intake->delete();
 
@@ -155,7 +155,7 @@ class IntakeController extends Controller
         $created = [];
         foreach ($request->file('documents') as $file) {
             $created[] = $intake->documents()->create([
-                'file_path' => $file->store('intakes', 'public'),
+                'file_path' => $file->store('intakes'),
                 'original_name' => $file->getClientOriginalName(),
             ]);
         }
@@ -169,7 +169,7 @@ class IntakeController extends Controller
             return response()->json(['message' => 'Document not found for this intake'], 404);
         }
 
-        Storage::disk('public')->delete($document->file_path);
+        Storage::delete($document->file_path);
         $document->delete();
 
         return response()->json(['message' => 'Document deleted']);
@@ -213,7 +213,7 @@ class IntakeController extends Controller
             'created_at' => $i->created_at,
             'documents' => $i->documents->map(fn ($d) => [
                 'id' => $d->id,
-                'file_path' => $d->file_path,
+                'file_path' => $d->file_path ? Storage::url($d->file_path) : null,
                 'original_name' => $d->original_name,
             ])->values(),
         ];

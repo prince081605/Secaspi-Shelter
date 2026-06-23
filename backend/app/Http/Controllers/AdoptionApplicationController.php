@@ -7,6 +7,7 @@ use App\Models\AdoptionApplication;
 use App\Notifications\AdoptionStatusChanged;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
@@ -75,7 +76,7 @@ class AdoptionApplicationController extends Controller
                 'animal' => $a->animal ? [
                     'id' => $a->animal->id,
                     'name' => $a->animal->name,
-                    'photo' => optional($a->animal->mainPhoto)->photo_url,
+                    'photo' => optional($a->animal->mainPhoto)->photo_url ? Storage::url($a->animal->mainPhoto->photo_url) : null,
                 ] : null,
             ])->values(),
         ]);
@@ -176,7 +177,7 @@ class AdoptionApplicationController extends Controller
                 'species' => $a->animal->species,
                 'breed' => $a->animal->breed,
                 'age' => $a->animal->age,
-                'photo' => optional($a->animal->mainPhoto)->photo_url,
+                'photo' => optional($a->animal->mainPhoto)->photo_url ? Storage::url($a->animal->mainPhoto->photo_url) : null,
             ] : null,
             'applicant' => $a->user ? [
                 'id' => $a->user->id,

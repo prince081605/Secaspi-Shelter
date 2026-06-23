@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\RescueReport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class RescueReportController extends Controller
@@ -26,7 +27,7 @@ class RescueReportController extends Controller
 
         try {
             $photoPath = $request->hasFile('photo')
-                ? $request->file('photo')->store('rescue-reports', 'public')
+                ? $request->file('photo')->store('rescue-reports')
                 : null;
 
             $report = RescueReport::create([
@@ -70,6 +71,15 @@ class RescueReportController extends Controller
         }
 
         $reports = $query->orderByDesc('id')->paginate(12)->withQueryString();
+
+        // Expose photo_url as an absolute URL (in place, just for serialization) so the
+        // admin triage panel renders it regardless of the configured filesystem disk.
+        $reports->getCollection()->transform(function (RescueReport $report) {
+            if ($report->photo_url) {
+                $report->photo_url = Storage::url($report->photo_url);
+            }
+            return $report;
+        });
 
         return response()->json($reports);
     }
