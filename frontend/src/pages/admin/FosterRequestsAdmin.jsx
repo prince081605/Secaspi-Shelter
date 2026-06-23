@@ -105,6 +105,21 @@ function ApplicationRow({ application, onChanged }) {
         <tr>
           <td colSpan={6} className="dashExpandPanel">
             {error && <div className="ui-error">{error}</div>}
+
+            <div className="dashReviewSection">
+              <div className="dashReviewSectionTitle">Applicant Details</div>
+              <dl className="dashInfoList">
+                <div><dt>Full name</dt><dd>{application.full_name || application.applicant?.full_name || '—'}</dd></div>
+                <div><dt>Address</dt><dd>{application.address || '—'}</dd></div>
+                <div><dt>Occupation</dt><dd>{application.occupation || '—'}</dd></div>
+                <div><dt>Housing type</dt><dd>{application.housing_type || '—'}</dd></div>
+                <div><dt>Email</dt><dd>{application.applicant?.email || '—'}</dd></div>
+                <div><dt>Phone</dt><dd>{application.applicant?.phone || '—'}</dd></div>
+                <div className="dashInfoFull"><dt>Pet experience</dt><dd>{application.pet_experience || '—'}</dd></div>
+                <div className="dashInfoFull"><dt>Why foster?</dt><dd>{application.reason || '—'}</dd></div>
+              </dl>
+            </div>
+
             <MonitoringPanel application={application} onSaved={onChanged} />
           </td>
         </tr>

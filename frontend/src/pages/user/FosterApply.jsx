@@ -12,7 +12,10 @@ const styles = `
 export default function FosterApply() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ start_date: '', end_date: '', notes: '' });
+  const [form, setForm] = useState({
+    full_name: '', address: '', occupation: '', housing_type: '', pet_experience: '', reason: '',
+    start_date: '', end_date: '', notes: '',
+  });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
@@ -51,11 +54,35 @@ export default function FosterApply() {
         ) : (
           <>
             <h1 className="ui-h1" style={{ marginBottom: '0.4rem' }}>Foster Application</h1>
-            <p className="ui-muted" style={{ marginBottom: '2rem' }}>Let us know the dates you're available to foster.</p>
+            <p className="ui-muted" style={{ marginBottom: '2rem' }}>Tell us about yourself and the dates you're available to foster.</p>
 
             {error && <div className="ui-error">{error}</div>}
 
             <form onSubmit={handleSubmit}>
+              <div className="ui-field">
+                <label className="ui-label ui-label-required">Full name</label>
+                <input className="ui-input" name="full_name" value={form.full_name} onChange={handleChange} required />
+              </div>
+              <div className="ui-field">
+                <label className="ui-label ui-label-required">Address</label>
+                <input className="ui-input" name="address" value={form.address} onChange={handleChange} required />
+              </div>
+              <div className="ui-field">
+                <label className="ui-label">Occupation</label>
+                <input className="ui-input" name="occupation" value={form.occupation} onChange={handleChange} />
+              </div>
+              <div className="ui-field">
+                <label className="ui-label">Housing type</label>
+                <input className="ui-input" name="housing_type" value={form.housing_type} onChange={handleChange} placeholder="e.g. Apartment, House with yard" />
+              </div>
+              <div className="ui-field">
+                <label className="ui-label">Pet experience</label>
+                <textarea className="ui-textarea" name="pet_experience" value={form.pet_experience} onChange={handleChange} />
+              </div>
+              <div className="ui-field">
+                <label className="ui-label ui-label-required">Why do you want to foster?</label>
+                <textarea className="ui-textarea" name="reason" value={form.reason} onChange={handleChange} required />
+              </div>
               <div className="applyRow">
                 <div className="ui-field">
                   <label className="ui-label ui-label-required">Start date</label>
@@ -68,7 +95,7 @@ export default function FosterApply() {
               </div>
               <div className="ui-field">
                 <label className="ui-label">Notes</label>
-                <textarea className="ui-textarea" name="notes" value={form.notes} onChange={handleChange} placeholder="Anything we should know?" />
+                <textarea className="ui-textarea" name="notes" value={form.notes} onChange={handleChange} placeholder="Anything else we should know?" />
               </div>
               <button className="ui-btn-primary" style={{ width: '100%' }} type="submit" disabled={submitting}>
                 {submitting ? 'Submitting…' : 'Submit Foster Application'}

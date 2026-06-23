@@ -6,7 +6,6 @@ import { listMyAdoptionApplications, listMyFosterApplications } from '../../lib/
 import { updateProfile, changePassword } from '../../lib/profileApi';
 import AnimalsAdmin from '../admin/AnimalsAdmin';
 import AdoptionRequestsAdmin from '../admin/AdoptionRequestsAdmin';
-import FosterRequestsAdmin from '../admin/FosterRequestsAdmin';
 import RescueReportsAdmin from '../admin/RescueReportsAdmin';
 import DonationsAdmin from '../admin/DonationsAdmin';
 import UsersAdmin from '../admin/UsersAdmin';
@@ -384,8 +383,7 @@ export default function Dashboard() {
   const navItems = [
     { key: 'dashboard', label: 'Dashboard', icon: '🏠' },
     { key: 'animals', label: 'Animals', icon: '🐶', show: isAdminRole },
-    { key: 'requests', label: 'Adoption', icon: '📩', show: isAdminRole, badge: pendingAdoptionCount },
-    { key: 'fosters', label: 'Foster Requests', icon: '🏡', show: isAdminRole, badge: pendingFosterCount },
+    { key: 'requests', label: 'Adoption & Foster', icon: '📩', show: isAdminRole, badge: pendingAdoptionCount + pendingFosterCount },
     { key: 'rescues', label: 'Rescue Reports', icon: '🚨', show: isAdminRole, badge: pendingRescueCount },
     { key: 'visitations', label: 'Visit Requests', icon: '📅', show: isAdminRole, badge: pendingVisitationCount },
     { key: 'reminders', label: 'Health Reminders', icon: '🔔', show: isAdminRole, badge: overdueReminderCount },
@@ -484,7 +482,6 @@ export default function Dashboard() {
               {activeNav === 'dashboard' ? <ActivityFeed activity={overview?.activity} /> : null}
               {activeNav === 'animals' ? <AnimalsAdmin /> : null}
               {activeNav === 'requests' ? <AdoptionRequestsAdmin onUnreadChanged={fetchPendingCounts} /> : null}
-              {activeNav === 'fosters' ? <FosterRequestsAdmin /> : null}
               {activeNav === 'rescues' ? <RescueReportsAdmin onUnreadChanged={fetchPendingCounts} /> : null}
               {activeNav === 'visitations' ? <VisitationsAdmin /> : null}
               {activeNav === 'reminders' ? <RemindersAdmin onChanged={fetchPendingCounts} /> : null}

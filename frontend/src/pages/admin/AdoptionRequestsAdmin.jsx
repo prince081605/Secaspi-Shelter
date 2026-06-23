@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { adminListAdoptionApplications, adminUpdateAdoptionApplication } from '../../lib/animalsApi';
 import { getPublicSettings, settingImageUrl } from '../../lib/settingsApi';
 import StatusBadge from '../../components/StatusBadge';
+import FosterRequestsAdmin from './FosterRequestsAdmin';
 
 const STATUSES = ['pending', 'approved', 'declined', 'completed'];
 const HOME_VISIT_STATUSES = ['not_scheduled', 'scheduled', 'completed'];
@@ -359,6 +360,9 @@ export default function AdoptionRequestsAdmin({ onUnreadChanged }) {
 
   const [siteSettings, setSiteSettings] = useState({});
   const [subTab, setSubTab] = useState('ongoing');
+  // Adoption and fostering are two flavors of the same "place this animal" workflow,
+  // so they share one screen with a top-level toggle between them.
+  const [mode, setMode] = useState('adoption');
 
   useEffect(() => {
     getPublicSettings().then(setSiteSettings).catch(() => {});
@@ -431,6 +435,25 @@ export default function AdoptionRequestsAdmin({ onUnreadChanged }) {
 
   return (
     <>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        <button
+          className={mode === 'adoption' ? 'dashBtn dashBtnPrimary' : 'dashBtn'}
+          onClick={() => setMode('adoption')}
+        >
+          🐾 Adoption
+        </button>
+        <button
+          className={mode === 'foster' ? 'dashBtn dashBtnPrimary' : 'dashBtn'}
+          onClick={() => setMode('foster')}
+        >
+          🏡 Foster
+        </button>
+      </div>
+
+      {mode === 'foster' ? (
+        <FosterRequestsAdmin />
+      ) : (
+      <>
       <div className="dashTabs" style={{ marginBottom: 16 }}>
         {SUB_TABS.map((t) => (
           <button
@@ -545,6 +568,8 @@ export default function AdoptionRequestsAdmin({ onUnreadChanged }) {
             </div>
           )}
         </>
+      )}
+      </>
       )}
     </>
   );

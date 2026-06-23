@@ -20,6 +20,12 @@ class FosterApplicationController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
+            'full_name' => ['required', 'string', 'max:150'],
+            'address' => ['required', 'string'],
+            'occupation' => ['nullable', 'string', 'max:100'],
+            'housing_type' => ['nullable', 'string', 'max:100'],
+            'pet_experience' => ['nullable', 'string'],
+            'reason' => ['required', 'string'],
             'start_date' => ['required', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'notes' => ['nullable', 'string'],
@@ -130,6 +136,12 @@ class FosterApplicationController extends Controller
         return [
             'id' => $a->id,
             'status' => $a->status,
+            'full_name' => $a->full_name,
+            'address' => $a->address,
+            'occupation' => $a->occupation,
+            'housing_type' => $a->housing_type,
+            'pet_experience' => $a->pet_experience,
+            'reason' => $a->reason,
             'start_date' => $a->start_date,
             'end_date' => $a->end_date,
             'notes' => $a->notes,
