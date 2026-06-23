@@ -128,6 +128,63 @@
   line-height: 1.5;
 }
 
+/* Collapsible nav category header */
+.dashNavCategory {
+  width: 100%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  padding: 9px 12px;
+  margin-top: 6px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 700;
+  font-family: 'Work Sans', sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: background 0.16s var(--ease), color 0.16s var(--ease);
+}
+
+.dashNavCategory:hover {
+  background: var(--bg-soft);
+  color: var(--ink);
+}
+
+.dashNavCategoryLabel {
+  flex: 1;
+}
+
+.dashNavChevron {
+  display: inline-block;
+  font-size: 0.7rem;
+  transition: transform 0.18s var(--ease);
+  transform: rotate(0deg);
+}
+
+.dashNavChevron.isOpen {
+  transform: rotate(90deg);
+}
+
+/* Indented container for a category's child items */
+.dashNavGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 4px 0 4px 10px;
+  padding-left: 8px;
+  border-left: 1px solid var(--line);
+}
+
+/* The collapsed-category aggregate badge sits inline (not floated) in the flex header */
+.dashNavCategory .dashNavBadge {
+  float: none;
+}
+
 .dashMain {
   border: 1px solid var(--line);
   background: var(--paper);

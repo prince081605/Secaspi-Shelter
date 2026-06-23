@@ -26,6 +26,15 @@ import NotificationBell from '../../components/NotificationBell';
 
 const fallbackRole = 'user';
 
+// Which collapsible sidebar category each admin nav item belongs to. Used to
+// auto-expand the category that contains the active item.
+const ITEM_CATEGORY = {
+  animals: 'cat_animals', reminders: 'cat_animals',
+  requests: 'cat_requests', rescues: 'cat_requests', visitations: 'cat_requests', volunteers: 'cat_requests',
+  donations: 'cat_ops', reports: 'cat_ops', users: 'cat_ops', settings: 'cat_ops',
+};
+const NAV_CATEGORY_KEYS = ['cat_animals', 'cat_requests', 'cat_ops'];
+
 
 function safeRoleFromUser(user) {
   const role = user?.role || user?.user?.role || user?.data?.role;
@@ -385,21 +394,58 @@ export default function Dashboard() {
 
   const activeTab = tab;
 
-  const navItems = [
-    { key: 'dashboard', label: 'Dashboard', icon: '🏠' },
-    { key: 'animals', label: 'Animals', icon: '🐶', show: isAdminRole },
-    { key: 'requests', label: 'Adoption & Foster', icon: '📩', show: isAdminRole, badge: pendingAdoptionCount + pendingFosterCount },
-    { key: 'rescues', label: 'Rescue Reports', icon: '🚨', show: isAdminRole, badge: pendingRescueCount },
-    { key: 'visitations', label: 'Visit Requests', icon: '📅', show: isAdminRole, badge: pendingVisitationCount },
-    { key: 'reminders', label: 'Health Reminders', icon: '🔔', show: isAdminRole, badge: overdueReminderCount },
-    { key: 'donations', label: 'Donations', icon: '💰', show: isAdminRole, badge: pendingDonationCount },
-    { key: 'volunteers', label: 'Volunteers', icon: '🤝', show: isAdminRole, badge: pendingVolunteerCount },
-    { key: 'users', label: 'Users', icon: '👥', show: isAdminRole },
-    { key: 'reports', label: 'Reports', icon: '📈', show: isAdminRole },
-    { key: 'settings', label: 'Settings', icon: '⚙️', show: isAdminRole },
-  ].filter((i) => i.show);
+  const navCategories = [
+    {
+      key: 'cat_animals', label: 'Animal Care', icon: '🐾',
+      items: [
+        { key: 'animals', label: 'Animals', icon: '🐶' },
+        { key: 'reminders', label: 'Health Reminders', icon: '🔔', badge: overdueReminderCount },
+      ],
+    },
+    {
+      key: 'cat_requests', label: 'Requests', icon: '📨',
+      items: [
+        { key: 'requests', label: 'Adoption & Foster', icon: '📩', badge: pendingAdoptionCount + pendingFosterCount },
+        { key: 'rescues', label: 'Rescue Reports', icon: '🚨', badge: pendingRescueCount },
+        { key: 'visitations', label: 'Visit Requests', icon: '📅', badge: pendingVisitationCount },
+        { key: 'volunteers', label: 'Volunteers', icon: '🤝', badge: pendingVolunteerCount },
+      ],
+    },
+    {
+      key: 'cat_ops', label: 'Operations', icon: '🛠️',
+      items: [
+        { key: 'donations', label: 'Donations', icon: '💰', badge: pendingDonationCount },
+        { key: 'reports', label: 'Reports', icon: '📈' },
+        { key: 'users', label: 'Users', icon: '👥' },
+        { key: 'settings', label: 'Settings', icon: '⚙️' },
+      ],
+    },
+  ];
 
   const [activeNav, setActiveNav] = useState('dashboard');
+  const [openCategories, setOpenCategories] = useState(() => {
+    const allOpen = Object.fromEntries(NAV_CATEGORY_KEYS.map((k) => [k, true]));
+    try {
+      const saved = JSON.parse(localStorage.getItem('secaspi_admin_nav_open') || '{}');
+      return { ...allOpen, ...saved };
+    } catch {
+      return allOpen;
+    }
+  });
+
+  const toggleCategory = (key) => {
+    setOpenCategories((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      try { localStorage.setItem('secaspi_admin_nav_open', JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  };
+
+  // Keep the active item's category expanded so it's never hidden behind a collapsed header.
+  useEffect(() => {
+    const cat = ITEM_CATEGORY[activeNav];
+    if (cat) setOpenCategories((prev) => (prev[cat] ? prev : { ...prev, [cat]: true }));
+  }, [activeNav]);
 
   return (
     <div className="dashboardPage">
@@ -427,18 +473,49 @@ export default function Dashboard() {
             <button className="dashNavBtn" onClick={() => navigate('/')}>
               ⬅️ Back to Home
             </button>
-            {navItems.map((item) => (
-              <button
-                key={item.key}
-                className={
-                  'dashNavBtn ' + (activeNav === item.key ? 'dashNavBtnActive' : '')
-                }
-                onClick={() => setActiveNav(item.key)}
-              >
-                {item.icon} {item.label}
-                {item.badge > 0 ? <span className="dashNavBadge">{item.badge > 99 ? '99+' : item.badge}</span> : null}
-              </button>
-            ))}
+
+            <button
+              className={'dashNavBtn ' + (activeNav === 'dashboard' ? 'dashNavBtnActive' : '')}
+              onClick={() => setActiveNav('dashboard')}
+            >
+              🏠 Dashboard
+            </button>
+
+            {isAdminRole && navCategories.map((cat) => {
+              const isOpen = !!openCategories[cat.key];
+              const aggregate = cat.items.reduce((sum, it) => sum + (it.badge || 0), 0);
+              return (
+                <div key={cat.key}>
+                  <button
+                    className="dashNavCategory"
+                    onClick={() => toggleCategory(cat.key)}
+                    aria-expanded={isOpen}
+                  >
+                    <span aria-hidden="true">{cat.icon}</span>
+                    <span className="dashNavCategoryLabel">{cat.label}</span>
+                    {!isOpen && aggregate > 0 ? (
+                      <span className="dashNavBadge">{aggregate > 99 ? '99+' : aggregate}</span>
+                    ) : null}
+                    <span className={'dashNavChevron' + (isOpen ? ' isOpen' : '')} aria-hidden="true">▸</span>
+                  </button>
+                  {isOpen && (
+                    <div className="dashNavGroup">
+                      {cat.items.map((item) => (
+                        <button
+                          key={item.key}
+                          className={'dashNavBtn ' + (activeNav === item.key ? 'dashNavBtnActive' : '')}
+                          onClick={() => setActiveNav(item.key)}
+                        >
+                          {item.icon} {item.label}
+                          {item.badge > 0 ? <span className="dashNavBadge">{item.badge > 99 ? '99+' : item.badge}</span> : null}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
             {!isAdminRole ? (
               <button
                 className={'dashNavBtn ' + (activeNav === 'profile' ? 'dashNavBtnActive' : '')}
