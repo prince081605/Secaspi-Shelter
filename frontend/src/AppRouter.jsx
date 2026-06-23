@@ -13,6 +13,7 @@ import FosterApply from './pages/user/FosterApply';
 import Dashboard from './pages/user/Dashboard';
 import Donate from './pages/user/Donate';
 import Transparency from './pages/user/Transparency';
+import VisitationBooking from './pages/user/VisitationBooking';
 import DonationHistory from './pages/user/DonationHistory';
 import Receipt from './pages/user/Receipt';
 import NotFound from './pages/user/NotFound';
@@ -83,6 +84,14 @@ export default function AppRouter() {
           element={
             <RequireAuth>
               <Donate />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/visit"
+          element={
+            <RequireAuth>
+              <VisitationBooking />
             </RequireAuth>
           }
         />

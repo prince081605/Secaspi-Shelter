@@ -17,6 +17,7 @@ use App\Http\Controllers\IntakeController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\VisitationController;
 
 
 // Public routes
@@ -54,6 +55,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/notifications',                     [NotificationController::class, 'index']);
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead']);
     Route::post('/notifications/read-all',           [NotificationController::class, 'markAllRead']);
+
+    // ---- Visitation scheduling ----
+    Route::post('/visitations',                      [VisitationController::class, 'store']);
+    Route::get('/visitations',                       [VisitationController::class, 'index']);
+    Route::get('/admin/visitations',                 [VisitationController::class, 'adminIndex'])->middleware('admin');
+    Route::put('/admin/visitations/{visitation}',    [VisitationController::class, 'adminUpdate'])->middleware('admin');
+    Route::post('/admin/visitations/{visitation}/read', [VisitationController::class, 'adminMarkRead'])->middleware('admin');
 
     // ---- Animal management (Phase 6) ----
     Route::get('/admin/animals',                     [AnimalController::class, 'adminIndex'])->middleware('admin');
