@@ -18,6 +18,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\VisitationController;
+use App\Http\Controllers\ReminderController;
 
 
 // Public routes
@@ -62,6 +63,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/admin/visitations',                 [VisitationController::class, 'adminIndex'])->middleware('admin');
     Route::put('/admin/visitations/{visitation}',    [VisitationController::class, 'adminUpdate'])->middleware('admin');
     Route::post('/admin/visitations/{visitation}/read', [VisitationController::class, 'adminMarkRead'])->middleware('admin');
+
+    // ---- Health reminders (vaccination boosters, follow-ups) ----
+    Route::get('/admin/reminders',                   [ReminderController::class, 'adminIndex'])->middleware('admin');
+    Route::put('/admin/reminders/{reminder}',        [ReminderController::class, 'adminUpdate'])->middleware('admin');
 
     // ---- Animal management (Phase 6) ----
     Route::get('/admin/animals',                     [AnimalController::class, 'adminIndex'])->middleware('admin');

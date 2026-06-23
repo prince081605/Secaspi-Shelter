@@ -15,10 +15,12 @@ import { adminListRescueReports } from '../../lib/rescueApi';
 import { adminListAdoptionApplications, adminListFosterApplications } from '../../lib/animalsApi';
 import { adminListDonations } from '../../lib/donationsApi';
 import { adminListVisitations } from '../../lib/visitationsApi';
+import { adminListReminders } from '../../lib/remindersApi';
 import VolunteersAdmin from '../admin/VolunteersAdmin';
 import ReportsAdmin from '../admin/ReportsAdmin';
 import SettingsAdmin from '../admin/SettingsAdmin';
 import VisitationsAdmin from '../admin/VisitationsAdmin';
+import RemindersAdmin from '../admin/RemindersAdmin';
 import StatusBadge from '../../components/StatusBadge';
 import NotificationBell from '../../components/NotificationBell';
 
@@ -245,6 +247,7 @@ export default function Dashboard() {
   const [pendingFosterCount, setPendingFosterCount] = useState(0);
   const [pendingDonationCount, setPendingDonationCount] = useState(0);
   const [pendingVisitationCount, setPendingVisitationCount] = useState(0);
+  const [overdueReminderCount, setOverdueReminderCount] = useState(0);
 
   // keep empty when data isn't available
   const isAdminRole = role === 'admin';
@@ -343,6 +346,9 @@ export default function Dashboard() {
     adminListVisitations({ status: 'pending', per_page: 1 })
       .then((data) => { if (mountedRef.current) setPendingVisitationCount(data?.total || 0); })
       .catch(() => { if (mountedRef.current) setPendingVisitationCount(0); });
+    adminListReminders(30)
+      .then((data) => { if (mountedRef.current) setOverdueReminderCount(data?.overdue_count || 0); })
+      .catch(() => { if (mountedRef.current) setOverdueReminderCount(0); });
   }, [isAdminRole]);
 
   useEffect(() => {
@@ -382,6 +388,7 @@ export default function Dashboard() {
     { key: 'fosters', label: 'Foster Requests', icon: '🏡', show: isAdminRole, badge: pendingFosterCount },
     { key: 'rescues', label: 'Rescue Reports', icon: '🚨', show: isAdminRole, badge: pendingRescueCount },
     { key: 'visitations', label: 'Visit Requests', icon: '📅', show: isAdminRole, badge: pendingVisitationCount },
+    { key: 'reminders', label: 'Health Reminders', icon: '🔔', show: isAdminRole, badge: overdueReminderCount },
     { key: 'donations', label: 'Donations', icon: '💰', show: isAdminRole, badge: pendingDonationCount },
     { key: 'volunteers', label: 'Volunteers', icon: '🤝', show: isAdminRole },
     { key: 'users', label: 'Users', icon: '👥', show: isAdminRole },
@@ -480,6 +487,7 @@ export default function Dashboard() {
               {activeNav === 'fosters' ? <FosterRequestsAdmin /> : null}
               {activeNav === 'rescues' ? <RescueReportsAdmin onUnreadChanged={fetchPendingCounts} /> : null}
               {activeNav === 'visitations' ? <VisitationsAdmin /> : null}
+              {activeNav === 'reminders' ? <RemindersAdmin onChanged={fetchPendingCounts} /> : null}
               {activeNav === 'donations' ? <DonationsAdmin /> : null}
               {activeNav === 'volunteers' ? <VolunteersAdmin /> : null}
               {activeNav === 'reports' ? <ReportsAdmin /> : null}
