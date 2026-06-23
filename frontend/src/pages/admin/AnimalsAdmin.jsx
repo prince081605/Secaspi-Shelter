@@ -36,6 +36,27 @@ const RECORD_TYPES = ['vaccination', 'deworming', 'treatment', 'surgery', 'check
 const INTAKE_TYPES = ['rescue', 'owner_surrender', 'stray'];
 const INTAKE_STATUSES = ['pending', 'under_assessment', 'approved', 'converted', 'rejected'];
 
+const BEHAVIORAL_ISSUES = [
+  'separation anxiety',
+  'aggression & resource guarding',
+  'dog-to-dog aggression',
+  'territorial aggression',
+  'fear aggression',
+  'destructive chewing & digging',
+  'inappropriate elimination',
+  'excessive barking',
+  'excessive vocalization',
+  'jumping/mouthing',
+  'pulling on leash',
+  'excessive energy',
+  'extreme shyness',
+  'fear of strangers',
+  'fear of loud noises',
+  'post-trauma/trust issues',
+  'pain-related aggression',
+  'cognitive issues (senior)',
+];
+
 const emptyIntakeForm = {
   intake_type: 'stray',
   reporter_name: '',
@@ -59,6 +80,7 @@ const emptyForm = {
   weight: '',
   status: 'available',
   rescue_story: '',
+  behavioral_assessment: [],
 };
 
 function photoSrc(path) {
@@ -85,6 +107,16 @@ function AnimalForm({ initial, onCancel, onSaved }) {
 
   const setField = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
+  const toggleBehavioralIssue = (issue) => {
+    setForm((f) => {
+      const current = Array.isArray(f.behavioral_assessment) ? f.behavioral_assessment : [];
+      const updated = current.includes(issue)
+        ? current.filter((i) => i !== issue)
+        : [...current, issue];
+      return { ...f, behavioral_assessment: updated };
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setState({ status: 'loading', error: '' });
@@ -100,6 +132,7 @@ function AnimalForm({ initial, onCancel, onSaved }) {
           weight: form.weight === '' ? null : Number(form.weight),
           status: form.status,
           rescue_story: form.rescue_story || null,
+          behavioral_assessment: form.behavioral_assessment && form.behavioral_assessment.length > 0 ? form.behavioral_assessment : null,
         });
       } else {
         const fd = new FormData();
@@ -112,6 +145,9 @@ function AnimalForm({ initial, onCancel, onSaved }) {
         if (form.weight !== '') fd.append('weight', form.weight);
         fd.append('status', form.status);
         if (form.rescue_story) fd.append('rescue_story', form.rescue_story);
+        if (form.behavioral_assessment && form.behavioral_assessment.length > 0) {
+          fd.append('behavioral_assessment', JSON.stringify(form.behavioral_assessment));
+        }
         if (photoFiles) {
           Array.from(photoFiles).forEach((file) => fd.append('photos[]', file));
         }
@@ -172,6 +208,21 @@ function AnimalForm({ initial, onCancel, onSaved }) {
       <div className="ui-field">
         <label className="ui-label">Rescue story</label>
         <textarea className="ui-input" rows={3} value={form.rescue_story} onChange={setField('rescue_story')} />
+      </div>
+      <div className="ui-field">
+        <label className="ui-label">Behavioral issues</label>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.8rem', marginTop: '0.5rem' }}>
+          {BEHAVIORAL_ISSUES.map((issue) => (
+            <label key={issue} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
+              <input
+                type="checkbox"
+                checked={form.behavioral_assessment.includes(issue)}
+                onChange={() => toggleBehavioralIssue(issue)}
+              />
+              <span style={{ textTransform: 'capitalize' }}>{issue}</span>
+            </label>
+          ))}
+        </div>
       </div>
       {!isEdit && (
         <div className="ui-field">

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Animal;
 use App\Models\AnimalPhoto;
+use App\Models\CareGuide;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Writer\SvgWriter;
 use Illuminate\Http\Request;
@@ -91,6 +92,7 @@ class AnimalController extends Controller
                 'weight' => $animal->weight,
                 'status' => $animal->status,
                 'rescue_story' => $animal->rescue_story,
+                'behavioral_assessment' => $animal->behavioral_assessment,
                 'qr_code' => $qrCode ? Storage::url($qrCode) : null,
                 'photos' => $animal->photos->pluck('photo_url')
                     ->filter()
@@ -111,6 +113,7 @@ class AnimalController extends Controller
                     'date_given' => $v->date_given,
                     'next_due' => $v->next_due,
                 ])->values(),
+                'care_guides' => $this->careGuides($animal),
             ],
         ]);
     }
@@ -127,6 +130,7 @@ class AnimalController extends Controller
             'weight' => ['nullable', 'numeric', 'min:0'],
             'status' => ['nullable', 'in:' . implode(',', self::STATUSES)],
             'rescue_story' => ['nullable', 'string'],
+            'behavioral_assessment' => ['nullable', 'string'],
             'photos' => ['nullable', 'array'],
             'photos.*' => ['image', 'max:5120'],
         ]);
@@ -139,6 +143,14 @@ class AnimalController extends Controller
         $photos = $data['photos'] ?? null;
         unset($data['photos']);
         $data['status'] = $data['status'] ?? 'available';
+
+        // Decode JSON behavioral_assessment if it was sent as JSON string
+        if ($data['behavioral_assessment'] && is_string($data['behavioral_assessment'])) {
+            $decoded = json_decode($data['behavioral_assessment'], true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $data['behavioral_assessment'] = $decoded;
+            }
+        }
 
         $animal = Animal::create($data);
 
@@ -166,13 +178,24 @@ class AnimalController extends Controller
             'weight' => ['nullable', 'numeric', 'min:0'],
             'status' => ['nullable', 'in:' . implode(',', self::STATUSES)],
             'rescue_story' => ['nullable', 'string'],
+            'behavioral_assessment' => ['nullable', 'string'],
         ]);
 
         if ($validator->fails()) {
             return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
         }
 
-        $animal->update($validator->validated());
+        $data = $validator->validated();
+
+        // Decode JSON behavioral_assessment if it was sent as JSON string
+        if (isset($data['behavioral_assessment']) && is_string($data['behavioral_assessment'])) {
+            $decoded = json_decode($data['behavioral_assessment'], true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $data['behavioral_assessment'] = $decoded;
+            }
+        }
+
+        $animal->update($data);
 
         return response()->json(['animal' => $this->toAdminDetail($animal)]);
     }
@@ -302,6 +325,7 @@ class AnimalController extends Controller
             'weight' => $animal->weight,
             'status' => $animal->status,
             'rescue_story' => $animal->rescue_story,
+            'behavioral_assessment' => $animal->behavioral_assessment,
             'qr_code' => $qrCode ? Storage::url($qrCode) : null,
             'photos' => $animal->photos->map(fn ($p) => [
                 'id' => $p->id,
@@ -324,6 +348,84 @@ class AnimalController extends Controller
                 'next_due' => $v->next_due,
             ])->values(),
         ];
+    }
+
+    private function careGuides(Animal $animal): array
+    {
+        $guides = CareGuide::query()
+            ->where('species', $animal->species)
+            ->get();
+
+        $matched = [];
+
+        // Determine age range
+        $ageRange = null;
+        if ($animal->age !== null) {
+            if ($animal->age < 2) $ageRange = 'puppy';
+            elseif ($animal->age < 7) $ageRange = 'adult';
+            else $ageRange = 'senior';
+        }
+
+        foreach ($guides as $guide) {
+            $matchScore = 0;
+
+            // Match by breed (exact or keyword match)
+            if ($guide->breed_keywords && is_array($guide->breed_keywords)) {
+                $breedLower = strtolower($animal->breed ?? '');
+                foreach ($guide->breed_keywords as $keyword) {
+                    if ($breedLower && strpos($breedLower, strtolower($keyword)) !== false) {
+                        $matchScore += 2;
+                    }
+                }
+            }
+
+            // Match by age range
+            if ($guide->age_range && $guide->age_range === $ageRange) {
+                $matchScore += 1;
+            }
+
+            // Match by behavioral keywords
+            $behaviors = $animal->behavioral_assessment;
+            if ($guide->behavioral_keywords && is_array($guide->behavioral_keywords)) {
+                if ($behaviors && is_array($behaviors)) {
+                    foreach ($guide->behavioral_keywords as $keyword) {
+                        if (in_array(strtolower($keyword), array_map('strtolower', $behaviors))) {
+                            $matchScore += 3;
+                        }
+                    }
+                }
+            }
+
+            // General guides (no keywords match everything)
+            if (!$guide->breed_keywords && !$guide->age_range && !$guide->behavioral_keywords) {
+                $matchScore += 0.5;
+            }
+
+            if ($matchScore > 0) {
+                $matched[] = [
+                    'id' => $guide->id,
+                    'title' => $guide->title,
+                    'category' => $guide->category,
+                    'content' => $guide->content,
+                    'matchScore' => $matchScore,
+                    'isBehavioral' => !empty($guide->behavioral_keywords),
+                ];
+            }
+        }
+
+        // Sort by: behavioral guides first (prioritized), then by match score descending
+        usort($matched, function ($a, $b) {
+            if ($a['isBehavioral'] !== $b['isBehavioral']) {
+                return $a['isBehavioral'] ? -1 : 1;
+            }
+            return $b['matchScore'] <=> $a['matchScore'];
+        });
+
+        // Remove internal fields before returning
+        return array_map(function ($g) {
+            unset($g['matchScore'], $g['isBehavioral']);
+            return $g;
+        }, $matched);
     }
 
     private function toListItem(Animal $animal): array

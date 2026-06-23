@@ -18,6 +18,7 @@ class Animal extends Model
         'status',
         'rescue_story',
         'qr_code_path',
+        'behavioral_assessment',
     ];
 
     public function photos()

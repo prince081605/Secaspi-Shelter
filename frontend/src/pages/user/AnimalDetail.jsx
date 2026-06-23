@@ -22,6 +22,12 @@ const styles = `
   .detQr img { width: 140px; height: 140px; }
   .detQr a { font-size: 0.85rem; color: var(--brand); text-decoration: none; }
   .detQr a:hover { text-decoration: underline; }
+  .detGuidesGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-top: 1rem; }
+  .detGuideCard { padding: 1rem; background: var(--bg-soft-2); border-radius: var(--radius); border-left: 4px solid var(--brand); }
+  .detGuideCard.behavioral { border-left-color: var(--brand-2); background: rgba(193, 97, 46, 0.05); }
+  .detGuideTitle { font-weight: 700; color: var(--ink); margin-bottom: 0.5rem; font-size: 0.95rem; }
+  .detGuideCategory { font-size: 0.75rem; text-transform: uppercase; color: var(--muted); letter-spacing: 0.5px; margin-bottom: 0.7rem; }
+  .detGuideContent { font-size: 0.88rem; color: var(--ink-soft); line-height: 1.5; }
   @media (max-width: 900px) { .detBody { grid-template-columns: 1fr; padding: 2rem 6vw; } }
 `;
 
@@ -138,6 +144,18 @@ export default function AnimalDetail() {
             </div>
             <span className="ui-tag ui-tag-brand">{animal.status}</span>
             {animal.rescue_story && <p className="detStory">{animal.rescue_story}</p>}
+            {animal.behavioral_assessment && animal.behavioral_assessment.length > 0 && (
+              <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: 'var(--bg-soft-2)', borderRadius: 'var(--radius)' }}>
+                <h3 className="ui-h3" style={{ marginBottom: '0.7rem' }}>Behavioral Notes</h3>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {animal.behavioral_assessment.map((issue) => (
+                    <span key={issue} style={{ display: 'inline-block', padding: '0.4rem 0.8rem', backgroundColor: 'var(--brand-soft)', borderRadius: '999px', fontSize: '0.85rem', textTransform: 'capitalize', color: 'var(--brand)' }}>
+                      {issue}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="detActions">
               <button className="ui-btn-primary" onClick={() => navigate(`/adopt/${id}/apply`)}>Apply to Adopt</button>
@@ -155,6 +173,21 @@ export default function AnimalDetail() {
                   {h.date && <div className="detRecordDate">{h.date}</div>}
                 </div>
               ))
+            )}
+
+            {animal.care_guides && animal.care_guides.length > 0 && (
+              <>
+                <h2 className="ui-h3" style={{ marginBottom: '1rem', marginTop: '2.5rem' }}>Care Guide for {animal.species === 'dog' ? 'This Dog' : animal.species === 'cat' ? 'This Cat' : 'This Animal'}</h2>
+                <div className="detGuidesGrid">
+                  {animal.care_guides.map((guide) => (
+                    <div key={guide.id} className={`detGuideCard${guide.id % 1000 > 500 ? ' behavioral' : ''}`}>
+                      <div className="detGuideTitle">{guide.title}</div>
+                      <div className="detGuideCategory">{guide.category}</div>
+                      <div className="detGuideContent">{guide.content}</div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </div>
