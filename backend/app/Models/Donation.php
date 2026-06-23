@@ -14,6 +14,11 @@ class Donation extends Model
         'payment_method',
         'proof_image',
         'status',
+        'is_anonymous',
+    ];
+
+    protected $casts = [
+        'is_anonymous' => 'boolean',
     ];
 
     public function user()

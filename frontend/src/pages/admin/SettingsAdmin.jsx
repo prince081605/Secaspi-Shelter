@@ -18,11 +18,12 @@ const FIELDS = {
   hero_subtitle: '',
   about_us_content: '',
   adoption_policies: '',
+  donation_monthly_goal: '',
 };
 
 export default function SettingsAdmin() {
   const [form, setForm] = useState(FIELDS);
-  const [images, setImages] = useState({ logo_path: '', banner_image_path: '' });
+  const [images, setImages] = useState({ logo_path: '', banner_image_path: '', fund_usage_image_path: '' });
   const [loading, setLoading] = useState(true);
   const [saveState, setSaveState] = useState({ status: 'idle', error: '' });
   const [imageState, setImageState] = useState({ status: 'idle', error: '', key: '' });
@@ -32,7 +33,11 @@ export default function SettingsAdmin() {
     adminGetSettings()
       .then((data) => {
         setForm({ ...FIELDS, ...data });
-        setImages({ logo_path: data?.logo_path || '', banner_image_path: data?.banner_image_path || '' });
+        setImages({
+          logo_path: data?.logo_path || '',
+          banner_image_path: data?.banner_image_path || '',
+          fund_usage_image_path: data?.fund_usage_image_path || '',
+        });
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -139,6 +144,21 @@ export default function SettingsAdmin() {
           <div className="ui-field">
             <label className="ui-label">Adoption policies</label>
             <textarea className="ui-input" rows={4} value={form.adoption_policies} onChange={handleChange('adoption_policies')} placeholder="Outline your adoption requirements and process..." />
+          </div>
+
+          <h3 className="dashSubSectionTitle" style={{ marginTop: 20 }}>💜 Donations / Transparency</h3>
+
+          <div className="ui-field">
+            <label className="ui-label">Monthly fundraising goal (₱)</label>
+            <input className="ui-input" type="number" min="0" value={form.donation_monthly_goal} onChange={handleChange('donation_monthly_goal')} placeholder="80220" />
+          </div>
+          <div className="ui-field">
+            <label className="ui-label">"Where your donations go" image</label>
+            <input className="ui-input" type="file" accept="image/*" onChange={handleImageUpload('fund_usage_image_path')} />
+            {images.fund_usage_image_path && (
+              <img src={settingImageUrl(images.fund_usage_image_path)} alt="How donations are used" style={{ maxWidth: 240, marginTop: 8 }} />
+            )}
+            {imageState.key === 'fund_usage_image_path' && imageState.status === 'error' && <div className="ui-error">{imageState.error}</div>}
           </div>
 
           <button className="ui-btn-primary" type="submit" disabled={saveState.status === 'loading'}>

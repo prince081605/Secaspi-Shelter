@@ -16,4 +16,12 @@ export async function getImpactStats() {
   return api.get('/api/home/impact');
 }
 
+export async function getTransparency() {
+  // Expected shape:
+  // { monthly_goal, this_month_raised, progress_pct, total_raised, donation_count,
+  //   donor_count, by_method: { method: total }, monthly_trend: [{ label, total }],
+  //   recent_donations: [{ name, amount, date }], fund_usage_image }
+  return api.get('/api/home/transparency');
+}
+
 

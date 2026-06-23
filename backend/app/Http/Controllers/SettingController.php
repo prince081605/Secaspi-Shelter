@@ -32,6 +32,7 @@ class SettingController extends Controller
             'hero_subtitle' => ['nullable', 'string', 'max:500'],
             'about_us_content' => ['nullable', 'string'],
             'adoption_policies' => ['nullable', 'string'],
+            'donation_monthly_goal' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         if ($validator->fails()) {
@@ -46,7 +47,7 @@ class SettingController extends Controller
     public function adminUploadImage(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'key' => ['required', 'in:logo_path,banner_image_path'],
+            'key' => ['required', 'in:logo_path,banner_image_path,fund_usage_image_path'],
             'image' => ['required', 'image', 'max:5120'],
         ]);
 

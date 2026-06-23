@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { createDonation } from '../../lib/donationsApi';
+import { getTransparency } from '../../lib/publicHomeApi';
+
+const peso = (n) => `₱${Number(n || 0).toLocaleString()}`;
 
 const styles = `
   .donateBody { max-width: 640px; margin: 0 auto; padding: 3rem 1.5rem; }
@@ -10,6 +13,13 @@ const styles = `
   .donatePaymentSheetLink { display: block; margin-bottom: 1.2rem; }
   .donatePaymentSheet { width: 100%; border-radius: 12px; border: 1px solid var(--line); display: block; }
   .donatePaymentSheetCaption { font-size: 0.82rem; color: var(--muted); margin-top: 0.4rem; text-align: center; }
+  .donateGoal { border: 1px solid var(--line); border-radius: 12px; padding: 1.1rem 1.2rem; margin-bottom: 2rem; }
+  .donateGoalTop { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.6rem; font-size: 0.92rem; }
+  .donateGoalTrack { height: 12px; border-radius: 999px; background: var(--brand-soft); overflow: hidden; }
+  .donateGoalFill { height: 100%; border-radius: 999px; background: var(--brand); transition: width .6s ease; }
+  .donateUsage { margin-top: 2.4rem; }
+  .donateUsageImg { width: 100%; border-radius: 12px; border: 1px solid var(--line); display: block; }
+  .donateUsageLink { display: inline-block; margin-top: 0.7rem; color: var(--brand-2); font-size: 0.9rem; font-weight: 600; }
 `;
 
 const PRESET_AMOUNTS = [100, 300, 500, 1000, 2500];
@@ -28,6 +38,8 @@ export default function Donate() {
   const [paymentMethod, setPaymentMethod] = useState('gcash');
   const [proofImage, setProofImage] = useState(null);
   const [proofPreviewUrl, setProofPreviewUrl] = useState('');
+  const [listPublicly, setListPublicly] = useState(false);
+  const [transparency, setTransparency] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
@@ -41,6 +53,14 @@ export default function Donate() {
     setProofPreviewUrl(url);
     return () => URL.revokeObjectURL(url);
   }, [proofImage]);
+
+  useEffect(() => {
+    let mounted = true;
+    getTransparency()
+      .then((res) => { if (mounted) setTransparency(res); })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
 
   const handlePreset = (value) => {
     setAmount(value);
@@ -61,6 +81,8 @@ export default function Donate() {
       formData.append('amount', amount);
       formData.append('payment_method', paymentMethod);
       if (proofImage) formData.append('proof_image', proofImage);
+      // Checked = wants to be named publicly (not anonymous).
+      formData.append('is_anonymous', listPublicly ? '0' : '1');
 
       const data = await createDonation(formData);
       setResult(data?.donation || null);
@@ -102,6 +124,18 @@ export default function Donate() {
             <p className="ui-muted" style={{ marginBottom: '2rem' }}>
               Every peso covers vet care, food, and shelter operations.
             </p>
+
+            {transparency && (
+              <div className="donateGoal">
+                <div className="donateGoalTop">
+                  <span><strong>{peso(transparency.this_month_raised)}</strong> raised this month</span>
+                  <span className="ui-muted">{transparency.progress_pct}% of {peso(transparency.monthly_goal)} goal</span>
+                </div>
+                <div className="donateGoalTrack">
+                  <div className="donateGoalFill" style={{ width: `${Math.min(100, transparency.progress_pct)}%` }} />
+                </div>
+              </div>
+            )}
 
             {error && <div className="ui-error">{error}</div>}
 
@@ -168,10 +202,34 @@ export default function Donate() {
                 </>
               )}
 
+              <div className="ui-field">
+                <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={listPublicly}
+                    onChange={(e) => setListPublicly(e.target.checked)}
+                    style={{ marginTop: '0.2rem' }}
+                  />
+                  <span className="ui-muted" style={{ fontSize: '0.9rem' }}>
+                    List me publicly as a supporter (first name + initial). Leave unchecked to donate anonymously.
+                  </span>
+                </label>
+              </div>
+
               <button className="ui-btn-primary" style={{ width: '100%' }} type="submit" disabled={submitting || !amount}>
                 {submitting ? 'Submitting…' : `Donate ₱${Number(amount || 0).toLocaleString()}`}
               </button>
             </form>
+
+            <div className="donateUsage">
+              <h2 className="ui-h2" style={{ fontSize: '1.15rem', marginBottom: '0.8rem' }}>Where your donations go</h2>
+              <img
+                className="donateUsageImg"
+                src={transparency?.fund_usage_image || '/fund-usage-placeholder.svg'}
+                alt="How the shelter uses your donations"
+              />
+              <a href="/transparency" className="donateUsageLink">See our full transparency report →</a>
+            </div>
           </>
         )}
       </div>

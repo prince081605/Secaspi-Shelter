@@ -77,6 +77,7 @@ function Navbar({ shelterName, isLoggedIn, menuOpen, scrolled, onToggleMenu, onN
           <li><a href="/adopt">Adopt</a></li>
           <li><a href="#how">How it works</a></li>
           <li><a href="#impact">Impact</a></li>
+          <li><a href="/transparency">Transparency</a></li>
           <li><a href="#donate">Donate</a></li>
         </ul>
         <div className="lp-nav-actions">
@@ -99,6 +100,7 @@ function Navbar({ shelterName, isLoggedIn, menuOpen, scrolled, onToggleMenu, onN
         <a href="/adopt" onClick={onToggleMenu}>Adopt</a>
         <a href="#how" onClick={onToggleMenu}>How it works</a>
         <a href="#impact" onClick={onToggleMenu}>Impact</a>
+        <a href="/transparency" onClick={onToggleMenu}>Transparency</a>
         <a href="#donate" onClick={onToggleMenu}>Donate</a>
         <a href="#report" onClick={onToggleMenu}>Report a stray</a>
         <a href={isLoggedIn ? "/dashboard" : "/login"} onClick={onToggleMenu}>{isLoggedIn ? "Dashboard" : "Login"}</a>

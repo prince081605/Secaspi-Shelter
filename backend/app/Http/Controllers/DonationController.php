@@ -18,6 +18,7 @@ class DonationController extends Controller
             'amount'         => ['required', 'numeric', 'min:1'],
             'payment_method' => ['required', 'in:gcash,cash,bank'],
             'proof_image'    => ['required_if:payment_method,gcash', 'image', 'max:5120'],
+            'is_anonymous'   => ['sometimes', 'boolean'],
         ]);
 
         if ($validator->fails()) {
@@ -39,6 +40,8 @@ class DonationController extends Controller
                 'payment_method' => $request->input('payment_method'),
                 'proof_image'    => $proofPath,
                 'status'         => 'pending',
+                // Default anonymous unless the donor explicitly opts in to be named.
+                'is_anonymous'   => $request->boolean('is_anonymous', true),
             ]);
         } catch (\Throwable $e) {
             Log::error('Failed to record donation', [

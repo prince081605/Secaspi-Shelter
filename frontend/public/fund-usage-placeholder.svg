@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" role="img" aria-label="Where your donations go — breakdown image coming soon">
+  <rect x="6" y="6" width="788" height="438" rx="18" fill="#fdf8f1" stroke="#ddd0b8" stroke-width="2.5" stroke-dasharray="10 8"/>
+  <circle cx="400" cy="165" r="80" fill="#f2dfcb"/>
+  <path d="M400 212 C 358 180, 320 153, 320 125 C 320 104, 337 91, 356 91 C 377 91, 392 106, 400 120 C 408 106, 423 91, 444 91 C 463 91, 480 104, 480 125 C 480 153, 442 180, 400 212 Z" fill="#c1612e"/>
+  <text x="400" y="305" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="36" font-weight="700" fill="#9b4a22">Where Your Donations Go</text>
+  <text x="400" y="345" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="18" fill="#8c8071">Our fund breakdown image will appear here soon.</text>
+</svg>

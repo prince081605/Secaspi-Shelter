@@ -12,6 +12,7 @@ import AdoptionApply from './pages/user/AdoptionApply';
 import FosterApply from './pages/user/FosterApply';
 import Dashboard from './pages/user/Dashboard';
 import Donate from './pages/user/Donate';
+import Transparency from './pages/user/Transparency';
 import DonationHistory from './pages/user/DonationHistory';
 import Receipt from './pages/user/Receipt';
 import NotFound from './pages/user/NotFound';
@@ -51,6 +52,7 @@ export default function AppRouter() {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/" element={<Home />} />
         <Route path="/adopt" element={<Adoption />} />
+        <Route path="/transparency" element={<Transparency />} />
         <Route path="/adopt/:id" element={<AnimalDetail />} />
         <Route
           path="/adopt/:id/apply"

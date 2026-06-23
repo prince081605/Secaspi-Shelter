@@ -74,6 +74,7 @@ Route::get('/home/impact', function () {
     $topDonors = DB::table('donations')
         ->join('users', 'users.id', '=', 'donations.user_id')
         ->where('donations.status', 'verified')
+        ->where('donations.is_anonymous', false)
         ->select('users.full_name', DB::raw('SUM(donations.amount) as total'))
         ->groupBy('users.id', 'users.full_name')
         ->orderByDesc('total')
@@ -102,6 +103,91 @@ Route::get('/home/impact', function () {
         'success_rate' => $successRate,
         'top_donors' => $topDonors,
     ]);
+});
+
+Route::get('/home/transparency', function () {
+    try {
+        // Fresh verified-donations query each time (closures avoid builder mutation bugs).
+        $verified = fn () => DB::table('donations')->where('status', 'verified');
+
+        $monthStart = now()->startOfMonth();
+
+        $totalRaised = (float) $verified()->sum('amount');
+        $donationCount = (int) $verified()->count();
+        $donorCount = (int) $verified()->distinct()->count('user_id');
+        $thisMonthRaised = (float) $verified()->where('donated_at', '>=', $monthStart)->sum('amount');
+
+        $monthlyGoal = (float) (DB::table('settings')->where('key', 'donation_monthly_goal')->value('value') ?: 80220);
+        $progressPct = $monthlyGoal > 0 ? (int) min(100, round(($thisMonthRaised / $monthlyGoal) * 100)) : 0;
+
+        $byMethod = $verified()
+            ->selectRaw('payment_method, COALESCE(SUM(amount), 0) as total')
+            ->groupBy('payment_method')
+            ->pluck('total', 'payment_method');
+
+        // 6-month trend, bucketed in PHP to stay DB-agnostic (Postgres in prod, SQLite in dev).
+        $buckets = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $m = now()->startOfMonth()->subMonths($i);
+            $buckets[$m->format('Y-m')] = ['label' => $m->format('M'), 'total' => 0.0];
+        }
+        $trendRows = $verified()
+            ->where('donated_at', '>=', now()->startOfMonth()->subMonths(5))
+            ->get(['amount', 'donated_at']);
+        foreach ($trendRows as $r) {
+            $key = \Illuminate\Support\Carbon::parse($r->donated_at)->format('Y-m');
+            if (isset($buckets[$key])) {
+                $buckets[$key]['total'] += (float) $r->amount;
+            }
+        }
+        $monthlyTrend = array_values($buckets);
+
+        // Recent donations, honoring each donor's opt-in (named) vs anonymous choice.
+        $recentDonations = DB::table('donations')
+            ->leftJoin('users', 'users.id', '=', 'donations.user_id')
+            ->where('donations.status', 'verified')
+            ->orderByDesc('donations.donated_at')
+            ->limit(10)
+            ->get(['donations.amount', 'donations.donated_at', 'donations.is_anonymous', 'users.full_name'])
+            ->map(function ($d) {
+                $name = 'Anonymous';
+                if (!$d->is_anonymous && $d->full_name) {
+                    // Show "First L." rather than a donor's full legal name on a public page.
+                    $parts = preg_split('/\s+/', trim($d->full_name));
+                    $name = $parts[0];
+                    if (count($parts) > 1) {
+                        $name .= ' ' . mb_substr(end($parts), 0, 1) . '.';
+                    }
+                }
+                return [
+                    'name' => $name,
+                    'amount' => (float) $d->amount,
+                    'date' => $d->donated_at,
+                ];
+            })
+            ->values();
+
+        $fundUsageKey = DB::table('settings')->where('key', 'fund_usage_image_path')->value('value');
+        $fundUsageImage = $fundUsageKey ? Storage::url($fundUsageKey) : null;
+
+        return response()->json([
+            'monthly_goal' => $monthlyGoal,
+            'this_month_raised' => $thisMonthRaised,
+            'progress_pct' => $progressPct,
+            'total_raised' => $totalRaised,
+            'donation_count' => $donationCount,
+            'donor_count' => $donorCount,
+            'by_method' => $byMethod,
+            'monthly_trend' => $monthlyTrend,
+            'recent_donations' => $recentDonations,
+            'fund_usage_image' => $fundUsageImage,
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'message' => 'Failed to load transparency data',
+            'error' => $e->getMessage(),
+        ], 500);
+    }
 });
 
 Route::get('/home/featured-animals', function () {

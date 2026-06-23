@@ -11,7 +11,7 @@ class Setting extends Model
     // Settings whose value is a stored file key rather than plain text. These are
     // exposed as absolute URLs so the frontend can render them directly regardless
     // of which filesystem disk is configured (local vs. S3/R2).
-    private const IMAGE_KEYS = ['logo_path', 'banner_image_path'];
+    private const IMAGE_KEYS = ['logo_path', 'banner_image_path', 'fund_usage_image_path'];
 
     public static function getAll(): array
     {
