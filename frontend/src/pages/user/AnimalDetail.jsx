@@ -180,7 +180,7 @@ export default function AnimalDetail() {
                 <h2 className="ui-h3" style={{ marginBottom: '1rem', marginTop: '2.5rem' }}>Care Guide for {animal.species === 'dog' ? 'This Dog' : animal.species === 'cat' ? 'This Cat' : 'This Animal'}</h2>
                 <div className="detGuidesGrid">
                   {animal.care_guides.map((guide) => (
-                    <div key={guide.id} className={`detGuideCard${guide.id % 1000 > 500 ? ' behavioral' : ''}`}>
+                    <div key={guide.id} className={`detGuideCard${guide.is_behavioral ? ' behavioral' : ''}`}>
                       <div className="detGuideTitle">{guide.title}</div>
                       <div className="detGuideCategory">{guide.category}</div>
                       <div className="detGuideContent">{guide.content}</div>

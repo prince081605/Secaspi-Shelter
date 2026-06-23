@@ -63,8 +63,14 @@ class CareGuideSeeder extends Seeder
             ['title' => 'Indoor Cat Health Maintenance', 'species' => 'cat', 'category' => 'health', 'content' => 'Annual vet checkups are essential. Keep up with vaccinations. Flea and tick prevention year-round. Provide a balanced diet appropriate to age and health status. Maintain a healthy weight—obesity leads to health problems. Watch for signs of illness: lethargy, loss of appetite, excessive thirst.'],
         ];
 
+        // Idempotent: this seeder runs on every production deploy (docker-entrypoint.sh
+        // calls `db:seed --force`). Keying on title + species refreshes content without
+        // creating duplicate rows each time.
         foreach ($guides as $guide) {
-            CareGuide::create($guide);
+            CareGuide::updateOrCreate(
+                ['title' => $guide['title'], 'species' => $guide['species']],
+                $guide
+            );
         }
     }
 }

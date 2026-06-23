@@ -369,6 +369,15 @@ class AnimalController extends Controller
         foreach ($guides as $guide) {
             $matchScore = 0;
 
+            // Age range is a hard filter, not just a bonus: an age-specific guide
+            // (e.g. "Puppy Diet") should never surface for an animal of a different
+            // life stage, even when its breed matches. Guides without an age_range
+            // (behavioral, grooming, general) are unaffected. When the animal's age
+            // is unknown we can't filter, so we let age-specific guides through.
+            if ($guide->age_range && $ageRange && $guide->age_range !== $ageRange) {
+                continue;
+            }
+
             // Match by breed (exact or keyword match)
             if ($guide->breed_keywords && is_array($guide->breed_keywords)) {
                 $breedLower = strtolower($animal->breed ?? '');
@@ -408,22 +417,23 @@ class AnimalController extends Controller
                     'category' => $guide->category,
                     'content' => $guide->content,
                     'matchScore' => $matchScore,
-                    'isBehavioral' => !empty($guide->behavioral_keywords),
+                    'is_behavioral' => !empty($guide->behavioral_keywords),
                 ];
             }
         }
 
         // Sort by: behavioral guides first (prioritized), then by match score descending
         usort($matched, function ($a, $b) {
-            if ($a['isBehavioral'] !== $b['isBehavioral']) {
-                return $a['isBehavioral'] ? -1 : 1;
+            if ($a['is_behavioral'] !== $b['is_behavioral']) {
+                return $a['is_behavioral'] ? -1 : 1;
             }
             return $b['matchScore'] <=> $a['matchScore'];
         });
 
-        // Remove internal fields before returning
+        // Strip the internal scoring field but keep is_behavioral so the frontend
+        // can visually prioritize behavior-matched guides.
         return array_map(function ($g) {
-            unset($g['matchScore'], $g['isBehavioral']);
+            unset($g['matchScore']);
             return $g;
         }, $matched);
     }

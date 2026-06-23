@@ -21,6 +21,10 @@ class Animal extends Model
         'behavioral_assessment',
     ];
 
+    protected $casts = [
+        'behavioral_assessment' => 'array',
+    ];
+
     public function photos()
     {
         return $this->hasMany(AnimalPhoto::class, 'animal_id');
