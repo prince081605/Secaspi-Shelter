@@ -11,6 +11,49 @@ use Illuminate\Support\Facades\Validator;
 
 class VolunteerController extends Controller
 {
+    /**
+     * The current user's own volunteer record + tasks, or { volunteer: null } if they
+     * aren't a volunteer yet. Powers the self-service /volunteer page.
+     */
+    public function me(Request $request)
+    {
+        $volunteer = Volunteer::with('tasks')->where('user_id', $request->user()->id)->first();
+
+        if (!$volunteer) {
+            return response()->json(['volunteer' => null]);
+        }
+
+        return response()->json(['volunteer' => $this->toItem($volunteer)]);
+    }
+
+    /**
+     * A volunteer proposes a task they'd like to do (e.g. "Walk the dog"). It lands as
+     * 'requested' and waits for an admin to confirm it (→ assigned) via updateTask().
+     */
+    public function requestTask(Request $request)
+    {
+        $volunteer = Volunteer::where('user_id', $request->user()->id)->first();
+
+        if (!$volunteer) {
+            return response()->json(['message' => 'Only approved volunteers can request tasks.'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'task_name' => ['required', 'string', 'max:150'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+        }
+
+        $task = $volunteer->tasks()->create([
+            'task_name' => $validator->validated()['task_name'],
+            'status' => 'requested',
+        ]);
+
+        return response()->json(['task' => $task], 201);
+    }
+
     public function adminIndex(Request $request)
     {
         $query = Volunteer::query()->with(['user', 'tasks']);
@@ -36,9 +79,11 @@ class VolunteerController extends Controller
 
         $volunteer = Volunteer::create($validator->validated());
 
+        // role isn't mass-assignable (privilege-escalation guard), so forceFill it —
+        // same approach as UserController::adminUpdate.
         $user = User::find($volunteer->user_id);
         if ($user && $user->role !== 'admin') {
-            $user->update(['role' => 'volunteer']);
+            $user->forceFill(['role' => 'volunteer'])->save();
         }
 
         return response()->json(['volunteer' => $this->toItem($volunteer->fresh(['user', 'tasks']))], 201);
@@ -73,7 +118,7 @@ class VolunteerController extends Controller
         $volunteer->delete();
 
         if ($user && $user->role === 'volunteer') {
-            $user->update(['role' => 'user']);
+            $user->forceFill(['role' => 'user'])->save();
         }
 
         return response()->json(['message' => 'Volunteer removed']);
@@ -83,7 +128,7 @@ class VolunteerController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'task_name' => ['required', 'string', 'max:150'],
-            'status' => ['nullable', 'in:assigned,ongoing,completed'],
+            'status' => ['nullable', 'in:requested,assigned,ongoing,completed'],
             'assigned_date' => ['nullable', 'date'],
         ]);
 
@@ -108,7 +153,7 @@ class VolunteerController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'task_name' => ['sometimes', 'string', 'max:150'],
-            'status' => ['sometimes', 'in:assigned,ongoing,completed'],
+            'status' => ['sometimes', 'in:requested,assigned,ongoing,completed'],
             'assigned_date' => ['nullable', 'date'],
         ]);
 

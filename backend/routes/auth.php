@@ -19,6 +19,7 @@ use App\Http\Controllers\SettingController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\VisitationController;
 use App\Http\Controllers\ReminderController;
+use App\Http\Controllers\VolunteerApplicationController;
 
 
 // Public routes
@@ -92,6 +93,15 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ---- Admin dashboard overview (Phase 6) ----
     Route::get('/admin/dashboard/overview', [DashboardController::class, 'adminOverview'])->middleware('admin');
+
+    // ---- Volunteer sign-up (user-facing) ----
+    Route::post('/volunteer-applications',           [VolunteerApplicationController::class, 'store']);
+    Route::get('/volunteer-applications',            [VolunteerApplicationController::class, 'index']);
+    Route::get('/volunteer/me',                      [VolunteerController::class, 'me']);
+    Route::post('/volunteer/tasks',                  [VolunteerController::class, 'requestTask']);
+    Route::get('/admin/volunteer-applications',      [VolunteerApplicationController::class, 'adminIndex'])->middleware('admin');
+    Route::put('/admin/volunteer-applications/{application}', [VolunteerApplicationController::class, 'adminUpdate'])->middleware('admin');
+    Route::post('/admin/volunteer-applications/{application}/read', [VolunteerApplicationController::class, 'adminMarkRead'])->middleware('admin');
 
     // ---- Volunteer management (Phase 6) ----
     Route::get('/admin/volunteers',                 [VolunteerController::class, 'adminIndex'])->middleware('admin');

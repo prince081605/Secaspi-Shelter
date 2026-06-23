@@ -15,6 +15,7 @@ import { adminListAdoptionApplications, adminListFosterApplications } from '../.
 import { adminListDonations } from '../../lib/donationsApi';
 import { adminListVisitations } from '../../lib/visitationsApi';
 import { adminListReminders } from '../../lib/remindersApi';
+import { adminListVolunteerApplications } from '../../lib/volunteersApi';
 import VolunteersAdmin from '../admin/VolunteersAdmin';
 import ReportsAdmin from '../admin/ReportsAdmin';
 import SettingsAdmin from '../admin/SettingsAdmin';
@@ -247,6 +248,7 @@ export default function Dashboard() {
   const [pendingDonationCount, setPendingDonationCount] = useState(0);
   const [pendingVisitationCount, setPendingVisitationCount] = useState(0);
   const [overdueReminderCount, setOverdueReminderCount] = useState(0);
+  const [pendingVolunteerCount, setPendingVolunteerCount] = useState(0);
 
   // keep empty when data isn't available
   const isAdminRole = role === 'admin';
@@ -348,6 +350,9 @@ export default function Dashboard() {
     adminListReminders(30)
       .then((data) => { if (mountedRef.current) setOverdueReminderCount(data?.overdue_count || 0); })
       .catch(() => { if (mountedRef.current) setOverdueReminderCount(0); });
+    adminListVolunteerApplications({ status: 'pending', per_page: 1 })
+      .then((data) => { if (mountedRef.current) setPendingVolunteerCount(data?.total || 0); })
+      .catch(() => { if (mountedRef.current) setPendingVolunteerCount(0); });
   }, [isAdminRole]);
 
   useEffect(() => {
@@ -388,7 +393,7 @@ export default function Dashboard() {
     { key: 'visitations', label: 'Visit Requests', icon: '📅', show: isAdminRole, badge: pendingVisitationCount },
     { key: 'reminders', label: 'Health Reminders', icon: '🔔', show: isAdminRole, badge: overdueReminderCount },
     { key: 'donations', label: 'Donations', icon: '💰', show: isAdminRole, badge: pendingDonationCount },
-    { key: 'volunteers', label: 'Volunteers', icon: '🤝', show: isAdminRole },
+    { key: 'volunteers', label: 'Volunteers', icon: '🤝', show: isAdminRole, badge: pendingVolunteerCount },
     { key: 'users', label: 'Users', icon: '👥', show: isAdminRole },
     { key: 'reports', label: 'Reports', icon: '📈', show: isAdminRole },
     { key: 'settings', label: 'Settings', icon: '⚙️', show: isAdminRole },

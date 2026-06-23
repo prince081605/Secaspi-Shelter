@@ -7,12 +7,13 @@ import {
   adminCreateVolunteerTask,
   adminUpdateVolunteerTask,
   adminDeleteVolunteerTask,
+  adminListVolunteerApplications,
+  adminUpdateVolunteerApplication,
 } from '../../lib/volunteersApi';
 import { adminListUsers } from '../../lib/usersApi';
 import StatusBadge from '../../components/StatusBadge';
 import ConfirmButton from '../../components/ConfirmButton';
 
-const TASK_STATUSES = ['assigned', 'ongoing', 'completed'];
 const NEXT_TASK_STATUS = { assigned: 'ongoing', ongoing: 'completed' };
 
 function AddVolunteerForm({ onCancel, onAdded }) {
@@ -23,16 +24,26 @@ function AddVolunteerForm({ onCancel, onAdded }) {
   const [notes, setNotes] = useState('');
   const [state, setState] = useState({ status: 'idle', error: '' });
 
-  const search = async (e) => {
-    e.preventDefault();
+  const loadUsers = async (query = '') => {
     setState({ status: 'loading', error: '' });
     try {
-      const data = await adminListUsers({ q });
-      setResults((data?.data || []).filter((u) => u.role !== 'admin'));
+      const data = await adminListUsers(query ? { q: query } : {});
+      // Admins and existing volunteers aren't valid picks here.
+      setResults((data?.data || []).filter((u) => u.role !== 'admin' && u.role !== 'volunteer'));
       setState({ status: 'idle', error: '' });
     } catch (err) {
-      setState({ status: 'error', error: err?.message || 'Search failed.' });
+      setState({ status: 'error', error: err?.message || 'Failed to load users.' });
     }
+  };
+
+  // Show the full user list by default — no need to search first.
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const search = (e) => {
+    e.preventDefault();
+    loadUsers(q);
   };
 
   const handleSubmit = async (e) => {
@@ -116,15 +127,19 @@ function TasksPanel({ volunteer, onChanged }) {
     }
   };
 
-  const advanceTask = async (task) => {
-    const next = NEXT_TASK_STATUS[task.status];
-    if (!next) return;
+  const setStatus = async (task, status) => {
+    setError('');
     try {
-      await adminUpdateVolunteerTask(task.id, { status: next });
+      await adminUpdateVolunteerTask(task.id, { status });
       onChanged();
     } catch (err) {
       setError(err?.message || 'Failed to update task.');
     }
+  };
+
+  const advanceTask = (task) => {
+    const next = NEXT_TASK_STATUS[task.status];
+    if (next) setStatus(task, next);
   };
 
   const deleteTask = async (task) => {
@@ -153,12 +168,17 @@ function TasksPanel({ volunteer, onChanged }) {
                   <td>{t.assigned_date || '—'}</td>
                   <td className="dashActionsCell">
                     <span className="dashActionsRow">
+                      {t.status === 'requested' && (
+                        <button className="dashBtn dashBtnPrimary" onClick={() => setStatus(t, 'assigned')}>
+                          Confirm
+                        </button>
+                      )}
                       {NEXT_TASK_STATUS[t.status] && (
                         <button className="dashBtn dashBtnPrimary" onClick={() => advanceTask(t)}>
                           Mark {NEXT_TASK_STATUS[t.status]}
                         </button>
                       )}
-                      <button className="dashBtn dashBtnDanger" aria-label="Delete task" onClick={() => deleteTask(t)}>✕</button>
+                      <button className="dashBtn dashBtnDanger" aria-label={t.status === 'requested' ? 'Decline task' : 'Delete task'} onClick={() => deleteTask(t)}>✕</button>
                     </span>
                   </td>
                 </tr>
@@ -235,12 +255,133 @@ function VolunteerRow({ volunteer, onChanged }) {
   );
 }
 
+function RequestRow({ application, onChanged }) {
+  const [expanded, setExpanded] = useState(false);
+  const [notes, setNotes] = useState(application.admin_notes || '');
+  const [error, setError] = useState('');
+
+  const decide = async (status) => {
+    setError('');
+    try {
+      await adminUpdateVolunteerApplication(application.id, { status, admin_notes: notes || null });
+      onChanged();
+    } catch (err) {
+      setError(err?.message || 'Failed to update application.');
+    }
+  };
+
+  return (
+    <>
+      <tr>
+        <td>{application.applicant?.full_name || '—'}<br /><span style={{ fontSize: 12, color: 'var(--muted)' }}>{application.applicant?.email}</span></td>
+        <td>{application.availability || '—'}</td>
+        <td><StatusBadge status={application.status} /></td>
+        <td>{(application.created_at || '').slice(0, 10)}</td>
+        <td className="dashActionsCell">
+          <span className="dashActionsRow">
+            {application.status === 'pending' && (
+              <>
+                <button className="dashBtn dashBtnPrimary" onClick={() => decide('approved')}>Approve</button>
+                <button className="dashBtn dashBtnDanger" onClick={() => decide('rejected')}>Reject</button>
+              </>
+            )}
+            <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Details'}</button>
+          </span>
+        </td>
+      </tr>
+      {expanded && (
+        <tr>
+          <td colSpan={5} className="dashExpandPanel">
+            {error && <div className="ui-error">{error}</div>}
+            <dl className="dashInfoList">
+              <div><dt>Phone</dt><dd>{application.applicant?.phone || '—'}</dd></div>
+              <div className="dashInfoFull"><dt>Experience</dt><dd>{application.experience || '—'}</dd></div>
+              <div className="dashInfoFull"><dt>Why volunteer?</dt><dd>{application.reason || '—'}</dd></div>
+            </dl>
+            <div className="ui-field" style={{ marginTop: 8 }}>
+              <label className="ui-label">Admin notes (shared with the applicant on decision)</label>
+              <textarea className="ui-input" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+function VolunteerRequests() {
+  const [applications, setApplications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [status, setStatusFilter] = useState('');
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    adminListVolunteerApplications({ status })
+      .then((data) => {
+        if (!mounted) return;
+        setApplications(data?.data || []);
+        setError('');
+      })
+      .catch((err) => {
+        if (!mounted) return;
+        setError(err?.message || 'Failed to load volunteer requests.');
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => { mounted = false; };
+  }, [status, refreshKey]);
+
+  const refresh = () => setRefreshKey((k) => k + 1);
+
+  return (
+    <>
+      {error && <div className="ui-error">{error}</div>}
+      <div className="dashFilterBar">
+        <select className="ui-input" style={{ maxWidth: 180 }} aria-label="Filter volunteer requests by status" value={status} onChange={(e) => setStatusFilter(e.target.value)}>
+          <option value="">All statuses</option>
+          {['pending', 'approved', 'rejected'].map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </div>
+
+      {loading ? (
+        <div className="ui-empty">Loading…</div>
+      ) : applications.length === 0 ? (
+        <div className="ui-empty">No volunteer requests match this filter.</div>
+      ) : (
+        <div className="dashTableWrap">
+          <table className="dashTable">
+            <thead>
+              <tr>
+                <th>Applicant</th>
+                <th>Availability</th>
+                <th>Status</th>
+                <th>Submitted</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {applications.map((a) => (
+                <RequestRow key={a.id} application={a} onChanged={refresh} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function VolunteersAdmin() {
   const [volunteers, setVolunteers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [mode, setMode] = useState('volunteers');
 
   useEffect(() => {
     let mounted = true;
@@ -269,6 +410,26 @@ export default function VolunteersAdmin() {
   return (
     <>
       <h2 className="dashSectionTitle">🤝 Volunteer Management</h2>
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        <button
+          className={mode === 'volunteers' ? 'dashBtn dashBtnPrimary' : 'dashBtn'}
+          onClick={() => setMode('volunteers')}
+        >
+          🤝 Volunteers
+        </button>
+        <button
+          className={mode === 'requests' ? 'dashBtn dashBtnPrimary' : 'dashBtn'}
+          onClick={() => setMode('requests')}
+        >
+          📩 Requests
+        </button>
+      </div>
+
+      {mode === 'requests' ? (
+        <VolunteerRequests />
+      ) : (
+      <>
       {error && <div className="ui-error">{error}</div>}
 
       <button className="dashBtn dashBtnPrimary" onClick={() => setShowAdd((v) => !v)}>
@@ -300,6 +461,8 @@ export default function VolunteersAdmin() {
             </tbody>
           </table>
         </div>
+      )}
+      </>
       )}
     </>
   );
