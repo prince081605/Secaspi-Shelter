@@ -358,8 +358,12 @@ class AnimalController extends Controller
 
     private function careGuides(Animal $animal): array
     {
+        // Species is entered freeform by admins ("Dog", "dog", "CAT", …) while guides
+        // are seeded lowercase. Compare case-insensitively so the match works on
+        // Postgres too (its string comparison is case-sensitive, unlike MySQL's
+        // default collation).
         $guides = CareGuide::query()
-            ->where('species', $animal->species)
+            ->whereRaw('LOWER(species) = ?', [strtolower($animal->species ?? '')])
             ->get();
 
         $matched = [];
