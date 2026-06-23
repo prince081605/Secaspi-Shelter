@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Volunteer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -65,6 +66,21 @@ class UserController extends Controller
         // role/status are not mass-assignable on the model (privilege-escalation guard), so set
         // them explicitly here. $data is whitelisted by the validator above to role/status only.
         $user->forceFill($data)->save();
+
+        // Keep the volunteer roster in sync with the role so the Users and Volunteers
+        // modules can't disagree: promoting to "volunteer" adds them to the roster,
+        // demoting to "user"/"admin" removes their volunteer record (and any tasks).
+        if (array_key_exists('role', $data)) {
+            if ($user->role === 'volunteer') {
+                Volunteer::firstOrCreate(['user_id' => $user->id]);
+            } else {
+                $volunteer = Volunteer::where('user_id', $user->id)->first();
+                if ($volunteer) {
+                    $volunteer->tasks()->delete();
+                    $volunteer->delete();
+                }
+            }
+        }
 
         return response()->json([
             'user' => [
