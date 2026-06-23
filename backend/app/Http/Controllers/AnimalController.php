@@ -120,6 +120,8 @@ class AnimalController extends Controller
 
     public function store(Request $request)
     {
+        $this->normalizeBehavioralAssessment($request);
+
         $validator = Validator::make($request->all(), [
             'name' => ['required', 'string', 'max:100'],
             'species' => ['required', 'string', 'max:50'],
@@ -130,7 +132,8 @@ class AnimalController extends Controller
             'weight' => ['nullable', 'numeric', 'min:0'],
             'status' => ['nullable', 'in:' . implode(',', self::STATUSES)],
             'rescue_story' => ['nullable', 'string'],
-            'behavioral_assessment' => ['nullable', 'string'],
+            'behavioral_assessment' => ['nullable', 'array'],
+            'behavioral_assessment.*' => ['string', 'max:100'],
             'photos' => ['nullable', 'array'],
             'photos.*' => ['image', 'max:5120'],
         ]);
@@ -143,14 +146,6 @@ class AnimalController extends Controller
         $photos = $data['photos'] ?? null;
         unset($data['photos']);
         $data['status'] = $data['status'] ?? 'available';
-
-        // Decode JSON behavioral_assessment if it was sent as JSON string
-        if ($data['behavioral_assessment'] && is_string($data['behavioral_assessment'])) {
-            $decoded = json_decode($data['behavioral_assessment'], true);
-            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                $data['behavioral_assessment'] = $decoded;
-            }
-        }
 
         $animal = Animal::create($data);
 
@@ -168,6 +163,8 @@ class AnimalController extends Controller
 
     public function update(Request $request, Animal $animal)
     {
+        $this->normalizeBehavioralAssessment($request);
+
         $validator = Validator::make($request->all(), [
             'name' => ['sometimes', 'string', 'max:100'],
             'species' => ['sometimes', 'string', 'max:50'],
@@ -178,26 +175,35 @@ class AnimalController extends Controller
             'weight' => ['nullable', 'numeric', 'min:0'],
             'status' => ['nullable', 'in:' . implode(',', self::STATUSES)],
             'rescue_story' => ['nullable', 'string'],
-            'behavioral_assessment' => ['nullable', 'string'],
+            'behavioral_assessment' => ['nullable', 'array'],
+            'behavioral_assessment.*' => ['string', 'max:100'],
         ]);
 
         if ($validator->fails()) {
             return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
         }
 
-        $data = $validator->validated();
-
-        // Decode JSON behavioral_assessment if it was sent as JSON string
-        if (isset($data['behavioral_assessment']) && is_string($data['behavioral_assessment'])) {
-            $decoded = json_decode($data['behavioral_assessment'], true);
-            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                $data['behavioral_assessment'] = $decoded;
-            }
-        }
-
-        $animal->update($data);
+        $animal->update($validator->validated());
 
         return response()->json(['animal' => $this->toAdminDetail($animal)]);
+    }
+
+    /**
+     * behavioral_assessment can arrive two ways: a real array (JSON request body,
+     * used by the edit form) or a JSON-encoded string (multipart/FormData, used by
+     * the create form, which can't send a native array). Coerce the string form to
+     * an array up front so a single `array` validation rule covers both.
+     */
+    private function normalizeBehavioralAssessment(Request $request): void
+    {
+        $value = $request->input('behavioral_assessment');
+
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            $request->merge([
+                'behavioral_assessment' => json_last_error() === JSON_ERROR_NONE ? $decoded : null,
+            ]);
+        }
     }
 
     public function archive(Animal $animal)
