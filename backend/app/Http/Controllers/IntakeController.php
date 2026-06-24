@@ -8,6 +8,7 @@ use App\Models\IntakeDocument;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class IntakeController extends Controller
 {
@@ -51,7 +52,7 @@ class IntakeController extends Controller
             'gender' => ['nullable', 'in:male,female'],
             'description' => ['nullable', 'string'],
             'documents' => ['nullable', 'array'],
-            'documents.*' => ['file', 'max:10240'],
+            'documents.*' => ['image', 'max:10240'],
         ]);
 
         if ($validator->fails()) {
@@ -123,6 +124,24 @@ class IntakeController extends Controller
             'rescue_story' => $intake->description,
         ]);
 
+        // Carry the intake's photos over to the new animal so staff don't have to re-upload.
+        // Copy (not reference) the files into the animals/ folder so deleting the intake — which
+        // cascades + Storage::delete()s its documents — never removes the animal's photos. The
+        // first photo becomes the main one, matching AnimalController's upload convention.
+        $intake->load('documents');
+        foreach ($intake->documents as $i => $doc) {
+            if (!$doc->file_path || !Storage::exists($doc->file_path)) {
+                continue;
+            }
+            $ext = pathinfo($doc->file_path, PATHINFO_EXTENSION);
+            $newPath = 'animals/' . Str::random(40) . ($ext ? '.' . $ext : '');
+            Storage::copy($doc->file_path, $newPath);
+            $animal->photos()->create([
+                'photo_url' => $newPath,
+                'is_main' => $i === 0,
+            ]);
+        }
+
         $intake->update(['status' => 'converted', 'converted_animal_id' => $animal->id]);
 
         return response()->json([
@@ -145,7 +164,7 @@ class IntakeController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'documents' => ['required', 'array', 'min:1'],
-            'documents.*' => ['file', 'max:10240'],
+            'documents.*' => ['image', 'max:10240'],
         ]);
 
         if ($validator->fails()) {

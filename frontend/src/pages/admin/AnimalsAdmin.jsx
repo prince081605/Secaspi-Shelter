@@ -560,8 +560,11 @@ function NewIntakeForm({ onCancel, onCreated }) {
         <textarea className="ui-input" rows={3} value={form.description} onChange={setField('description')} />
       </div>
       <div className="ui-field">
-        <label className="ui-label">Documents</label>
-        <input type="file" multiple onChange={(e) => setFiles(e.target.files)} />
+        <label className="ui-label">Animal photo(s)</label>
+        <input type="file" accept="image/*" multiple onChange={(e) => setFiles(e.target.files)} />
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>
+          These carry over as the animal's photos when you add this intake to Animals.
+        </div>
       </div>
       <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
         <button className="ui-btn-primary" type="submit" disabled={state.status === 'loading'}>
@@ -661,18 +664,20 @@ function AssessmentPanel({ intake, onChanged }) {
       </div>
       <div style={{ marginTop: 6 }}><strong>Description:</strong> {detail.description || '—'}</div>
 
-      <div className="dashSectionTitle" style={{ fontSize: 13, marginTop: 12 }}>📄 Documents</div>
+      <div className="dashSectionTitle" style={{ fontSize: 13, marginTop: 12 }}>📷 Photos</div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {detail.documents.map((d) => (
-          <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 4, border: '1px solid var(--line)', borderRadius: 8, padding: '4px 8px' }}>
-            <a href={photoSrc(d.file_path)} target="_blank" rel="noreferrer">{d.original_name || `Document #${d.id}`}</a>
-            <button className="dashBtn dashBtnDanger" style={{ padding: '2px 6px', fontSize: 11 }} aria-label="Delete document" onClick={() => deleteDoc(d.id)}>✕</button>
+          <div key={d.id} style={{ position: 'relative', border: '1px solid var(--line)', borderRadius: 8, overflow: 'hidden' }}>
+            <a href={photoSrc(d.file_path)} target="_blank" rel="noreferrer" title={d.original_name || `Photo #${d.id}`}>
+              <img src={photoSrc(d.file_path)} alt={d.original_name || `Photo #${d.id}`} style={{ width: 96, height: 96, objectFit: 'cover', display: 'block' }} />
+            </a>
+            <button className="dashBtn dashBtnDanger" style={{ position: 'absolute', top: 2, right: 2, padding: '2px 6px', fontSize: 11 }} aria-label="Delete photo" onClick={() => deleteDoc(d.id)}>✕</button>
           </div>
         ))}
-        {detail.documents.length === 0 && <div className="ui-empty">No documents uploaded.</div>}
+        {detail.documents.length === 0 && <div className="ui-empty">No photos uploaded.</div>}
       </div>
       <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
-        <input type="file" multiple onChange={(e) => setFiles(e.target.files)} />
+        <input type="file" accept="image/*" multiple onChange={(e) => setFiles(e.target.files)} />
         <button className="dashBtn" type="button" onClick={uploadDocs}>Upload</button>
       </div>
 
