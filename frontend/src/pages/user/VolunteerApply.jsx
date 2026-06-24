@@ -102,10 +102,10 @@ export default function VolunteerApply() {
         {loading ? (
           <div className="ui-empty">Loading…</div>
         ) : volunteer ? (
-          /* ---- Approved volunteer: task dashboard ---- */
+          /* ---- Approved volunteer/staff: task dashboard ---- */
           <>
-            <p className="ui-eyebrow" style={{ marginBottom: '1rem' }}>Volunteer Dashboard</p>
-            <h1 className="ui-h1" style={{ marginBottom: '0.4rem' }}>Welcome back, volunteer! 🐾</h1>
+            <p className="ui-eyebrow" style={{ marginBottom: '1rem' }}>{volunteer.type === 'staff' ? 'Staff Dashboard' : 'Volunteer Dashboard'}</p>
+            <h1 className="ui-h1" style={{ marginBottom: '0.4rem' }}>Welcome back, {volunteer.type === 'staff' ? 'staff member' : 'volunteer'}! 🐾</h1>
             <p className="ui-muted" style={{ marginBottom: '2rem' }}>
               Request a task you'd like to help with — the team will confirm it.
             </p>

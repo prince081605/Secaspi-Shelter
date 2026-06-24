@@ -58,6 +58,12 @@ class VolunteerController extends Controller
     {
         $query = Volunteer::query()->with(['user', 'tasks']);
 
+        if ($type = $request->query('type')) {
+            $query->where('type', $type);
+        } else {
+            $query->where('type', 'volunteer');
+        }
+
         $volunteers = $query->orderByDesc('id')->paginate(20)->withQueryString();
 
         $volunteers->getCollection()->transform(fn (Volunteer $v) => $this->toItem($v));
@@ -69,6 +75,7 @@ class VolunteerController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'user_id' => ['required', 'integer', 'exists:users,id', 'unique:volunteers,user_id'],
+            'type' => ['nullable', 'in:volunteer,staff'],
             'availability' => ['nullable', 'string', 'max:150'],
             'performance_notes' => ['nullable', 'string'],
         ]);
@@ -77,13 +84,16 @@ class VolunteerController extends Controller
             return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
         }
 
-        $volunteer = Volunteer::create($validator->validated());
+        $data = $validator->validated();
+        $data['type'] = $data['type'] ?? 'volunteer';
+
+        $volunteer = Volunteer::create($data);
 
         // role isn't mass-assignable (privilege-escalation guard), so forceFill it —
         // same approach as UserController::adminUpdate.
         $user = User::find($volunteer->user_id);
         if ($user && $user->role !== 'admin') {
-            $user->forceFill(['role' => 'volunteer'])->save();
+            $user->forceFill(['role' => $volunteer->type])->save();
         }
 
         return response()->json(['volunteer' => $this->toItem($volunteer->fresh(['user', 'tasks']))], 201);
@@ -110,18 +120,18 @@ class VolunteerController extends Controller
     {
         if ($volunteer->tasks()->exists()) {
             return response()->json([
-                'message' => 'This volunteer has assigned tasks and cannot be removed. Reassign or delete their tasks first.',
+                'message' => 'This personnel has assigned tasks and cannot be removed. Reassign or delete their tasks first.',
             ], 409);
         }
 
         $user = $volunteer->user;
         $volunteer->delete();
 
-        if ($user && $user->role === 'volunteer') {
+        if ($user && ($user->role === 'volunteer' || $user->role === 'staff')) {
             $user->forceFill(['role' => 'user'])->save();
         }
 
-        return response()->json(['message' => 'Volunteer removed']);
+        return response()->json(['message' => 'Personnel removed']);
     }
 
     public function storeTask(Request $request, Volunteer $volunteer)
@@ -185,6 +195,7 @@ class VolunteerController extends Controller
     {
         return [
             'id' => $v->id,
+            'type' => $v->type,
             'availability' => $v->availability,
             'hours_rendered' => $v->hours_rendered,
             'performance_notes' => $v->performance_notes,

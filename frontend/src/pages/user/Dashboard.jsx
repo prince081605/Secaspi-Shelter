@@ -30,8 +30,8 @@ const fallbackRole = 'user';
 // auto-expand the category that contains the active item.
 const ITEM_CATEGORY = {
   animals: 'cat_animals', reminders: 'cat_animals',
-  requests: 'cat_requests', rescues: 'cat_requests', visitations: 'cat_requests', volunteers: 'cat_requests',
-  donations: 'cat_ops', reports: 'cat_ops', users: 'cat_ops', settings: 'cat_ops',
+  requests: 'cat_requests', rescues: 'cat_requests', visitations: 'cat_requests',
+  donations: 'cat_ops', reports: 'cat_ops', users: 'cat_ops', settings: 'cat_ops', volunteers: 'cat_ops',
 };
 const NAV_CATEGORY_KEYS = ['cat_animals', 'cat_requests', 'cat_ops'];
 
@@ -408,7 +408,6 @@ export default function Dashboard() {
         { key: 'requests', label: 'Adoption & Foster', icon: '📩', badge: pendingAdoptionCount + pendingFosterCount },
         { key: 'rescues', label: 'Rescue Reports', icon: '🚨', badge: pendingRescueCount },
         { key: 'visitations', label: 'Visit Requests', icon: '📅', badge: pendingVisitationCount },
-        { key: 'volunteers', label: 'Volunteers', icon: '🤝', badge: pendingVolunteerCount },
       ],
     },
     {
@@ -417,6 +416,7 @@ export default function Dashboard() {
         { key: 'donations', label: 'Donations', icon: '💰', badge: pendingDonationCount },
         { key: 'reports', label: 'Reports', icon: '📈' },
         { key: 'users', label: 'Users', icon: '👥' },
+        { key: 'volunteers', label: 'Personnel', icon: '👥', badge: pendingVolunteerCount },
         { key: 'settings', label: 'Settings', icon: '⚙️' },
       ],
     },

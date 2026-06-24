@@ -16,7 +16,7 @@ import ConfirmButton from '../../components/ConfirmButton';
 
 const NEXT_TASK_STATUS = { assigned: 'ongoing', ongoing: 'completed' };
 
-function AddVolunteerForm({ onCancel, onAdded }) {
+function AddPersonForm({ type, onCancel, onAdded }) {
   const [q, setQ] = useState('');
   const [results, setResults] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -28,15 +28,14 @@ function AddVolunteerForm({ onCancel, onAdded }) {
     setState({ status: 'loading', error: '' });
     try {
       const data = await adminListUsers(query ? { q: query } : {});
-      // Admins and existing volunteers aren't valid picks here.
-      setResults((data?.data || []).filter((u) => u.role !== 'admin' && u.role !== 'volunteer'));
+      // Admins and existing staff/volunteers aren't valid picks here.
+      setResults((data?.data || []).filter((u) => u.role !== 'admin' && u.role !== 'volunteer' && u.role !== 'staff'));
       setState({ status: 'idle', error: '' });
     } catch (err) {
       setState({ status: 'error', error: err?.message || 'Failed to load users.' });
     }
   };
 
-  // Show the full user list by default — no need to search first.
   useEffect(() => {
     loadUsers();
   }, []);
@@ -51,12 +50,15 @@ function AddVolunteerForm({ onCancel, onAdded }) {
     if (!selected) return;
     setState({ status: 'loading', error: '' });
     try {
-      await adminCreateVolunteer({ user_id: selected.id, availability, performance_notes: notes });
+      await adminCreateVolunteer({ user_id: selected.id, type, availability, performance_notes: notes });
       onAdded();
     } catch (err) {
-      setState({ status: 'error', error: err?.message || 'Failed to add volunteer.' });
+      setState({ status: 'error', error: err?.message || `Failed to add ${type}.` });
     }
   };
+
+  const typeLabel = type === 'staff' ? 'staff member' : 'volunteer';
+  const typeVerb = type === 'staff' ? 'as staff' : 'as a volunteer';
 
   return (
     <div className="dashCard" style={{ marginTop: 10 }}>
@@ -88,7 +90,7 @@ function AddVolunteerForm({ onCancel, onAdded }) {
         </>
       ) : (
         <form onSubmit={handleSubmit}>
-          <div>Adding <strong>{selected.full_name}</strong> ({selected.email}) as a volunteer.</div>
+          <div>Adding <strong>{selected.full_name}</strong> ({selected.email}) {typeVerb}.</div>
           <div className="ui-field">
             <label className="ui-label">Availability</label>
             <input className="ui-input" placeholder="e.g. weekends" value={availability} onChange={(e) => setAvailability(e.target.value)} />
@@ -196,15 +198,15 @@ function TasksPanel({ volunteer, onChanged }) {
   );
 }
 
-function VolunteerRow({ volunteer, onChanged }) {
+function PersonnelRow({ personnel, onChanged }) {
   const [expanded, setExpanded] = useState(false);
-  const [hours, setHours] = useState(volunteer.hours_rendered);
+  const [hours, setHours] = useState(personnel.hours_rendered);
   const [error, setError] = useState('');
 
   const saveHours = async () => {
     setError('');
     try {
-      await adminUpdateVolunteer(volunteer.id, { hours_rendered: Number(hours) || 0 });
+      await adminUpdateVolunteer(personnel.id, { hours_rendered: Number(hours) || 0 });
       onChanged();
     } catch (err) {
       setError(err?.message || 'Failed to save hours.');
@@ -214,29 +216,29 @@ function VolunteerRow({ volunteer, onChanged }) {
   const remove = async () => {
     setError('');
     try {
-      await adminDeleteVolunteer(volunteer.id);
+      await adminDeleteVolunteer(personnel.id);
       onChanged();
     } catch (err) {
-      setError(err?.message || 'Failed to remove volunteer.');
+      setError(err?.message || 'Failed to remove personnel.');
     }
   };
 
   return (
     <>
       <tr>
-        <td>{volunteer.user?.full_name}<br /><span style={{ fontSize: 12, color: 'var(--muted)' }}>{volunteer.user?.email}</span></td>
-        <td>{volunteer.availability || '—'}</td>
+        <td>{personnel.user?.full_name}<br /><span style={{ fontSize: 12, color: 'var(--muted)' }}>{personnel.user?.email}</span></td>
+        <td>{personnel.availability || '—'}</td>
         <td className="dashActionsCell">
           <span className="dashActionsRow">
             <input className="ui-input" type="number" min="0" style={{ width: 80 }} value={hours} onChange={(e) => setHours(e.target.value)} />
             <button className="dashBtn" onClick={saveHours}>Save</button>
           </span>
         </td>
-        <td>{volunteer.tasks.length}</td>
+        <td>{personnel.tasks.length}</td>
         <td className="dashActionsCell">
           <span className="dashActionsRow">
             <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Tasks'}</button>
-            <ConfirmButton confirmLabel={`Remove ${volunteer.user?.full_name}?`} onConfirm={remove}>Remove</ConfirmButton>
+            <ConfirmButton confirmLabel={`Remove ${personnel.user?.full_name}?`} onConfirm={remove}>Remove</ConfirmButton>
           </span>
         </td>
       </tr>
@@ -246,8 +248,8 @@ function VolunteerRow({ volunteer, onChanged }) {
       {expanded && (
         <tr>
           <td colSpan={5} className="dashExpandPanel">
-            {volunteer.performance_notes && <div><strong>Notes:</strong> {volunteer.performance_notes}</div>}
-            <TasksPanel volunteer={volunteer} onChanged={onChanged} />
+            {personnel.performance_notes && <div><strong>Notes:</strong> {personnel.performance_notes}</div>}
+            <TasksPanel volunteer={personnel} onChanged={onChanged} />
           </td>
         </tr>
       )}
@@ -375,41 +377,85 @@ function VolunteerRequests() {
   );
 }
 
-export default function VolunteersAdmin() {
-  const [volunteers, setVolunteers] = useState([]);
+function PersonnelRoster({ type, onChanged }) {
+  const [personnel, setPersonnel] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [mode, setMode] = useState('volunteers');
 
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    adminListVolunteers()
+    adminListVolunteers({ type })
       .then((data) => {
         if (!mounted) return;
-        setVolunteers(data?.data || []);
+        setPersonnel(data?.data || []);
         setError('');
       })
       .catch((err) => {
         if (!mounted) return;
-        setError(err?.message || 'Failed to load volunteers.');
+        setError(err?.message || `Failed to load ${type}.`);
       })
       .finally(() => {
         if (mounted) setLoading(false);
       });
     return () => { mounted = false; };
-  }, [refreshKey]);
+  }, [type, refreshKey]);
 
   const refresh = () => {
     setShowAdd(false);
     setRefreshKey((k) => k + 1);
   };
 
+  const typeLabel = type === 'staff' ? 'staff' : 'volunteers';
+  const addLabel = type === 'staff' ? '+ Add staff' : '+ Add volunteer';
+
   return (
     <>
-      <h2 className="dashSectionTitle">🤝 Volunteer Management</h2>
+      {error && <div className="ui-error">{error}</div>}
+
+      <button className="dashBtn dashBtnPrimary" onClick={() => setShowAdd((v) => !v)}>
+        {showAdd ? 'Close' : addLabel}
+      </button>
+
+      {showAdd && <AddPersonForm type={type} onCancel={() => setShowAdd(false)} onAdded={refresh} />}
+
+      {loading ? (
+        <div className="ui-empty">Loading…</div>
+      ) : personnel.length === 0 ? (
+        <div className="ui-empty">No {typeLabel} yet.</div>
+      ) : (
+        <div className="dashTableWrap" style={{ marginTop: 10 }}>
+          <table className="dashTable">
+            <thead>
+              <tr>
+                <th>{type === 'staff' ? 'Staff Member' : 'Volunteer'}</th>
+                <th>Availability</th>
+                <th>Hours rendered</th>
+                <th>Tasks</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {personnel.map((p) => (
+                <PersonnelRow key={p.id} personnel={p} onChanged={refresh} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
+}
+
+export default function VolunteersAdmin() {
+  const [mode, setMode] = useState('volunteers');
+  const [subMode, setSubMode] = useState('roster');
+
+  return (
+    <>
+      <h2 className="dashSectionTitle">👥 Personnel Management</h2>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         <button
@@ -419,50 +465,38 @@ export default function VolunteersAdmin() {
           🤝 Volunteers
         </button>
         <button
-          className={mode === 'requests' ? 'dashBtn dashBtnPrimary' : 'dashBtn'}
-          onClick={() => setMode('requests')}
+          className={mode === 'staff' ? 'dashBtn dashBtnPrimary' : 'dashBtn'}
+          onClick={() => setMode('staff')}
         >
-          📩 Requests
+          👔 Staff
         </button>
       </div>
 
-      {mode === 'requests' ? (
-        <VolunteerRequests />
+      {mode === 'volunteers' ? (
+        <>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+            <button
+              className={subMode === 'roster' ? 'dashBtn dashBtnPrimary' : 'dashBtn'}
+              onClick={() => setSubMode('roster')}
+            >
+              📋 Volunteers
+            </button>
+            <button
+              className={subMode === 'requests' ? 'dashBtn dashBtnPrimary' : 'dashBtn'}
+              onClick={() => setSubMode('requests')}
+            >
+              📩 Requests
+            </button>
+          </div>
+
+          {subMode === 'requests' ? (
+            <VolunteerRequests />
+          ) : (
+            <PersonnelRoster type="volunteer" />
+          )}
+        </>
       ) : (
-      <>
-      {error && <div className="ui-error">{error}</div>}
-
-      <button className="dashBtn dashBtnPrimary" onClick={() => setShowAdd((v) => !v)}>
-        {showAdd ? 'Close' : '+ Add volunteer'}
-      </button>
-
-      {showAdd && <AddVolunteerForm onCancel={() => setShowAdd(false)} onAdded={refresh} />}
-
-      {loading ? (
-        <div className="ui-empty">Loading…</div>
-      ) : volunteers.length === 0 ? (
-        <div className="ui-empty">No volunteers yet.</div>
-      ) : (
-        <div className="dashTableWrap" style={{ marginTop: 10 }}>
-          <table className="dashTable">
-            <thead>
-              <tr>
-                <th>Volunteer</th>
-                <th>Availability</th>
-                <th>Hours rendered</th>
-                <th>Tasks</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {volunteers.map((v) => (
-                <VolunteerRow key={v.id} volunteer={v} onChanged={refresh} />
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      </>
+        <PersonnelRoster type="staff" />
       )}
     </>
   );

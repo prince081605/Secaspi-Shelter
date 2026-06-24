@@ -46,7 +46,7 @@ class UserController extends Controller
     public function adminUpdate(Request $request, User $user)
     {
         $validator = Validator::make($request->all(), [
-            'role' => ['sometimes', 'in:admin,volunteer,user'],
+            'role' => ['sometimes', 'in:admin,staff,volunteer,user'],
             'status' => ['sometimes', 'in:active,suspended,pending'],
         ]);
 
@@ -67,12 +67,15 @@ class UserController extends Controller
         // them explicitly here. $data is whitelisted by the validator above to role/status only.
         $user->forceFill($data)->save();
 
-        // Keep the volunteer roster in sync with the role so the Users and Volunteers
-        // modules can't disagree: promoting to "volunteer" adds them to the roster,
-        // demoting to "user"/"admin" removes their volunteer record (and any tasks).
+        // Keep the personnel roster in sync with the role so the Users and Personnel
+        // modules can't disagree: promoting to "volunteer" or "staff" adds them to the roster,
+        // demoting to "user"/"admin" removes their personnel record (and any tasks).
         if (array_key_exists('role', $data)) {
-            if ($user->role === 'volunteer') {
-                Volunteer::firstOrCreate(['user_id' => $user->id]);
+            if ($user->role === 'volunteer' || $user->role === 'staff') {
+                Volunteer::firstOrCreate(
+                    ['user_id' => $user->id],
+                    ['type' => $user->role]
+                )->update(['type' => $user->role]);
             } else {
                 $volunteer = Volunteer::where('user_id', $user->id)->first();
                 if ($volunteer) {

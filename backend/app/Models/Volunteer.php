@@ -9,6 +9,7 @@ class Volunteer extends Model
 
     protected $fillable = [
         'user_id',
+        'type',
         'availability',
         'hours_rendered',
         'performance_notes',
