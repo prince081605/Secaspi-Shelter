@@ -824,7 +824,7 @@ function IntakesSection({ onConverted }) {
           {INTAKE_TYPES.map((t) => <option key={t} value={t}>{t.replace('_', ' ')}</option>)}
         </select>
         <select className="ui-input" style={{ maxWidth: 160 }} aria-label="Filter intakes by status" value={status} onChange={(e) => setStatusFilter(e.target.value)}>
-          <option value="">All statuses</option>
+          <option value="">Active (excl. converted)</option>
           {INTAKE_STATUSES.map((s) => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
         </select>
         <button className="dashBtn dashBtnPrimary" onClick={() => setShowNew((v) => !v)}>

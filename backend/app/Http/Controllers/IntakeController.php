@@ -24,6 +24,10 @@ class IntakeController extends Controller
         }
         if ($status = $request->query('status')) {
             $query->where('status', $status);
+        } else {
+            // Once an intake is added to Animals it leaves the active queue; the record is kept
+            // (with its converted_animal_id link) and can still be found via the "converted" filter.
+            $query->where('status', '!=', 'converted');
         }
 
         $intakes = $query->orderByDesc('id')->paginate(20)->withQueryString();
