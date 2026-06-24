@@ -105,6 +105,26 @@ function AnimalForm({ initial, onCancel, onSaved }) {
   const [photoFiles, setPhotoFiles] = useState(null);
   const [state, setState] = useState({ status: 'idle', error: '' });
 
+  // The list row (`initial`) only carries a subset of fields — notably it omits weight,
+  // rescue_story and behavioral_assessment — so editing straight from it leaves those blank
+  // and would wipe them on save. Hydrate the form from the full record once the form opens.
+  useEffect(() => {
+    if (!initial?.id) return;
+    let active = true;
+    adminGetAnimal(initial.id)
+      .then((data) => {
+        const full = data?.animal;
+        if (!active || !full) return;
+        const merged = { ...emptyForm, ...full };
+        for (const key of Object.keys(emptyForm)) {
+          if (merged[key] === null || merged[key] === undefined) merged[key] = emptyForm[key];
+        }
+        setForm(merged);
+      })
+      .catch(() => { /* keep the list-row values already shown */ });
+    return () => { active = false; };
+  }, [initial?.id]);
+
   const setField = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
   const toggleBehavioralIssue = (issue) => {
