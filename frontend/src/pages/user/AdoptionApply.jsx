@@ -11,7 +11,7 @@ export default function AdoptionApply() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [form, setForm] = useState({
-    full_name: '', address: '', occupation: '', housing_type: '', pet_experience: '', reason: '',
+    full_name: '', contact_number: '', address: '', occupation: '', housing_type: '', pet_experience: '', reason: '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -60,6 +60,10 @@ export default function AdoptionApply() {
               <div className="ui-field">
                 <label className="ui-label ui-label-required">Full name</label>
                 <input className="ui-input" name="full_name" value={form.full_name} onChange={handleChange} required />
+              </div>
+              <div className="ui-field">
+                <label className="ui-label ui-label-required">Contact number</label>
+                <input className="ui-input" name="contact_number" type="tel" value={form.contact_number} onChange={handleChange} placeholder="e.g. 09XX XXX XXXX" required />
               </div>
               <div className="ui-field">
                 <label className="ui-label ui-label-required">Address</label>

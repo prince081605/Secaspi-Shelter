@@ -38,11 +38,26 @@ class AuthController extends Controller
             'user'  => [
                 'id'        => $user->id,
                 'full_name' => $user->full_name,
+                'username'  => $user->username,
                 'email'     => $user->email,
                 'role'      => $user->role,
             ],
         ]);
 
+    }
+
+    /**
+     * Preview the system-assigned username for a given full name, so the sign-up form can show
+     * it live (read-only) as the visitor types. Public — used before an account exists. The
+     * actual username is assigned server-side in register(), so this is a best-effort preview.
+     */
+    public function suggestUsername(Request $request)
+    {
+        $name = (string) $request->input('name', '');
+
+        return response()->json([
+            'username' => trim($name) === '' ? '' : User::generateUsername($name),
+        ]);
     }
 
     public function register(Request $request)
@@ -60,6 +75,8 @@ class AuthController extends Controller
 
         $user = User::create([
             'full_name' => $request->input('name'),
+            // System-assigned (ignores any client-supplied value), guaranteed unique.
+            'username'  => User::generateUsername($request->input('name')),
             'email'     => $request->input('email'),
             'password'  => Hash::make($request->input('password')),
         ]);
@@ -68,6 +85,7 @@ class AuthController extends Controller
             'user' => [
                 'id'        => $user->id,
                 'full_name' => $user->full_name,
+                'username'  => $user->username,
                 'email'     => $user->email,
                 'role'      => $user->role,
             ],
@@ -173,6 +191,7 @@ class AuthController extends Controller
             'user' => [
                 'id'        => $user->id,
                 'full_name' => $user->full_name,
+                'username'  => $user->username,
                 'email'     => $user->email,
                 'phone'     => $user->phone,
                 'role'      => $user->role,

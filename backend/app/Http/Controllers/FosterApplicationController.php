@@ -37,6 +37,20 @@ class FosterApplicationController extends Controller
 
         $user = $request->user();
 
+        // One foster request per animal per user within a 30-day window — regardless of the
+        // earlier request's outcome. After 30 days they may apply for this animal again, or
+        // foster a different animal anytime. Mirrors the adoption-application guard.
+        $alreadyApplied = FosterApplication::where('user_id', $user->id)
+            ->where('animal_id', $animal->id)
+            ->where('created_at', '>=', now()->subDays(30))
+            ->exists();
+
+        if ($alreadyApplied) {
+            return response()->json([
+                'message' => "You've already applied to foster {$animal->name}. You can apply for this animal again 30 days after your last request.",
+            ], 409);
+        }
+
         try {
             $application = FosterApplication::create([
                 'user_id' => $user->id,

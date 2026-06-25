@@ -17,6 +17,7 @@ class AdoptionApplicationController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'full_name' => ['required', 'string', 'max:150'],
+            'contact_number' => ['required', 'string', 'max:50'],
             'address' => ['required', 'string'],
             'occupation' => ['nullable', 'string', 'max:100'],
             'housing_type' => ['nullable', 'string', 'max:50'],
@@ -29,6 +30,21 @@ class AdoptionApplicationController extends Controller
         }
 
         $user = $request->user();
+
+        // One adoption request per animal per user within a 30-day window — regardless of the
+        // earlier request's outcome (a decline doesn't unlock an immediate re-apply). After
+        // 30 days they may apply for this animal again, or apply for a different animal anytime.
+        $alreadyApplied = AdoptionApplication::where('user_id', $user->id)
+            ->where('animal_id', $animal->id)
+            ->where('created_at', '>=', now()->subDays(30))
+            ->exists();
+
+        if ($alreadyApplied) {
+            return response()->json([
+                'message' => "You've already applied to adopt {$animal->name}. You can apply for this animal again 30 days after your last request.",
+            ], 409);
+        }
+
         $referenceNo = 'ADP-' . strtoupper(Str::random(8));
 
         try {
@@ -165,6 +181,7 @@ class AdoptionApplicationController extends Controller
             'home_visit_date' => $a->home_visit_date,
             'home_visit_notes' => $a->home_visit_notes,
             'full_name' => $a->full_name,
+            'contact_number' => $a->contact_number,
             'address' => $a->address,
             'occupation' => $a->occupation,
             'housing_type' => $a->housing_type,

@@ -13,6 +13,7 @@ class AdoptionApplication extends Model
         'reference_no',
         'status',
         'full_name',
+        'contact_number',
         'address',
         'occupation',
         'housing_type',

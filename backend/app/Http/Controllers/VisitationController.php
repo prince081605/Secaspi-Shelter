@@ -29,6 +29,22 @@ class VisitationController extends Controller
 
         $user = $request->user();
 
+        // Block booking the exact same schedule (date + time slot) twice within a 30-day
+        // window, regardless of the earlier request's outcome. They can pick a different
+        // date or slot anytime.
+        $validated = $validator->validated();
+        $dupe = Visitation::where('user_id', $user->id)
+            ->where('requested_date', $validated['requested_date'])
+            ->where('time_slot', $validated['time_slot'])
+            ->where('created_at', '>=', now()->subDays(30))
+            ->exists();
+
+        if ($dupe) {
+            return response()->json([
+                'message' => 'You already have a visit request for this date and time slot. Please pick a different time.',
+            ], 409);
+        }
+
         try {
             $visitation = Visitation::create([
                 'user_id' => $user->id,

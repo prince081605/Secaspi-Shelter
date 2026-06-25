@@ -16,6 +16,7 @@ class UserController extends Controller
         if ($q = $request->query('q')) {
             $query->where(function ($w) use ($q) {
                 $w->where('full_name', 'like', "%{$q}%")
+                    ->orWhere('username', 'like', "%{$q}%")
                     ->orWhere('email', 'like', "%{$q}%");
             });
         }
@@ -33,6 +34,7 @@ class UserController extends Controller
         $users->getCollection()->transform(fn (User $u) => [
             'id' => $u->id,
             'full_name' => $u->full_name,
+            'username' => $u->username,
             'email' => $u->email,
             'phone' => $u->phone,
             'role' => $u->role,
@@ -89,6 +91,7 @@ class UserController extends Controller
             'user' => [
                 'id' => $user->id,
                 'full_name' => $user->full_name,
+                'username' => $user->username,
                 'email' => $user->email,
                 'phone' => $user->phone,
                 'role' => $user->role,

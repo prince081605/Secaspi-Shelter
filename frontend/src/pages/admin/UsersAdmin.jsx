@@ -95,6 +95,7 @@ export default function UsersAdmin({ currentUserId }) {
                   <tr key={u.id}>
                     <td>
                       {u.full_name}
+                      {u.username && <span style={{ fontSize: 12, color: 'var(--muted)' }}> · @{u.username}</span>}
                       <br />
                       <span style={{ fontSize: 12, color: 'var(--muted)' }}>{u.email}</span>
                     </td>

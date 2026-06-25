@@ -34,7 +34,13 @@ async function request(path, { method = 'GET', body, headers = {} } = {}) {
 
   if (!res.ok) {
     const message = (data && data.message) ? data.message : 'Request failed';
-    throw new Error(message);
+    // Attach the status and parsed body so callers that need the structured payload
+    // (e.g. a 409 duplicate carrying the existing record) can read it. Existing callers
+    // only read `.message`, so this stays backward compatible.
+    const error = new Error(message);
+    error.status = res.status;
+    error.data = data;
+    throw error;
   }
 
   return data;

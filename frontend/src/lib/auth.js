@@ -11,6 +11,10 @@ export const auth = {
     if (data?.token) setAuthToken(data.token);
     return data;
   },
+  async suggestUsername(name) {
+    const data = await api.post('/api/username/suggest', { name });
+    return data?.username || '';
+  },
   async me() {
     return api.get('/api/user');
   },

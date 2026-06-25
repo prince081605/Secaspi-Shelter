@@ -24,9 +24,9 @@ function escapeHtml(value) {
 }
 
 function printAdoptionContract(application, settings = {}) {
-  const adopterName = escapeHtml(application.applicant?.full_name || application.full_name);
+  const adopterName = escapeHtml(application.full_name || application.applicant?.full_name);
   const adopterEmail = escapeHtml(application.applicant?.email);
-  const adopterPhone = escapeHtml(application.applicant?.phone);
+  const adopterPhone = escapeHtml(application.contact_number || application.applicant?.phone);
   const adopterAddress = escapeHtml(application.address);
   const animalName = escapeHtml(application.animal?.name || 'Unknown');
   const animalSpecies = escapeHtml(application.animal?.species);
@@ -218,7 +218,7 @@ function ApplicationRow({ application, onChanged, onUnreadChanged }) {
             {application.animal?.name || 'Unknown'}
           </div>
         </td>
-        <td>{application.applicant?.full_name || application.full_name}</td>
+        <td>{application.full_name || application.applicant?.full_name}</td>
         <td><StatusBadge status={application.status} /></td>
         <td><StatusBadge status={application.home_visit_status} /></td>
         <td>{(application.created_at || '').slice(0, 10)}</td>
@@ -241,7 +241,7 @@ function ApplicationRow({ application, onChanged, onUnreadChanged }) {
                   <div><dt>Occupation</dt><dd>{application.occupation || '—'}</dd></div>
                   <div><dt>Housing type</dt><dd>{application.housing_type || '—'}</dd></div>
                   <div><dt>Email</dt><dd>{application.applicant?.email || '—'}</dd></div>
-                  <div><dt>Phone</dt><dd>{application.applicant?.phone || '—'}</dd></div>
+                  <div><dt>Contact number</dt><dd>{application.contact_number || application.applicant?.phone || '—'}</dd></div>
                 </dl>
               </div>
 
@@ -298,7 +298,7 @@ function OngoingApprovedRow({ application, onChanged }) {
             {application.animal?.name || 'Unknown'}
           </div>
         </td>
-        <td>{application.applicant?.full_name || application.full_name}</td>
+        <td>{application.full_name || application.applicant?.full_name}</td>
         <td><StatusBadge status={application.home_visit_status} /></td>
         <td>{application.home_visit_date || '—'}</td>
         <td className="dashActionsCell">
@@ -332,7 +332,7 @@ function CompletedAdoptionRow({ application, settings }) {
           {application.animal?.name || 'Unknown'}
         </div>
       </td>
-      <td>{application.applicant?.full_name || application.full_name}</td>
+      <td>{application.full_name || application.applicant?.full_name}</td>
       <td>{application.home_visit_date || '—'}</td>
       <td className="dashActionsCell">
         <span className="dashActionsRow">

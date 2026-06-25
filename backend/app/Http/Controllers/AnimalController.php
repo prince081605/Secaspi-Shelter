@@ -143,6 +143,23 @@ class AnimalController extends Controller
         }
 
         $data = $validator->validated();
+
+        // Block accidental duplicates: an animal with the same name + species (case-insensitive)
+        // across any status. The admin can knowingly override by resubmitting with force=1.
+        if (! $request->boolean('force')) {
+            $existing = Animal::query()
+                ->whereRaw('LOWER(name) = ?', [mb_strtolower($data['name'])])
+                ->whereRaw('LOWER(species) = ?', [mb_strtolower($data['species'])])
+                ->first();
+
+            if ($existing) {
+                return response()->json([
+                    'message' => "A {$existing->species} named \"{$existing->name}\" already exists.",
+                    'existing_animal' => $this->toListItem($existing),
+                ], 409);
+            }
+        }
+
         $photos = $data['photos'] ?? null;
         unset($data['photos']);
         $data['status'] = $data['status'] ?? 'available';

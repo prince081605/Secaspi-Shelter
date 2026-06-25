@@ -88,7 +88,7 @@ function photoSrc(path) {
   return path.startsWith('http') ? path : `${import.meta.env.VITE_API_BASE_URL}/storage/${path}`;
 }
 
-function AnimalForm({ initial, onCancel, onSaved }) {
+function AnimalForm({ initial, onCancel, onSaved, onViewExisting }) {
   const isEdit = Boolean(initial?.id);
   const [form, setForm] = useState(() => {
     if (!initial) return emptyForm;
@@ -104,6 +104,9 @@ function AnimalForm({ initial, onCancel, onSaved }) {
   });
   const [photoFiles, setPhotoFiles] = useState(null);
   const [state, setState] = useState({ status: 'idle', error: '' });
+  // Set when a create hits a duplicate (same name + species). Holds the existing animal so
+  // we can offer a "View existing" shortcut alongside an explicit "add anyway" override.
+  const [duplicate, setDuplicate] = useState(null);
 
   // The list row (`initial`) only carries a subset of fields — notably it omits weight,
   // rescue_story and behavioral_assessment — so editing straight from it leaves those blank
@@ -137,9 +140,9 @@ function AnimalForm({ initial, onCancel, onSaved }) {
     });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const submit = async (force) => {
     setState({ status: 'loading', error: '' });
+    setDuplicate(null);
     try {
       if (isEdit) {
         await adminUpdateAnimal(initial.id, {
@@ -171,18 +174,49 @@ function AnimalForm({ initial, onCancel, onSaved }) {
         if (photoFiles) {
           Array.from(photoFiles).forEach((file) => fd.append('photos[]', file));
         }
+        if (force) fd.append('force', '1');
         await adminCreateAnimal(fd);
       }
       setState({ status: 'success', error: '' });
       onSaved();
     } catch (err) {
-      setState({ status: 'error', error: err?.message || 'Failed to save animal.' });
+      // A 409 on create means a same name + species animal already exists. Surface the
+      // existing record (View shortcut + "add anyway") instead of a plain error.
+      if (!isEdit && err?.status === 409 && err?.data?.existing_animal) {
+        setDuplicate(err.data.existing_animal);
+        setState({ status: 'idle', error: err.message || '' });
+      } else {
+        setState({ status: 'error', error: err?.message || 'Failed to save animal.' });
+      }
     }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    submit(false);
   };
 
   return (
     <form onSubmit={handleSubmit} className="dashCard" style={{ marginTop: 10 }}>
       {state.status === 'error' && <div className="ui-error">{state.error}</div>}
+      {duplicate && (
+        <div className="ui-error" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <span>{state.error || `A ${duplicate.species} named "${duplicate.name}" already exists.`}</span>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button type="button" className="dashBtn" onClick={() => onViewExisting?.(duplicate)}>
+              View existing
+            </button>
+            <button
+              type="button"
+              className="dashBtn dashBtnPrimary"
+              onClick={() => submit(true)}
+              disabled={state.status === 'loading'}
+            >
+              Yes, add {form.species || 'animal'} "{form.name}" anyway
+            </button>
+          </div>
+        </div>
+      )}
       <div className="dashFormGrid">
         <div className="ui-field">
           <label className="ui-label ui-label-required">Name</label>
@@ -1068,7 +1102,13 @@ export default function AnimalsAdmin() {
         </div>
       </div>
 
-      {showCreate && <AnimalForm onCancel={() => setShowCreate(false)} onSaved={refresh} />}
+      {showCreate && (
+        <AnimalForm
+          onCancel={() => setShowCreate(false)}
+          onSaved={refresh}
+          onViewExisting={(animal) => { setShowCreate(false); setEditingAnimal(animal); }}
+        />
+      )}
       {editingAnimal && (
         <AnimalForm initial={editingAnimal} onCancel={() => setEditingAnimal(null)} onSaved={refresh} />
       )}
