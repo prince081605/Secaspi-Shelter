@@ -109,6 +109,8 @@ function AnimalForm({ initial, onCancel, onSaved }) {
   // non-destructive — it must never discard the in-progress form the admin is filling out.
   const [duplicate, setDuplicate] = useState(null);
   const [showExisting, setShowExisting] = useState(false);
+  // Bumped on Clear to remount the (uncontrolled) file input so its chosen-filename label resets.
+  const [fileInputKey, setFileInputKey] = useState(0);
 
   // The list row (`initial`) only carries a subset of fields — notably it omits weight,
   // rescue_story and behavioral_assessment — so editing straight from it leaves those blank
@@ -197,6 +199,16 @@ function AnimalForm({ initial, onCancel, onSaved }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     submit(false);
+  };
+
+  // Reset every field back to empty without closing the form, so the admin can start over.
+  const clearForm = () => {
+    setForm(emptyForm);
+    setPhotoFiles(null);
+    setDuplicate(null);
+    setShowExisting(false);
+    setState({ status: 'idle', error: '' });
+    setFileInputKey((k) => k + 1);
   };
 
   return (
@@ -300,13 +312,14 @@ function AnimalForm({ initial, onCancel, onSaved }) {
       {!isEdit && (
         <div className="ui-field">
           <label className="ui-label">Photos</label>
-          <input type="file" accept="image/*" multiple onChange={(e) => setPhotoFiles(e.target.files)} />
+          <input key={fileInputKey} type="file" accept="image/*" multiple onChange={(e) => setPhotoFiles(e.target.files)} />
         </div>
       )}
       <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
         <button className="ui-btn-primary" type="submit" disabled={state.status === 'loading'}>
           {state.status === 'loading' ? 'Saving…' : isEdit ? 'Save changes' : 'Add animal'}
         </button>
+        <button type="button" className="dashBtn" onClick={clearForm} disabled={state.status === 'loading'}>Clear</button>
         <button type="button" className="dashBtn" onClick={onCancel}>Cancel</button>
       </div>
     </form>
