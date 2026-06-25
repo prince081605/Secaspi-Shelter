@@ -88,7 +88,7 @@ function photoSrc(path) {
   return path.startsWith('http') ? path : `${import.meta.env.VITE_API_BASE_URL}/storage/${path}`;
 }
 
-function AnimalForm({ initial, onCancel, onSaved, onViewExisting }) {
+function AnimalForm({ initial, onCancel, onSaved }) {
   const isEdit = Boolean(initial?.id);
   const [form, setForm] = useState(() => {
     if (!initial) return emptyForm;
@@ -105,8 +105,10 @@ function AnimalForm({ initial, onCancel, onSaved, onViewExisting }) {
   const [photoFiles, setPhotoFiles] = useState(null);
   const [state, setState] = useState({ status: 'idle', error: '' });
   // Set when a create hits a duplicate (same name + species). Holds the existing animal so
-  // we can offer a "View existing" shortcut alongside an explicit "add anyway" override.
+  // we can preview it inline alongside an explicit "add anyway" override. Previewing is
+  // non-destructive — it must never discard the in-progress form the admin is filling out.
   const [duplicate, setDuplicate] = useState(null);
+  const [showExisting, setShowExisting] = useState(false);
 
   // The list row (`initial`) only carries a subset of fields — notably it omits weight,
   // rescue_story and behavioral_assessment — so editing straight from it leaves those blank
@@ -143,6 +145,7 @@ function AnimalForm({ initial, onCancel, onSaved, onViewExisting }) {
   const submit = async (force) => {
     setState({ status: 'loading', error: '' });
     setDuplicate(null);
+    setShowExisting(false);
     try {
       if (isEdit) {
         await adminUpdateAnimal(initial.id, {
@@ -203,8 +206,8 @@ function AnimalForm({ initial, onCancel, onSaved, onViewExisting }) {
         <div className="ui-error" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <span>{state.error || `A ${duplicate.species} named "${duplicate.name}" already exists.`}</span>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button type="button" className="dashBtn" onClick={() => onViewExisting?.(duplicate)}>
-              View existing
+            <button type="button" className="dashBtn" onClick={() => setShowExisting((v) => !v)}>
+              {showExisting ? 'Hide existing' : 'View existing'}
             </button>
             <button
               type="button"
@@ -215,6 +218,22 @@ function AnimalForm({ initial, onCancel, onSaved, onViewExisting }) {
               Yes, add {form.species || 'animal'} "{form.name}" anyway
             </button>
           </div>
+          {showExisting && (
+            <div className="dashCard" style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 4 }}>
+              <div className="aa-row-photo" aria-hidden="true">
+                {duplicate.photo ? <img src={photoSrc(duplicate.photo)} alt="" /> : '🐾'}
+              </div>
+              <div style={{ fontSize: 13, lineHeight: 1.5 }}>
+                <div style={{ fontWeight: 600 }}>{duplicate.name}</div>
+                <div>
+                  {duplicate.species}
+                  {duplicate.breed ? ` • ${duplicate.breed}` : ''}
+                  {duplicate.age ? ` • ${duplicate.age} yrs` : ''}
+                </div>
+                <div>Status: {duplicate.status}</div>
+              </div>
+            </div>
+          )}
         </div>
       )}
       <div className="dashFormGrid">
@@ -1102,13 +1121,7 @@ export default function AnimalsAdmin() {
         </div>
       </div>
 
-      {showCreate && (
-        <AnimalForm
-          onCancel={() => setShowCreate(false)}
-          onSaved={refresh}
-          onViewExisting={(animal) => { setShowCreate(false); setEditingAnimal(animal); }}
-        />
-      )}
+      {showCreate && <AnimalForm onCancel={() => setShowCreate(false)} onSaved={refresh} />}
       {editingAnimal && (
         <AnimalForm initial={editingAnimal} onCancel={() => setEditingAnimal(null)} onSaved={refresh} />
       )}
