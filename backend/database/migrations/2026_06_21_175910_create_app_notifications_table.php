@@ -15,10 +15,11 @@ return new class extends Migration
     {
         Schema::create('app_notifications', function (Blueprint $table) {
             $table->id();
-            // users.id is a signed `int(11)` on the live DB (not bigint unsigned), so the FK
-            // column must match that exact type or MySQL refuses to create the constraint
-            // (errno 150) — same gotcha noted in the volunteers migration.
-            $table->integer('user_id');
+            // Matches users.id (bigint unsigned, from $table->id()). This was previously a signed
+            // int to mirror an old imported DB whose users.id was int(11); on a clean `migrate`
+            // that mismatch breaks the FK (errno 150), so it now matches the real PK type. Safe on
+            // both MySQL and Postgres for fresh builds; existing deployed tables are unaffected.
+            $table->unsignedBigInteger('user_id');
             $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
             $table->string('type', 50);
             $table->string('title', 150);
