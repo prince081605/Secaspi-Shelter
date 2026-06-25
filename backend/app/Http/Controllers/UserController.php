@@ -14,10 +14,14 @@ class UserController extends Controller
         $query = User::query();
 
         if ($q = $request->query('q')) {
-            $query->where(function ($w) use ($q) {
-                $w->where('full_name', 'like', "%{$q}%")
-                    ->orWhere('username', 'like', "%{$q}%")
-                    ->orWhere('email', 'like', "%{$q}%");
+            // Case-insensitive on every engine: plain `LIKE` is case-insensitive on MySQL/SQLite
+            // but case-sensitive on Postgres (prod), so normalise both sides with LOWER().
+            // Mirrors the search in AnimalController::index().
+            $needle = '%' . mb_strtolower($q) . '%';
+            $query->where(function ($w) use ($needle) {
+                $w->whereRaw('LOWER(full_name) LIKE ?', [$needle])
+                    ->orWhereRaw('LOWER(username) LIKE ?', [$needle])
+                    ->orWhereRaw('LOWER(email) LIKE ?', [$needle]);
             });
         }
 
