@@ -22,15 +22,26 @@ jobs:
     steps:
       - name: Trigger backup endpoint
         run: |
-          # Retries absorb Render's cold start: the first request may stall while the
-          # service wakes, so we allow a long timeout and retry on any failure. -f makes
-          # curl exit non-zero on a non-2xx response so a failed backup shows red here.
-          curl -fsS -X POST "$BACKUP_URL" \
+          # Retries absorb Render's cold start: the first request may stall while the service
+          # wakes, so we allow a long timeout and retry on any failure. We capture the response
+          # body and status so a failed backup prints its actual reason in this log, then fail
+          # the job (red) if the status isn't 2xx.
+          http_code=$(curl -sS -X POST "$BACKUP_URL" \
             -H "X-Backup-Token: $BACKUP_TOKEN" \
             --max-time 300 \
             --retry 3 \
             --retry-delay 30 \
-            --retry-all-errors
+            --retry-all-errors \
+            -o response.json \
+            -w '%{http_code}')
+          echo "HTTP status: $http_code"
+          echo "Response body:"
+          cat response.json || true
+          echo ""
+          if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+            echo "::error::Backup trigger failed with HTTP $http_code"
+            exit 1
+          fi
         env:
           BACKUP_URL: ${{ secrets.BACKUP_URL }}
           BACKUP_TOKEN: ${{ secrets.BACKUP_TRIGGER_TOKEN }}
