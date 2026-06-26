@@ -62,9 +62,13 @@ return [
     | Base URL of the frontend SPA. Used when building links that point back
     | to the frontend, e.g. the URL encoded into each animal's QR code.
     |
+    | FRONTEND_URL may hold a comma-separated list of origins (CORS uses the
+    | full list — see config/cors.php). For link building we only ever want a
+    | single, canonical base URL, so take the first entry here.
+    |
     */
 
-    'frontend_url' => env('FRONTEND_URL', 'http://localhost:5173'),
+    'frontend_url' => trim(explode(',', (string) env('FRONTEND_URL', 'http://localhost:5173'))[0]),
 
     /*
     |--------------------------------------------------------------------------

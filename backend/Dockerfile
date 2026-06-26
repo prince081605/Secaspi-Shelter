@@ -3,7 +3,7 @@ FROM php:8.4-cli
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
-    zip unzip curl git nodejs npm \
+    zip unzip curl git nodejs npm postgresql-client \
     libpq-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev libzip-dev libonig-dev \
     && docker-php-ext-configure gd --with-jpeg --with-freetype \
     && docker-php-ext-install -j$(nproc) pdo_pgsql mbstring gd zip bcmath \

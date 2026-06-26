@@ -42,3 +42,12 @@ Artisan::command('reminders:dispatch', function () {
 })->purpose('Notify admins of due health reminders');
 
 Schedule::command('reminders:dispatch')->dailyAt('08:00');
+
+/**
+ * Database backups (spatie/laravel-backup). Prune old backups first, then take a fresh
+ * dump and upload it to the configured destination disk (R2/S3 in production). Runs nightly
+ * via the same scheduler that powers reminders:dispatch. Take a manual backup anytime with
+ * `php artisan backup:run`; inspect existing backups with `php artisan backup:list`.
+ */
+Schedule::command('backup:clean')->dailyAt('01:00');
+Schedule::command('backup:run')->dailyAt('01:30');
