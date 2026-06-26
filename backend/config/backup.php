@@ -240,7 +240,11 @@ return [
         'notifiable' => Notifiable::class,
 
         'mail' => [
-            'to' => env('BACKUP_NOTIFY_EMAIL', env('MAIL_FROM_ADDRESS')),
+            // Must be a syntactically valid email at all times — the package validates
+            // it when the app boots (including `package:discover` during the Docker build,
+            // where no .env is present). The placeholder keeps the build green; production
+            // overrides it with BACKUP_NOTIFY_EMAIL so real failure alerts reach the admin.
+            'to' => env('BACKUP_NOTIFY_EMAIL') ?: env('MAIL_FROM_ADDRESS') ?: 'backups@example.com',
 
             'from' => [
                 'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
