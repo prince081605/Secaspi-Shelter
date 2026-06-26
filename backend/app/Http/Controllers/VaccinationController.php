@@ -5,11 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Animal;
 use App\Models\Reminder;
 use App\Models\Vaccination;
+use App\Support\SyncsHealthReminders;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class VaccinationController extends Controller
 {
+    use SyncsHealthReminders;
+
     public function store(Request $request, Animal $animal)
     {
         $validator = Validator::make($request->all(), [
@@ -24,6 +27,7 @@ class VaccinationController extends Controller
 
         $vaccination = $animal->vaccinations()->create($validator->validated());
         $this->syncReminder($vaccination);
+        $this->clearSupersededBoosters($vaccination);
 
         return response()->json(['vaccination' => $vaccination], 201);
     }
@@ -55,53 +59,43 @@ class VaccinationController extends Controller
     }
 
     /**
-     * Keep a booster reminder in lockstep with the vaccination's next_due date:
-     * create it when a due date is set, update it when the date changes, and remove
-     * it when the due date is cleared. A reminder that was already actioned
-     * (status completed) is left untouched.
+     * Keep a booster reminder in lockstep with the vaccination's next_due date.
+     * Delegates the create/update/delete logic to the shared SyncsHealthReminders trait.
      */
     private function syncReminder(Vaccination $vaccination): void
     {
-        if (empty($vaccination->next_due)) {
-            $this->deleteReminder($vaccination);
-            return;
-        }
-
         $animal = $vaccination->animal;
         $title = trim(($vaccination->vaccine_name ?: 'Vaccination') . ' booster due'
             . ($animal && $animal->name ? " — {$animal->name}" : ''));
 
-        $existing = Reminder::where('remindable_type', Vaccination::class)
-            ->where('remindable_id', $vaccination->id)
-            ->first();
-
-        // Preserve a completed reminder when the due date is unchanged (e.g. the admin
-        // only fixed a typo in the vaccine name). Re-arm to pending only when the date
-        // actually moves — that's a genuinely new booster to chase.
-        $dueChanged = !$existing
-            || optional($existing->reminder_date)->toDateString() !== \Illuminate\Support\Carbon::parse($vaccination->next_due)->toDateString();
-        $status = ($existing && $existing->status === 'completed' && !$dueChanged)
-            ? 'completed'
-            : 'pending';
-
-        Reminder::updateOrCreate(
-            [
-                'remindable_type' => Vaccination::class,
-                'remindable_id' => $vaccination->id,
-            ],
-            [
-                'animal_id' => $vaccination->animal_id,
-                'title' => $title,
-                'reminder_date' => $vaccination->next_due,
-                'status' => $status,
-            ]
-        );
+        $this->syncHealthReminder($vaccination, $vaccination->animal_id, $title, $vaccination->next_due);
     }
 
     private function deleteReminder(Vaccination $vaccination): void
     {
+        $this->deleteHealthReminder($vaccination);
+    }
+
+    /**
+     * Recording a fresh shot of the same vaccine for an animal means any earlier booster we
+     * were chasing has now been given — so mark those prior (still-open) reminders completed.
+     * This keeps the reminders list clean without ever hiding a genuinely missed booster:
+     * an overdue reminder only clears once a newer shot proves the care actually happened.
+     */
+    private function clearSupersededBoosters(Vaccination $new): void
+    {
+        $olderIds = Vaccination::where('animal_id', $new->animal_id)
+            ->whereRaw('LOWER(vaccine_name) = ?', [mb_strtolower($new->vaccine_name)])
+            ->where('id', '!=', $new->id)
+            ->pluck('id');
+
+        if ($olderIds->isEmpty()) {
+            return;
+        }
+
         Reminder::where('remindable_type', Vaccination::class)
-            ->where('remindable_id', $vaccination->id)
-            ->delete();
+            ->whereIn('remindable_id', $olderIds)
+            ->whereIn('status', ['pending', 'sent'])
+            ->update(['status' => 'completed']);
     }
 }

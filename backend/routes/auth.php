@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\DonationController;
 use App\Http\Controllers\AdoptionApplicationController;
 use App\Http\Controllers\FosterApplicationController;
@@ -102,6 +103,9 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
 
     // ---- Admin dashboard overview (Phase 6) ----
     Route::get('/admin/dashboard/overview', [DashboardController::class, 'adminOverview'])->middleware('role:staff');
+
+    // ---- Insights & analytics dashboard ----
+    Route::get('/admin/analytics/overview', [AnalyticsController::class, 'overview'])->middleware('role:staff');
 
     // ---- Volunteer sign-up (user-facing) ----
     Route::post('/volunteer-applications',           [VolunteerApplicationController::class, 'store']);

@@ -14,7 +14,12 @@ class MedicalRecord extends Model
         'vet_name',
         'cost',
         'record_date',
+        'follow_up_date',
         'notes',
+    ];
+
+    protected $casts = [
+        'follow_up_date' => 'date',
     ];
 
     public function animal()

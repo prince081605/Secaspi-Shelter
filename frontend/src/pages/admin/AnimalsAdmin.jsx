@@ -426,7 +426,7 @@ function QrCodeViewer({ animalId }) {
   );
 }
 
-const emptyRecordForm = { type: 'checkup', description: '', vet_name: '', cost: '', record_date: '', notes: '' };
+const emptyRecordForm = { type: 'checkup', description: '', vet_name: '', cost: '', record_date: '', follow_up_date: '', notes: '' };
 const emptyVaccinationForm = { vaccine_name: '', date_given: '', next_due: '' };
 
 function MedicalManager({ animalId, onChanged }) {
@@ -456,6 +456,7 @@ function MedicalManager({ animalId, onChanged }) {
       await adminCreateMedicalRecord(animalId, {
         ...recordForm,
         cost: recordForm.cost === '' ? null : Number(recordForm.cost),
+        follow_up_date: recordForm.follow_up_date || null,
       });
       setRecordForm(emptyRecordForm);
       load();
@@ -512,7 +513,7 @@ function MedicalManager({ animalId, onChanged }) {
         <div className="dashTableWrap">
           <table className="dashTable">
             <thead>
-              <tr><th>Type</th><th>Description</th><th>Vet</th><th>Cost</th><th>Date</th><th></th></tr>
+              <tr><th>Type</th><th>Description</th><th>Vet</th><th>Cost</th><th>Date</th><th>Follow-up</th><th></th></tr>
             </thead>
             <tbody>
               {records.map((r) => (
@@ -522,6 +523,7 @@ function MedicalManager({ animalId, onChanged }) {
                   <td>{r.vet_name || '—'}</td>
                   <td>{r.cost ?? '—'}</td>
                   <td>{r.record_date}</td>
+                  <td>{r.follow_up_date || '—'}</td>
                   <td><button className="dashBtn dashBtnDanger" aria-label="Delete medical record" onClick={() => handleDeleteRecord(r.id)}>✕</button></td>
                 </tr>
               ))}
@@ -537,6 +539,7 @@ function MedicalManager({ animalId, onChanged }) {
         <input className="ui-input" style={{ maxWidth: 120 }} placeholder="Vet name" value={recordForm.vet_name} onChange={(e) => setRecordForm((f) => ({ ...f, vet_name: e.target.value }))} />
         <input className="ui-input" style={{ maxWidth: 90 }} type="number" min="0" step="0.01" placeholder="Cost" value={recordForm.cost} onChange={(e) => setRecordForm((f) => ({ ...f, cost: e.target.value }))} />
         <input className="ui-input" style={{ maxWidth: 140 }} type="date" required aria-label="Record date (required)" value={recordForm.record_date} onChange={(e) => setRecordForm((f) => ({ ...f, record_date: e.target.value }))} />
+        <input className="ui-input" style={{ maxWidth: 150 }} type="date" aria-label="Follow-up date (optional — creates a reminder)" title="Optional follow-up date — auto-creates a health reminder" value={recordForm.follow_up_date} onChange={(e) => setRecordForm((f) => ({ ...f, follow_up_date: e.target.value }))} />
         <button className="dashBtn dashBtnPrimary" type="submit" disabled={state.status === 'loading'}>+ Add</button>
       </form>
 
