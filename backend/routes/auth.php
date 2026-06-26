@@ -29,28 +29,36 @@ Route::post('/username/suggest', [AuthController::class, 'suggestUsername']);
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password',  [AuthController::class, 'resetPassword']);
 
-// Protected routes
-Route::middleware('auth:sanctum')->group(function () {
+// Protected routes. `active` runs after `auth:sanctum` so a suspended user holding
+// a still-valid token is rejected (with their suspension reason) on every endpoint.
+//
+// Role gating (see App\Http\Middleware\EnsureRole, hierarchy user<volunteer<staff<admin):
+//   'role:staff' — day-to-day operations (animals, requests, rescues, donations view,
+//                  personnel, reports, intakes). Staff and admin clear this.
+//   'admin'      — sensitive/admin-only (user management, settings, donation verify,
+//                  the financial donations report). Admin only.
+// Routes with no role middleware are open to any authenticated user (their own data).
+Route::middleware(['auth:sanctum', 'active'])->group(function () {
     // Current user is exposed as GET /api/user (see routes/api.php).
     Route::post('/logout',      [AuthController::class, 'logout']);
     Route::get('/donations',                 [DonationController::class, 'index']);
     Route::post('/donations',                [DonationController::class, 'store']);
     Route::get('/donations/{donation}',      [DonationController::class, 'show']);
     Route::post('/donations/{donation}/verify', [DonationController::class, 'verify'])->middleware('admin');
-    Route::get('/admin/donations',              [DonationController::class, 'adminIndex'])->middleware('admin');
-    Route::get('/admin/donations/stats',         [DonationController::class, 'adminStats'])->middleware('admin');
+    Route::get('/admin/donations',              [DonationController::class, 'adminIndex'])->middleware('role:staff');
+    Route::get('/admin/donations/stats',         [DonationController::class, 'adminStats'])->middleware('role:staff');
     Route::post('/animals/{animal}/adopt',  [AdoptionApplicationController::class, 'store']);
     Route::post('/animals/{animal}/foster', [FosterApplicationController::class, 'store']);
     Route::get('/adoption-applications',    [AdoptionApplicationController::class, 'index']);
     Route::get('/foster-applications',      [FosterApplicationController::class, 'index']);
-    Route::get('/admin/adoption-applications',        [AdoptionApplicationController::class, 'adminIndex'])->middleware('admin');
-    Route::put('/admin/adoption-applications/{application}', [AdoptionApplicationController::class, 'adminUpdate'])->middleware('admin');
-    Route::post('/admin/adoption-applications/{application}/read', [AdoptionApplicationController::class, 'adminMarkRead'])->middleware('admin');
-    Route::get('/admin/foster-applications',          [FosterApplicationController::class, 'adminIndex'])->middleware('admin');
-    Route::put('/admin/foster-applications/{application}',   [FosterApplicationController::class, 'adminUpdate'])->middleware('admin');
-    Route::get('/rescue-reports',                    [RescueReportController::class, 'index'])->middleware('admin');
-    Route::post('/rescue-reports/{report}/status',   [RescueReportController::class, 'updateStatus'])->middleware('admin');
-    Route::post('/rescue-reports/{report}/read',     [RescueReportController::class, 'adminMarkRead'])->middleware('admin');
+    Route::get('/admin/adoption-applications',        [AdoptionApplicationController::class, 'adminIndex'])->middleware('role:staff');
+    Route::put('/admin/adoption-applications/{application}', [AdoptionApplicationController::class, 'adminUpdate'])->middleware('role:staff');
+    Route::post('/admin/adoption-applications/{application}/read', [AdoptionApplicationController::class, 'adminMarkRead'])->middleware('role:staff');
+    Route::get('/admin/foster-applications',          [FosterApplicationController::class, 'adminIndex'])->middleware('role:staff');
+    Route::put('/admin/foster-applications/{application}',   [FosterApplicationController::class, 'adminUpdate'])->middleware('role:staff');
+    Route::get('/rescue-reports',                    [RescueReportController::class, 'index'])->middleware('role:staff');
+    Route::post('/rescue-reports/{report}/status',   [RescueReportController::class, 'updateStatus'])->middleware('role:staff');
+    Route::post('/rescue-reports/{report}/read',     [RescueReportController::class, 'adminMarkRead'])->middleware('role:staff');
     Route::put('/profile',                           [ProfileController::class, 'update']);
     Route::post('/profile/change-password',          [ProfileController::class, 'changePassword']);
 
@@ -62,79 +70,82 @@ Route::middleware('auth:sanctum')->group(function () {
     // ---- Visitation scheduling ----
     Route::post('/visitations',                      [VisitationController::class, 'store']);
     Route::get('/visitations',                       [VisitationController::class, 'index']);
-    Route::get('/admin/visitations',                 [VisitationController::class, 'adminIndex'])->middleware('admin');
-    Route::put('/admin/visitations/{visitation}',    [VisitationController::class, 'adminUpdate'])->middleware('admin');
-    Route::post('/admin/visitations/{visitation}/read', [VisitationController::class, 'adminMarkRead'])->middleware('admin');
+    Route::get('/admin/visitations',                 [VisitationController::class, 'adminIndex'])->middleware('role:staff');
+    Route::put('/admin/visitations/{visitation}',    [VisitationController::class, 'adminUpdate'])->middleware('role:staff');
+    Route::post('/admin/visitations/{visitation}/read', [VisitationController::class, 'adminMarkRead'])->middleware('role:staff');
 
     // ---- Health reminders (vaccination boosters, follow-ups) ----
-    Route::get('/admin/reminders',                   [ReminderController::class, 'adminIndex'])->middleware('admin');
-    Route::put('/admin/reminders/{reminder}',        [ReminderController::class, 'adminUpdate'])->middleware('admin');
+    Route::get('/admin/reminders',                   [ReminderController::class, 'adminIndex'])->middleware('role:staff');
+    Route::put('/admin/reminders/{reminder}',        [ReminderController::class, 'adminUpdate'])->middleware('role:staff');
 
     // ---- Animal management (Phase 6) ----
-    Route::get('/admin/animals',                     [AnimalController::class, 'adminIndex'])->middleware('admin');
-    Route::get('/admin/animals/{animal}',            [AnimalController::class, 'adminShow'])->middleware('admin');
-    Route::post('/animals',                          [AnimalController::class, 'store'])->middleware('admin');
-    Route::put('/animals/{animal}',                  [AnimalController::class, 'update'])->middleware('admin');
-    Route::post('/animals/{animal}/archive',         [AnimalController::class, 'archive'])->middleware('admin');
-    Route::delete('/animals/{animal}',               [AnimalController::class, 'destroy'])->middleware('admin');
-    Route::post('/animals/{animal}/photos',          [AnimalController::class, 'addPhotos'])->middleware('admin');
-    Route::delete('/animals/{animal}/photos/{photo}', [AnimalController::class, 'destroyPhoto'])->middleware('admin');
+    Route::get('/admin/animals',                     [AnimalController::class, 'adminIndex'])->middleware('role:staff');
+    Route::get('/admin/animals/{animal}',            [AnimalController::class, 'adminShow'])->middleware('role:staff');
+    Route::post('/animals',                          [AnimalController::class, 'store'])->middleware('role:staff');
+    Route::put('/animals/{animal}',                  [AnimalController::class, 'update'])->middleware('role:staff');
+    Route::post('/animals/{animal}/archive',         [AnimalController::class, 'archive'])->middleware('role:staff');
+    Route::delete('/animals/{animal}',               [AnimalController::class, 'destroy'])->middleware('role:staff');
+    Route::post('/animals/{animal}/photos',          [AnimalController::class, 'addPhotos'])->middleware('role:staff');
+    Route::delete('/animals/{animal}/photos/{photo}', [AnimalController::class, 'destroyPhoto'])->middleware('role:staff');
 
     // ---- Medical records & vaccinations (Phase 6) ----
-    Route::post('/animals/{animal}/medical-records', [MedicalRecordController::class, 'store'])->middleware('admin');
-    Route::put('/medical-records/{record}',           [MedicalRecordController::class, 'update'])->middleware('admin');
-    Route::delete('/medical-records/{record}',        [MedicalRecordController::class, 'destroy'])->middleware('admin');
-    Route::post('/animals/{animal}/vaccinations',      [VaccinationController::class, 'store'])->middleware('admin');
-    Route::put('/vaccinations/{vaccination}',          [VaccinationController::class, 'update'])->middleware('admin');
-    Route::delete('/vaccinations/{vaccination}',       [VaccinationController::class, 'destroy'])->middleware('admin');
+    Route::post('/animals/{animal}/medical-records', [MedicalRecordController::class, 'store'])->middleware('role:staff');
+    Route::put('/medical-records/{record}',           [MedicalRecordController::class, 'update'])->middleware('role:staff');
+    Route::delete('/medical-records/{record}',        [MedicalRecordController::class, 'destroy'])->middleware('role:staff');
+    Route::post('/animals/{animal}/vaccinations',      [VaccinationController::class, 'store'])->middleware('role:staff');
+    Route::put('/vaccinations/{vaccination}',          [VaccinationController::class, 'update'])->middleware('role:staff');
+    Route::delete('/vaccinations/{vaccination}',       [VaccinationController::class, 'destroy'])->middleware('role:staff');
 
-    // ---- User management (Phase 6) ----
+    // ---- User management (Phase 6) ---- admin only
     Route::get('/admin/users',           [UserController::class, 'adminIndex'])->middleware('admin');
     Route::put('/admin/users/{user}',    [UserController::class, 'adminUpdate'])->middleware('admin');
 
     // ---- Admin dashboard overview (Phase 6) ----
-    Route::get('/admin/dashboard/overview', [DashboardController::class, 'adminOverview'])->middleware('admin');
+    Route::get('/admin/dashboard/overview', [DashboardController::class, 'adminOverview'])->middleware('role:staff');
 
     // ---- Volunteer sign-up (user-facing) ----
     Route::post('/volunteer-applications',           [VolunteerApplicationController::class, 'store']);
     Route::get('/volunteer-applications',            [VolunteerApplicationController::class, 'index']);
     Route::get('/volunteer/me',                      [VolunteerController::class, 'me']);
     Route::post('/volunteer/tasks',                  [VolunteerController::class, 'requestTask']);
-    Route::get('/admin/volunteer-applications',      [VolunteerApplicationController::class, 'adminIndex'])->middleware('admin');
-    Route::put('/admin/volunteer-applications/{application}', [VolunteerApplicationController::class, 'adminUpdate'])->middleware('admin');
-    Route::post('/admin/volunteer-applications/{application}/read', [VolunteerApplicationController::class, 'adminMarkRead'])->middleware('admin');
+    Route::get('/admin/volunteer-applications',      [VolunteerApplicationController::class, 'adminIndex'])->middleware('role:staff');
+    Route::put('/admin/volunteer-applications/{application}', [VolunteerApplicationController::class, 'adminUpdate'])->middleware('role:staff');
+    Route::post('/admin/volunteer-applications/{application}/read', [VolunteerApplicationController::class, 'adminMarkRead'])->middleware('role:staff');
 
     // ---- Volunteer management (Phase 6) ----
-    Route::get('/admin/volunteers',                 [VolunteerController::class, 'adminIndex'])->middleware('admin');
-    Route::post('/admin/volunteers',                [VolunteerController::class, 'adminStore'])->middleware('admin');
-    Route::put('/admin/volunteers/{volunteer}',     [VolunteerController::class, 'adminUpdate'])->middleware('admin');
-    Route::delete('/admin/volunteers/{volunteer}',  [VolunteerController::class, 'adminDestroy'])->middleware('admin');
-    Route::post('/admin/volunteers/{volunteer}/tasks',     [VolunteerController::class, 'storeTask'])->middleware('admin');
-    Route::put('/admin/volunteer-tasks/{task}',            [VolunteerController::class, 'updateTask'])->middleware('admin');
-    Route::delete('/admin/volunteer-tasks/{task}',         [VolunteerController::class, 'destroyTask'])->middleware('admin');
+    Route::get('/admin/volunteers',                 [VolunteerController::class, 'adminIndex'])->middleware('role:staff');
+    Route::post('/admin/volunteers',                [VolunteerController::class, 'adminStore'])->middleware('role:staff');
+    Route::put('/admin/volunteers/{volunteer}',     [VolunteerController::class, 'adminUpdate'])->middleware('role:staff');
+    Route::delete('/admin/volunteers/{volunteer}',  [VolunteerController::class, 'adminDestroy'])->middleware('role:staff');
+    Route::post('/admin/volunteers/{volunteer}/tasks',     [VolunteerController::class, 'storeTask'])->middleware('role:staff');
+    Route::put('/admin/volunteer-tasks/{task}',            [VolunteerController::class, 'updateTask'])->middleware('role:staff');
+    Route::delete('/admin/volunteer-tasks/{task}',         [VolunteerController::class, 'destroyTask'])->middleware('role:staff');
 
     // ---- Intake management (Phase 6) ----
-    Route::get('/admin/intakes',                     [IntakeController::class, 'adminIndex'])->middleware('admin');
-    Route::post('/admin/intakes',                    [IntakeController::class, 'adminStore'])->middleware('admin');
-    Route::get('/admin/intakes/{intake}',             [IntakeController::class, 'adminShow'])->middleware('admin');
-    Route::put('/admin/intakes/{intake}',             [IntakeController::class, 'adminUpdate'])->middleware('admin');
-    Route::delete('/admin/intakes/{intake}',          [IntakeController::class, 'adminDestroy'])->middleware('admin');
-    Route::post('/admin/intakes/{intake}/convert',    [IntakeController::class, 'adminConvert'])->middleware('admin');
-    Route::post('/admin/intakes/{intake}/documents',  [IntakeController::class, 'addDocuments'])->middleware('admin');
-    Route::delete('/admin/intakes/{intake}/documents/{document}', [IntakeController::class, 'destroyDocument'])->middleware('admin');
+    Route::get('/admin/intakes',                     [IntakeController::class, 'adminIndex'])->middleware('role:staff');
+    Route::post('/admin/intakes',                    [IntakeController::class, 'adminStore'])->middleware('role:staff');
+    Route::get('/admin/intakes/{intake}',             [IntakeController::class, 'adminShow'])->middleware('role:staff');
+    Route::put('/admin/intakes/{intake}',             [IntakeController::class, 'adminUpdate'])->middleware('role:staff');
+    Route::delete('/admin/intakes/{intake}',          [IntakeController::class, 'adminDestroy'])->middleware('role:staff');
+    Route::post('/admin/intakes/{intake}/convert',    [IntakeController::class, 'adminConvert'])->middleware('role:staff');
+    Route::post('/admin/intakes/{intake}/documents',  [IntakeController::class, 'addDocuments'])->middleware('role:staff');
+    Route::delete('/admin/intakes/{intake}/documents/{document}', [IntakeController::class, 'destroyDocument'])->middleware('role:staff');
 
-    // ---- Site settings ----
+    // ---- Site settings ---- admin only
     Route::get('/admin/settings',           [SettingController::class, 'adminIndex'])->middleware('admin');
     Route::put('/admin/settings',           [SettingController::class, 'adminUpdate'])->middleware('admin');
     Route::post('/admin/settings/image',    [SettingController::class, 'adminUploadImage'])->middleware('admin');
 
     // ---- Reports & exports (Phase 7) ----
-    Route::get('/admin/reports/adoption',    [ReportController::class, 'adoption'])->middleware('admin');
-    Route::get('/admin/reports/animals',     [ReportController::class, 'animals'])->middleware('admin');
-    Route::get('/admin/reports/medical',     [ReportController::class, 'medical'])->middleware('admin');
+    // Operational reports are staff-accessible; the donations (financial) report stays
+    // admin-only. The export endpoints are staff-accessible but ReportController blocks
+    // type=donations for non-admins (see resolveData()).
+    Route::get('/admin/reports/adoption',    [ReportController::class, 'adoption'])->middleware('role:staff');
+    Route::get('/admin/reports/animals',     [ReportController::class, 'animals'])->middleware('role:staff');
+    Route::get('/admin/reports/medical',     [ReportController::class, 'medical'])->middleware('role:staff');
     Route::get('/admin/reports/donations',   [ReportController::class, 'donations'])->middleware('admin');
-    Route::get('/admin/reports/volunteers',  [ReportController::class, 'volunteers'])->middleware('admin');
-    Route::get('/admin/reports/rescue',      [ReportController::class, 'rescue'])->middleware('admin');
-    Route::get('/admin/reports/export/csv',  [ReportController::class, 'exportCsv'])->middleware('admin');
-    Route::get('/admin/reports/export/pdf',  [ReportController::class, 'exportPdf'])->middleware('admin');
+    Route::get('/admin/reports/volunteers',  [ReportController::class, 'volunteers'])->middleware('role:staff');
+    Route::get('/admin/reports/rescue',      [ReportController::class, 'rescue'])->middleware('role:staff');
+    Route::get('/admin/reports/export/csv',  [ReportController::class, 'exportCsv'])->middleware('role:staff');
+    Route::get('/admin/reports/export/pdf',  [ReportController::class, 'exportPdf'])->middleware('role:staff');
 });

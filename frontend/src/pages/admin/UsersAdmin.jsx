@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { adminListUsers, adminUpdateUser } from '../../lib/usersApi';
 import StatusBadge from '../../components/StatusBadge';
 
-const ROLES = ['admin', 'volunteer', 'user'];
+const ROLES = ['admin', 'staff', 'volunteer', 'user'];
 const STATUSES = ['active', 'suspended', 'pending'];
 
 export default function UsersAdmin({ currentUserId }) {
@@ -47,8 +47,24 @@ export default function UsersAdmin({ currentUserId }) {
 
   const handleToggleStatus = async (user) => {
     setError('');
+
+    // Reactivating just flips the status back; the backend clears any stored reason.
+    if (user.status === 'suspended') {
+      try {
+        await adminUpdateUser(user.id, { status: 'active' });
+        refresh();
+      } catch (err) {
+        setError(err?.message || 'Failed to update status.');
+      }
+      return;
+    }
+
+    // Suspending: ask the admin why. Cancelling the prompt aborts the suspension.
+    const reason = window.prompt(`Why are you suspending ${user.full_name}? (shown to the user when they try to log in)`, '');
+    if (reason === null) return;
+
     try {
-      await adminUpdateUser(user.id, { status: user.status === 'suspended' ? 'active' : 'suspended' });
+      await adminUpdateUser(user.id, { status: 'suspended', suspension_reason: reason.trim() });
       refresh();
     } catch (err) {
       setError(err?.message || 'Failed to update status.');
@@ -112,7 +128,14 @@ export default function UsersAdmin({ currentUserId }) {
                         {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
                       </select>
                     </td>
-                    <td><StatusBadge status={u.status} /></td>
+                    <td>
+                      <StatusBadge status={u.status} />
+                      {u.status === 'suspended' && u.suspension_reason && (
+                        <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4, maxWidth: 220 }} title={u.suspension_reason}>
+                          Reason: {u.suspension_reason}
+                        </div>
+                      )}
+                    </td>
                     <td>
                       <button className="dashBtn" disabled={isSelf} onClick={() => handleToggleStatus(u)}>
                         {u.status === 'suspended' ? 'Reactivate' : 'Suspend'}

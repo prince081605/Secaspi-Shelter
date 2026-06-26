@@ -30,6 +30,16 @@ class AuthController extends Controller
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
+        // Suspended accounts may have valid credentials but must not be allowed in.
+        // Surface the admin's reason so the user knows why and who to contact.
+        if ($user->isSuspended()) {
+            return response()->json([
+                'message' => $user->suspensionMessage(),
+                'status'  => 'suspended',
+                'reason'  => $user->suspension_reason,
+            ], 403);
+        }
+
         $user->tokens()->delete();
         $token = $user->createToken('auth_token')->plainTextToken;
 

@@ -39,9 +39,22 @@ class UserFactory extends Factory
         return $this->state(fn () => ['role' => 'admin']);
     }
 
+    public function staff(): static
+    {
+        return $this->state(fn () => ['role' => 'staff']);
+    }
+
+    public function volunteer(): static
+    {
+        return $this->state(fn () => ['role' => 'volunteer']);
+    }
+
     public function suspended(): static
     {
-        return $this->state(fn () => ['status' => 'suspended']);
+        return $this->state(fn () => [
+            'status' => 'suspended',
+            'suspension_reason' => 'Suspended pending review of reported activity.',
+        ]);
     }
 
     /**
