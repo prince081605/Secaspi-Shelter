@@ -11,6 +11,8 @@ class RescueReport extends Model
         'reporter_name',
         'contact_number',
         'location',
+        'latitude',
+        'longitude',
         'description',
         'urgency',
         'status',
@@ -23,5 +25,7 @@ class RescueReport extends Model
 
     protected $casts = [
         'read_at' => 'datetime',
+        'latitude' => 'float',
+        'longitude' => 'float',
     ];
 }

@@ -16,6 +16,8 @@ class RescueReportController extends Controller
             'reporter_name'   => ['nullable', 'string', 'max:150'],
             'contact_number'  => ['nullable', 'string', 'max:20'],
             'location'        => ['required', 'string'],
+            'latitude'        => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude'       => ['nullable', 'numeric', 'between:-180,180'],
             'description'     => ['nullable', 'string'],
             'urgency'         => ['required', 'in:low,medium,high,critical'],
             'photo'           => ['nullable', 'image', 'max:5120'],
@@ -34,6 +36,8 @@ class RescueReportController extends Controller
                 'reporter_name'  => $request->input('reporter_name'),
                 'contact_number' => $request->input('contact_number'),
                 'location'       => $request->input('location'),
+                'latitude'       => $request->input('latitude'),
+                'longitude'      => $request->input('longitude'),
                 'description'    => $request->input('description'),
                 'urgency'        => $request->input('urgency'),
                 'status'         => 'pending',
@@ -82,6 +86,20 @@ class RescueReportController extends Controller
         });
 
         return response()->json($reports);
+    }
+
+    /**
+     * Lightweight feed for the rescue map: every report that has coordinates, with just the
+     * fields a marker needs. Not paginated (a map plots them all at once).
+     */
+    public function map()
+    {
+        $reports = RescueReport::whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->orderByDesc('id')
+            ->get(['id', 'location', 'latitude', 'longitude', 'urgency', 'status', 'created_at']);
+
+        return response()->json(['reports' => $reports]);
     }
 
     public function updateStatus(Request $request, RescueReport $report)

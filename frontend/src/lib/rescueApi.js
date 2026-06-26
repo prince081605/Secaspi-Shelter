@@ -24,3 +24,7 @@ export async function adminUpdateRescueReport(id, payload) {
 export async function adminMarkRescueReportRead(id) {
   return api.post(`/api/rescue-reports/${id}/read`);
 }
+
+export async function adminRescueMap() {
+  return api.get('/api/rescue-reports/map');
+}

@@ -258,7 +258,7 @@ function Process() {
   );
 }
 
-function RescueForm({ form, reportPhoto, reportState, onChange, onPhotoChange, onSubmit }) {
+function RescueForm({ form, reportPhoto, reportState, onChange, onPhotoChange, onPinLocation, onSubmit }) {
   const [ref, inView] = useInView();
 
   return (
@@ -280,7 +280,24 @@ function RescueForm({ form, reportPhoto, reportState, onChange, onPhotoChange, o
             <div><label className="ui-label">Your name</label><input className="ui-input" name="name" value={form.name} onChange={onChange} placeholder="Juan dela Cruz" /></div>
             <div><label className="ui-label">Contact</label><input className="ui-input" name="contact" value={form.contact} onChange={onChange} placeholder="09XX XXX XXXX" /></div>
           </div>
-          <div className="ui-field"><label className="ui-label ui-label-required">Location</label><input className="ui-input" name="location" required value={form.location} onChange={onChange} placeholder="Street, Barangay, City" /></div>
+          <div className="ui-field">
+            <label className="ui-label ui-label-required">Location</label>
+            <input className="ui-input" name="location" required value={form.location} onChange={onChange} placeholder="Street, Barangay, City" />
+            <button
+              type="button"
+              className="lp-btn lp-btn-ghost"
+              style={{ marginTop: 8, fontSize: 13 }}
+              onClick={() => {
+                if (!navigator.geolocation) return;
+                navigator.geolocation.getCurrentPosition(
+                  (pos) => onPinLocation(pos.coords.latitude, pos.coords.longitude),
+                  () => onPinLocation(null, null),
+                );
+              }}
+            >
+              📍 {form.latitude ? "Location pinned ✓ (re-pin)" : "Pin my current location (for the rescue map)"}
+            </button>
+          </div>
           <div className="ui-field"><label className="ui-label">Condition</label><select className="ui-select" name="condition" value={form.condition} onChange={onChange}><option>Injured or sick</option><option>Stray / no owner</option><option>Abandoned</option><option>In immediate danger</option><option>Other</option></select></div>
           <div className="ui-field"><label className="ui-label">Details</label><textarea className="ui-textarea" name="details" value={form.details} onChange={onChange} placeholder="Describe what you see..." /></div>
           <div className="ui-field">
@@ -397,7 +414,7 @@ export default function LandingPage() {
   const [settings, setSettings] = useState({});
   const [menuOpen, setMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [form, setForm] = useState({ name: "", contact: "", location: "", condition: "Injured or sick", details: "" });
+  const [form, setForm] = useState({ name: "", contact: "", location: "", condition: "Injured or sick", details: "", latitude: null, longitude: null });
   const [reportPhoto, setReportPhoto] = useState(null);
   const [reportState, setReportState] = useState({ status: "idle", error: "" });
   const [scrolled, setScrolled] = useState(false);
@@ -499,12 +516,16 @@ export default function LandingPage() {
       fd.append("location", form.location);
       fd.append("description", form.details);
       fd.append("urgency", URGENCY_BY_CONDITION[form.condition] || "medium");
+      if (form.latitude != null && form.longitude != null) {
+        fd.append("latitude", form.latitude);
+        fd.append("longitude", form.longitude);
+      }
       if (reportPhoto) fd.append("photo", reportPhoto);
 
       await createReport(fd);
 
       setReportState({ status: "success", error: "" });
-      setForm({ name: "", contact: "", location: "", condition: "Injured or sick", details: "" });
+      setForm({ name: "", contact: "", location: "", condition: "Injured or sick", details: "", latitude: null, longitude: null });
       setReportPhoto(null);
     } catch (err) {
       setReportState({ status: "error", error: err?.message || "Failed to submit report. Please try again." });
@@ -544,6 +565,7 @@ export default function LandingPage() {
           reportState={reportState}
           onChange={handleChange}
           onPhotoChange={handlePhotoChange}
+          onPinLocation={(lat, lng) => setForm((f) => ({ ...f, latitude: lat, longitude: lng }))}
           onSubmit={handleSubmit}
         />
         <TopSupporters topDonors={impact?.top_donors} />
