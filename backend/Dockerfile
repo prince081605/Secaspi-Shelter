@@ -20,7 +20,12 @@ COPY . .
 
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# Retry composer install a couple times: GitHub's codeload occasionally returns a transient
+# HTTP 400/timeout for a package zip, which would otherwise fail the whole build. If the last
+# attempt still fails, the RUN fails as normal.
+RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist \
+ || { echo "composer install failed; retrying in 10s..."; sleep 10; composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist; } \
+ || { echo "composer install failed; retrying in 20s..."; sleep 20; composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist; }
 
 RUN npm install
 RUN npm run build
