@@ -48,6 +48,60 @@ class AuthTest extends TestCase
             ->assertStatus(401);
     }
 
+    public function test_login_is_blocked_for_a_suspended_account_and_returns_the_reason(): void
+    {
+        $user = User::factory()->suspended()->create([
+            'password' => Hash::make('correct-horse'),
+            'suspension_reason' => 'Violated adoption policy',
+        ]);
+
+        $this->postJson('/api/login', ['email' => $user->email, 'password' => 'correct-horse'])
+            ->assertStatus(403)
+            ->assertJsonPath('status', 'suspended')
+            ->assertJsonPath('reason', 'Violated adoption policy')
+            ->assertJsonPath('message', 'Your account has been suspended. Reason: Violated adoption policy')
+            ->assertJsonMissingPath('token');
+    }
+
+    public function test_a_suspended_user_with_a_valid_token_is_rejected_on_authenticated_routes(): void
+    {
+        $user = User::factory()->suspended()->create(['suspension_reason' => 'Spam']);
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/user')
+            ->assertStatus(403)
+            ->assertJsonPath('status', 'suspended')
+            ->assertJsonPath('reason', 'Spam');
+    }
+
+    public function test_suspending_a_user_revokes_their_existing_tokens(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $target = User::factory()->create();
+        $target->createToken('auth_token');
+        $this->assertSame(1, $target->tokens()->count());
+
+        Sanctum::actingAs($admin);
+        $this->putJson("/api/admin/users/{$target->id}", [
+            'status' => 'suspended',
+            'suspension_reason' => 'Abuse',
+        ])->assertOk()->assertJsonPath('user.suspension_reason', 'Abuse');
+
+        $this->assertSame(0, $target->fresh()->tokens()->count(), 'suspension must revoke active sessions');
+    }
+
+    public function test_reactivating_a_user_clears_the_suspension_reason(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $target = User::factory()->suspended()->create(['suspension_reason' => 'Old reason']);
+
+        Sanctum::actingAs($admin);
+        $this->putJson("/api/admin/users/{$target->id}", ['status' => 'active'])
+            ->assertOk()
+            ->assertJsonPath('user.status', 'active')
+            ->assertJsonPath('user.suspension_reason', null);
+    }
+
     public function test_current_user_endpoint_returns_the_authenticated_user(): void
     {
         $this->getJson('/api/user')->assertStatus(401);

@@ -107,6 +107,13 @@ class ReportController extends Controller
             abort(422, 'Unknown or missing report type.');
         }
 
+        // The exports are staff-accessible (route gate), but financial data is admin-only:
+        // block exporting the donations report for anyone below admin. Mirrors the
+        // admin-only gate on GET /admin/reports/donations.
+        if ($request->query('type') === 'donations' && ! $request->user()->hasRoleAtLeast('admin')) {
+            abort(403, 'Forbidden');
+        }
+
         return match ($request->query('type')) {
             'adoption' => $this->adoptionData($request),
             'animals' => $this->animalsData($request),

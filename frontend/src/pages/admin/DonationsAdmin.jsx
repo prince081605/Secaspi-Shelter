@@ -51,7 +51,7 @@ function StatsCards() {
   );
 }
 
-export default function DonationsAdmin() {
+export default function DonationsAdmin({ isAdmin = false }) {
   const [donations, setDonations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -116,7 +116,7 @@ export default function DonationsAdmin() {
                 <th>Method</th>
                 <th>Proof</th>
                 <th>Status</th>
-                <th>Actions</th>
+                {isAdmin && <th>Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -132,16 +132,18 @@ export default function DonationsAdmin() {
                     ) : '—'}
                   </td>
                   <td><StatusBadge status={d.status} /></td>
-                  <td className="dashActionsCell">
-                    <span className="dashActionsRow">
-                      {d.status === 'pending' && (
-                        <>
-                          <button className="dashBtn dashBtnPrimary" onClick={() => handleVerify(d, 'verified')}>Verify</button>
-                          <button className="dashBtn dashBtnDanger" onClick={() => handleVerify(d, 'rejected')}>Reject</button>
-                        </>
-                      )}
-                    </span>
-                  </td>
+                  {isAdmin && (
+                    <td className="dashActionsCell">
+                      <span className="dashActionsRow">
+                        {d.status === 'pending' && (
+                          <>
+                            <button className="dashBtn dashBtnPrimary" onClick={() => handleVerify(d, 'verified')}>Verify</button>
+                            <button className="dashBtn dashBtnDanger" onClick={() => handleVerify(d, 'rejected')}>Reject</button>
+                          </>
+                        )}
+                      </span>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

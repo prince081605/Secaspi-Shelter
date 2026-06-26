@@ -40,7 +40,9 @@ function saveBlob(blob, filename) {
   URL.revokeObjectURL(url);
 }
 
-export default function ReportsAdmin() {
+export default function ReportsAdmin({ isAdmin = false }) {
+  // The donations (financial) report is admin-only; staff see operational types only.
+  const reportTypes = isAdmin ? REPORT_TYPES : REPORT_TYPES.filter((t) => t.key !== 'donations');
   const [type, setType] = useState('adoption');
   const [filters, setFilters] = useState(emptyFilters);
   const [data, setData] = useState(null);
@@ -94,7 +96,7 @@ export default function ReportsAdmin() {
 
       <div className="dashFilterBar">
         <select className="ui-input" style={{ maxWidth: 220 }} aria-label="Report type" value={type} onChange={(e) => setType(e.target.value)}>
-          {REPORT_TYPES.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
+          {reportTypes.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
         </select>
 
         {config.dateRange && (

@@ -43,6 +43,7 @@ class UserController extends Controller
             'phone' => $u->phone,
             'role' => $u->role,
             'status' => $u->status,
+            'suspension_reason' => $u->suspension_reason,
             'email_verified' => (bool) $u->email_verified,
         ]);
 
@@ -54,6 +55,7 @@ class UserController extends Controller
         $validator = Validator::make($request->all(), [
             'role' => ['sometimes', 'in:admin,staff,volunteer,user'],
             'status' => ['sometimes', 'in:active,suspended,pending'],
+            'suspension_reason' => ['sometimes', 'nullable', 'string', 'max:500'],
         ]);
 
         if ($validator->fails()) {
@@ -69,9 +71,26 @@ class UserController extends Controller
             return response()->json(['message' => 'You cannot change your own role or suspend your own account.'], 422);
         }
 
-        // role/status are not mass-assignable on the model (privilege-escalation guard), so set
-        // them explicitly here. $data is whitelisted by the validator above to role/status only.
+        // The reason only makes sense alongside a suspension: when status changes to
+        // 'suspended' we record the supplied reason; any other status clears it so a
+        // reactivated account doesn't keep a stale explanation.
+        $reason = $data['suspension_reason'] ?? null;
+        unset($data['suspension_reason']);
+        if (array_key_exists('status', $data)) {
+            $data['suspension_reason'] = $data['status'] === 'suspended' ? $reason : null;
+        }
+
+        // role/status/suspension_reason are not mass-assignable on the model
+        // (privilege-escalation guard), so set them explicitly here. $data is whitelisted
+        // by the validator above.
         $user->forceFill($data)->save();
+
+        // Suspending must end any active session immediately: revoke all tokens so a user
+        // who is currently logged in is kicked out on their next request, not merely blocked
+        // from logging in again.
+        if (($data['status'] ?? null) === 'suspended') {
+            $user->tokens()->delete();
+        }
 
         // Keep the personnel roster in sync with the role so the Users and Personnel
         // modules can't disagree: promoting to "volunteer" or "staff" adds them to the roster,
@@ -100,6 +119,7 @@ class UserController extends Controller
                 'phone' => $user->phone,
                 'role' => $user->role,
                 'status' => $user->status,
+                'suspension_reason' => $user->suspension_reason,
                 'email_verified' => (bool) $user->email_verified,
             ],
         ]);

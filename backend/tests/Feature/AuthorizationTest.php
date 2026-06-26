@@ -79,4 +79,74 @@ class AuthorizationTest extends TestCase
         // A public write endpoint should fail validation (422), not auth (401).
         $this->postJson('/api/rescue-reports', [])->assertStatus(422);
     }
+
+    // ---- Role hierarchy: staff (role:staff gate) and volunteer tiers -------------------
+
+    /** Operational routes now gated at 'role:staff' (staff and admin clear them). */
+    public static function staffRoutes(): array
+    {
+        return [
+            'list animals'    => ['get', '/api/admin/animals'],
+            'list donations'  => ['get', '/api/admin/donations'],
+            'list volunteers' => ['get', '/api/admin/volunteers'],
+            'list intakes'    => ['get', '/api/admin/intakes'],
+            'adoption apps'   => ['get', '/api/admin/adoption-applications'],
+            'rescue reports'  => ['get', '/api/rescue-reports'],
+            'animals report'  => ['get', '/api/admin/reports/animals'],
+            'dashboard'       => ['get', '/api/admin/dashboard/overview'],
+            'create animal'   => ['post', '/api/animals'],
+        ];
+    }
+
+    /** Routes that stay admin-only even for staff. */
+    public static function adminOnlyRoutes(): array
+    {
+        return [
+            'list users'       => ['get', '/api/admin/users'],
+            'settings'         => ['get', '/api/admin/settings'],
+            'donations report' => ['get', '/api/admin/reports/donations'],
+        ];
+    }
+
+    #[DataProvider('staffRoutes')]
+    public function test_staff_clears_staff_routes(string $method, string $uri): void
+    {
+        Sanctum::actingAs(User::factory()->staff()->create());
+
+        $response = $this->withHeader('Accept', 'application/json')->{$method}($uri);
+
+        $this->assertNotContains(
+            $response->status(),
+            [401, 403],
+            "Staff was blocked on {$method} {$uri} (status {$response->status()})"
+        );
+    }
+
+    #[DataProvider('adminOnlyRoutes')]
+    public function test_staff_is_blocked_from_admin_only_routes(string $method, string $uri): void
+    {
+        Sanctum::actingAs(User::factory()->staff()->create());
+
+        $this->withHeader('Accept', 'application/json')
+            ->{$method}($uri)
+            ->assertStatus(403);
+    }
+
+    #[DataProvider('staffRoutes')]
+    public function test_volunteer_is_blocked_from_staff_routes(string $method, string $uri): void
+    {
+        Sanctum::actingAs(User::factory()->volunteer()->create());
+
+        $this->withHeader('Accept', 'application/json')
+            ->{$method}($uri)
+            ->assertStatus(403);
+    }
+
+    public function test_volunteer_can_reach_own_volunteer_endpoint(): void
+    {
+        Sanctum::actingAs(User::factory()->volunteer()->create());
+
+        // Not a staff route — a volunteer's own record endpoint must not be forbidden.
+        $this->getJson('/api/volunteer/me')->assertOk();
+    }
 }

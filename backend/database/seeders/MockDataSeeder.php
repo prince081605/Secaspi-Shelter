@@ -151,6 +151,8 @@ class MockDataSeeder extends Seeder
             $email .= '@example.com';
             $emailUsed[$email] = true;
 
+            $status = $this->weighted(['active' => 92, 'suspended' => 8]);
+
             return DB::table('users')->insertGetId([
                 'full_name' => $full,
                 'username' => $uname,
@@ -158,7 +160,8 @@ class MockDataSeeder extends Seeder
                 'password' => $sharedPassword,
                 'phone' => '09' . mt_rand(100000000, 999999999),
                 'role' => $role,
-                'status' => $this->weighted(['active' => 92, 'suspended' => 8]),
+                'status' => $status,
+                'suspension_reason' => $status === 'suspended' ? 'Suspended pending review of reported activity.' : null,
                 'email_verified' => $this->weighted(['1' => 80, '0' => 20]),
                 'created_at' => now()->subDays(mt_rand(1, 300)),
             ]);

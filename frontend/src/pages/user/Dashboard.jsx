@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
 import { auth } from '../../lib/auth';
-import { listMyAdoptionApplications, listMyFosterApplications } from '../../lib/animalsApi';
+import { listMyAdoptionApplications, listMyFosterApplications, browseAnimals } from '../../lib/animalsApi';
 import { updateProfile, changePassword } from '../../lib/profileApi';
 import AnimalsAdmin from '../admin/AnimalsAdmin';
 import AdoptionRequestsAdmin from '../admin/AdoptionRequestsAdmin';
@@ -15,7 +15,7 @@ import { adminListAdoptionApplications, adminListFosterApplications } from '../.
 import { adminListDonations } from '../../lib/donationsApi';
 import { adminListVisitations } from '../../lib/visitationsApi';
 import { adminListReminders } from '../../lib/remindersApi';
-import { adminListVolunteerApplications } from '../../lib/volunteersApi';
+import { adminListVolunteerApplications, getMyVolunteer, requestVolunteerTask } from '../../lib/volunteersApi';
 import VolunteersAdmin from '../admin/VolunteersAdmin';
 import ReportsAdmin from '../admin/ReportsAdmin';
 import SettingsAdmin from '../admin/SettingsAdmin';
@@ -34,6 +34,21 @@ const ITEM_CATEGORY = {
   donations: 'cat_ops', reports: 'cat_ops', users: 'cat_ops', settings: 'cat_ops', volunteers: 'cat_ops',
 };
 const NAV_CATEGORY_KEYS = ['cat_animals', 'cat_requests', 'cat_ops'];
+
+// Role hierarchy (mirrors backend App\Models\User::ROLE_RANKS). Access is by minimum
+// rank: a higher role clears every gate a lower one can.
+const ROLE_RANK = { user: 1, volunteer: 2, staff: 3, admin: 4 };
+const rankOf = (r) => ROLE_RANK[r] || 0;
+const atLeast = (r, min) => rankOf(r) >= rankOf(min);
+
+// Minimum role required to see each admin nav item. Staff run operations; Users and
+// Settings stay admin-only. Items missing here default to admin (fail closed).
+const ITEM_MIN_ROLE = {
+  animals: 'staff', reminders: 'staff',
+  requests: 'staff', rescues: 'staff', visitations: 'staff',
+  donations: 'staff', reports: 'staff', volunteers: 'staff',
+  users: 'admin', settings: 'admin',
+};
 
 
 function safeRoleFromUser(user) {
@@ -243,6 +258,146 @@ function UserProfile({ user, onProfileUpdated }) {
   );
 }
 
+// Volunteer's own task hub: their assigned tasks + a request-a-task form. Reuses the
+// same endpoints as the public VolunteerApply page (GET /volunteer/me, POST /volunteer/tasks).
+function VolunteerTasksPanel() {
+  const [loading, setLoading] = useState(true);
+  const [volunteer, setVolunteer] = useState(null);
+  const [taskName, setTaskName] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const load = () => {
+    setLoading(true);
+    getMyVolunteer()
+      .then((v) => setVolunteer(v?.volunteer || null))
+      .catch(() => setVolunteer(null))
+      .finally(() => setLoading(false));
+  };
+  useEffect(() => { load(); }, []);
+
+  const handleRequestTask = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setError('');
+    try {
+      await requestVolunteerTask({ task_name: taskName });
+      setTaskName('');
+      load();
+    } catch (err) {
+      setError(err?.message || 'Failed to request task.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) return <div className="ui-empty">Loading…</div>;
+  if (!volunteer) {
+    return (
+      <>
+        <h2 className="dashSectionTitle">📋 My Tasks</h2>
+        <div className="ui-empty">Your volunteer profile isn't set up yet. Please contact the shelter team.</div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <h2 className="dashSectionTitle">📋 My Tasks</h2>
+      {error && <div className="ui-error">{error}</div>}
+      <form onSubmit={handleRequestTask} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 16 }}>
+        <div className="ui-field" style={{ flex: 1, marginBottom: 0 }}>
+          <label className="ui-label ui-label-required">Task you'd like to do</label>
+          <input
+            className="ui-input"
+            value={taskName}
+            onChange={(e) => setTaskName(e.target.value)}
+            placeholder="e.g. Walk the dogs on Saturday"
+            required
+          />
+        </div>
+        <button className="ui-btn-primary" type="submit" disabled={submitting || !taskName.trim()}>
+          {submitting ? 'Sending…' : 'Request task'}
+        </button>
+      </form>
+      {(!volunteer.tasks || volunteer.tasks.length === 0) ? (
+        <div className="ui-empty">No tasks yet. Request one above to get started!</div>
+      ) : (
+        <div className="dashTableWrap">
+          <table className="dashTable">
+            <thead><tr><th>Task</th><th>Status</th><th>When</th></tr></thead>
+            <tbody>
+              {volunteer.tasks.map((t) => (
+                <tr key={t.id}>
+                  <td>{t.task_name}</td>
+                  <td><StatusBadge status={t.status} /></td>
+                  <td>{t.status === 'requested' ? 'Awaiting confirmation' : (t.assigned_date || '—')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
+}
+
+// Read-only animal roster for volunteers — uses the public browse endpoint (no admin
+// fields, no write controls), so it works without any staff-level permission.
+function ReadOnlyAnimals() {
+  const [animals, setAnimals] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let mounted = true;
+    browseAnimals({ per_page: 50 })
+      .then((data) => { if (mounted) setAnimals(Array.isArray(data?.data) ? data.data : []); })
+      .catch((err) => { if (mounted) setError(err?.message || 'Failed to load animals.'); })
+      .finally(() => { if (mounted) setLoading(false); });
+    return () => { mounted = false; };
+  }, []);
+
+  return (
+    <>
+      <h2 className="dashSectionTitle">🐶 Animals</h2>
+      {error && <div className="ui-error">{error}</div>}
+      {loading ? (
+        <div className="ui-empty">Loading…</div>
+      ) : animals.length === 0 ? (
+        <div className="ui-empty">No animals to show.</div>
+      ) : (
+        <div className="dashTableWrap">
+          <table className="dashTable">
+            <thead><tr><th>Name</th><th>Species</th><th>Breed</th><th>Status</th></tr></thead>
+            <tbody>
+              {animals.map((a) => (
+                <tr key={a.id}>
+                  <td>
+                    <div className="dashFlexRow">
+                      {a.photo ? (
+                        <img
+                          src={a.photo.startsWith('http') ? a.photo : `${import.meta.env.VITE_API_BASE_URL}/storage/${a.photo}`}
+                          alt={a.name || 'animal'}
+                          className="dashThumbSm"
+                        />
+                      ) : null}
+                      {a.name || 'Unnamed'}
+                    </div>
+                  </td>
+                  <td>{a.species || '—'}</td>
+                  <td>{a.breed || '—'}</td>
+                  <td><StatusBadge status={a.status} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [role, setRole] = useState('');
@@ -261,6 +416,8 @@ export default function Dashboard() {
 
   // keep empty when data isn't available
   const isAdminRole = role === 'admin';
+  const isStaffPlus = atLeast(role, 'staff'); // staff + admin: operational dashboard
+  const isVolunteer = role === 'volunteer';   // focused tasks + read-only animals view
 
   const handleLogout = async () => {
     try {
@@ -280,7 +437,9 @@ export default function Dashboard() {
         setUser(u);
         const r = safeRoleFromUser(data);
         setRole(r);
-        setTab(r === 'admin' ? 'admin' : 'user');
+        // Land each role on its primary dashboard: staff/admin → operations, volunteer →
+        // their tasks, everyone else → the user dashboard.
+        setTab(atLeast(r, 'staff') ? 'admin' : r === 'volunteer' ? 'volunteer' : 'user');
       } catch {
         if (!mounted) return;
         setRole(fallbackRole);
@@ -319,7 +478,7 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    if (!isAdminRole) return;
+    if (!isStaffPlus) return;
     let mounted = true;
     adminGetOverview()
       .then((data) => {
@@ -331,7 +490,7 @@ export default function Dashboard() {
     return () => {
       mounted = false;
     };
-  }, [isAdminRole]);
+  }, [isStaffPlus]);
 
   const mountedRef = useRef(true);
   useEffect(() => {
@@ -340,7 +499,7 @@ export default function Dashboard() {
   }, []);
 
   const fetchPendingCounts = useCallback(() => {
-    if (!isAdminRole) return;
+    if (!isStaffPlus) return;
     adminListRescueReports({ unread: 1, per_page: 1 })
       .then((data) => { if (mountedRef.current) setPendingRescueCount(data?.total || 0); })
       .catch(() => { if (mountedRef.current) setPendingRescueCount(0); });
@@ -362,14 +521,14 @@ export default function Dashboard() {
     adminListVolunteerApplications({ status: 'pending', per_page: 1 })
       .then((data) => { if (mountedRef.current) setPendingVolunteerCount(data?.total || 0); })
       .catch(() => { if (mountedRef.current) setPendingVolunteerCount(0); });
-  }, [isAdminRole]);
+  }, [isStaffPlus]);
 
   useEffect(() => {
-    if (!isAdminRole) return;
+    if (!isStaffPlus) return;
     fetchPendingCounts();
     const interval = setInterval(fetchPendingCounts, 30000);
     return () => clearInterval(interval);
-  }, [isAdminRole, fetchPendingCounts]);
+  }, [isStaffPlus, fetchPendingCounts]);
 
   const userStats = useMemo(() => {
     const total = applications.length;
@@ -387,10 +546,11 @@ export default function Dashboard() {
 
   const dashboardTabs = useMemo(() => {
     return [
-      { key: 'admin', label: 'Admin Dashboard', show: isAdminRole },
+      { key: 'admin', label: isAdminRole ? 'Admin Dashboard' : 'Staff Dashboard', show: isStaffPlus },
+      { key: 'volunteer', label: 'Volunteer Dashboard', show: isVolunteer },
       { key: 'user', label: 'User Dashboard', show: true },
     ].filter((t) => t.show);
-  }, [isAdminRole]);
+  }, [isAdminRole, isStaffPlus, isVolunteer]);
 
   const activeTab = tab;
 
@@ -421,6 +581,12 @@ export default function Dashboard() {
       ],
     },
   ];
+
+  // Hide nav items above the current role (e.g. staff never see Users/Settings), then
+  // drop any category left empty. Admin sees everything.
+  const visibleNavCategories = navCategories
+    .map((cat) => ({ ...cat, items: cat.items.filter((it) => atLeast(role, ITEM_MIN_ROLE[it.key] || 'admin')) }))
+    .filter((cat) => cat.items.length > 0);
 
   const [activeNav, setActiveNav] = useState('dashboard');
   const [openCategories, setOpenCategories] = useState(() => {
@@ -474,14 +640,16 @@ export default function Dashboard() {
               ⬅️ Back to Home
             </button>
 
-            <button
-              className={'dashNavBtn ' + (activeNav === 'dashboard' ? 'dashNavBtnActive' : '')}
-              onClick={() => setActiveNav('dashboard')}
-            >
-              🏠 Dashboard
-            </button>
+            {activeTab !== 'volunteer' && (
+              <button
+                className={'dashNavBtn ' + (activeNav === 'dashboard' ? 'dashNavBtnActive' : '')}
+                onClick={() => setActiveNav('dashboard')}
+              >
+                🏠 Dashboard
+              </button>
+            )}
 
-            {isAdminRole && navCategories.map((cat) => {
+            {activeTab === 'admin' && visibleNavCategories.map((cat) => {
               const isOpen = !!openCategories[cat.key];
               const aggregate = cat.items.reduce((sum, it) => sum + (it.badge || 0), 0);
               return (
@@ -516,14 +684,31 @@ export default function Dashboard() {
               );
             })}
 
-            {!isAdminRole ? (
+            {activeTab === 'volunteer' && (
+              <>
+                <button
+                  className={'dashNavBtn ' + (activeNav === 'myanimals' ? '' : 'dashNavBtnActive')}
+                  onClick={() => setActiveNav('mytasks')}
+                >
+                  📋 My Tasks
+                </button>
+                <button
+                  className={'dashNavBtn ' + (activeNav === 'myanimals' ? 'dashNavBtnActive' : '')}
+                  onClick={() => setActiveNav('myanimals')}
+                >
+                  🐶 Animals
+                </button>
+              </>
+            )}
+
+            {activeTab === 'user' && (
               <button
                 className={'dashNavBtn ' + (activeNav === 'profile' ? 'dashNavBtnActive' : '')}
                 onClick={() => setActiveNav('profile')}
               >
                 👤 Profile
               </button>
-            ) : null}
+            )}
             <button className="dashNavBtn" onClick={handleLogout}>
               🚪 Logout
             </button>
@@ -536,8 +721,10 @@ export default function Dashboard() {
               <h1 className="dashTitle">Control Center</h1>
               <div className="dashSubtitle">
                 {activeTab === 'admin'
-                  ? 'Manage animals, requests, users, and analytics.'
-                  : 'Manage your adoption applications and favorites.'}
+                  ? 'Manage animals, requests, donations, and operations.'
+                  : activeTab === 'volunteer'
+                    ? 'View your tasks and the animals in our care.'
+                    : 'Manage your adoption applications and favorites.'}
               </div>
             </div>
 
@@ -547,7 +734,7 @@ export default function Dashboard() {
                   <button
                     key={t.key}
                     className={"dashTab " + (activeTab === t.key ? 'dashTabActive' : '')}
-                    onClick={() => setTab(t.key)}
+                    onClick={() => { setTab(t.key); setActiveNav('dashboard'); }}
                   >
                     {t.label}
                   </button>
@@ -557,7 +744,9 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <OverviewCards cards={activeTab === 'admin' ? (overview?.stats || []) : userStats} />
+          {activeTab !== 'volunteer' && (
+            <OverviewCards cards={activeTab === 'admin' ? (overview?.stats || []) : userStats} />
+          )}
 
           {activeTab === 'admin' ? (
             <div>
@@ -567,11 +756,12 @@ export default function Dashboard() {
               {activeNav === 'rescues' ? <RescueReportsAdmin onUnreadChanged={fetchPendingCounts} /> : null}
               {activeNav === 'visitations' ? <VisitationsAdmin /> : null}
               {activeNav === 'reminders' ? <RemindersAdmin onChanged={fetchPendingCounts} /> : null}
-              {activeNav === 'donations' ? <DonationsAdmin /> : null}
+              {activeNav === 'donations' ? <DonationsAdmin isAdmin={isAdminRole} /> : null}
               {activeNav === 'volunteers' ? <VolunteersAdmin /> : null}
-              {activeNav === 'reports' ? <ReportsAdmin /> : null}
-              {activeNav === 'users' ? <UsersAdmin currentUserId={user?.id} /> : null}
-              {activeNav === 'settings' ? (
+              {activeNav === 'reports' ? <ReportsAdmin isAdmin={isAdminRole} /> : null}
+              {/* Users & Settings are admin-only — guarded here too so a forced nav can't mount them. */}
+              {isAdminRole && activeNav === 'users' ? <UsersAdmin currentUserId={user?.id} /> : null}
+              {isAdminRole && activeNav === 'settings' ? (
                 <>
                   <SettingsAdmin />
                   <div style={{ marginTop: 20 }}>
@@ -579,6 +769,10 @@ export default function Dashboard() {
                   </div>
                 </>
               ) : null}
+            </div>
+          ) : activeTab === 'volunteer' ? (
+            <div>
+              {activeNav === 'myanimals' ? <ReadOnlyAnimals /> : <VolunteerTasksPanel />}
             </div>
           ) : (
             <div>

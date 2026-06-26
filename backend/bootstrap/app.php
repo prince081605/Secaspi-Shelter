@@ -19,6 +19,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ]);
     $middleware->alias([
         'admin' => \App\Http\Middleware\EnsureAdmin::class,
+        'active' => \App\Http\Middleware\EnsureActive::class,
+        // Parameterised minimum-role gate, e.g. ->middleware('role:staff').
+        'role' => \App\Http\Middleware\EnsureRole::class,
     ]);
     // API-only app with no `login` route. Returning null here stops the auth middleware from
     // trying to redirect unauthenticated guests to route('login') (which would throw a 500);

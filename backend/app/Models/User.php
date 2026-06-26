@@ -61,4 +61,47 @@ class User extends Authenticatable
 
         return $candidate;
     }
+
+    /**
+     * Whether this account is currently suspended (blocked from logging in or
+     * using the API).
+     */
+    public function isSuspended(): bool
+    {
+        return $this->status === 'suspended';
+    }
+
+    /**
+     * Human-readable explanation shown to a suspended user, including the admin's
+     * reason when one was recorded. Shared by login() and the EnsureActive middleware
+     * so the wording stays identical everywhere.
+     */
+    public function suspensionMessage(): string
+    {
+        $reason = trim((string) $this->suspension_reason);
+
+        return $reason !== ''
+            ? "Your account has been suspended. Reason: {$reason}"
+            : 'Your account has been suspended. Please contact the shelter administrator.';
+    }
+
+    /**
+     * Role hierarchy, lowest to highest. Access is granted by *minimum* rank, so a
+     * higher role automatically clears every gate a lower role can (admin passes all).
+     */
+    public const ROLE_RANKS = ['user' => 1, 'volunteer' => 2, 'staff' => 3, 'admin' => 4];
+
+    public function roleRank(): int
+    {
+        return self::ROLE_RANKS[$this->role] ?? 0; // unknown/null role ranks below everything
+    }
+
+    /**
+     * True if this user's role is at least $role in the hierarchy. An unknown
+     * threshold fails closed (no one clears it) rather than open.
+     */
+    public function hasRoleAtLeast(string $role): bool
+    {
+        return $this->roleRank() >= (self::ROLE_RANKS[$role] ?? PHP_INT_MAX);
+    }
 }
