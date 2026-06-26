@@ -62,6 +62,12 @@ return [
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 Mysql::ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
+            // Where spatie/laravel-backup looks for the `mysqldump` binary. Leave empty in
+            // production (it's on PATH); set DB_DUMP_BINARY_PATH locally if mysqldump isn't
+            // on PATH, e.g. "C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin".
+            'dump' => [
+                'dump_binary_path' => env('DB_DUMP_BINARY_PATH', ''),
+            ],
         ],
 
         'mariadb' => [
@@ -97,6 +103,12 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // Where spatie/laravel-backup looks for `pg_dump` (production backups). The Docker
+            // image installs postgresql-client so it's on PATH; only set DB_DUMP_BINARY_PATH
+            // if a host puts it somewhere non-standard.
+            'dump' => [
+                'dump_binary_path' => env('DB_DUMP_BINARY_PATH', ''),
+            ],
         ],
 
         'sqlsrv' => [

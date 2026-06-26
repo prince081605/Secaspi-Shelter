@@ -3,8 +3,14 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\AnimalController;
+use App\Http\Controllers\BackupController;
 use App\Http\Controllers\RescueReportController;
 use App\Http\Controllers\SettingController;
+
+// Token-guarded backup trigger, driven by an external scheduler (GitHub Actions cron) so
+// nightly backups still run on a sleeping Render Free service. Auth is the X-Backup-Token
+// header (checked in the controller), not Sanctum — hence its place among the public routes.
+Route::post('/internal/backup', [BackupController::class, 'run']);
 
 Route::get('/home/settings', [SettingController::class, 'publicIndex']);
 

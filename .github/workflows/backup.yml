@@ -1,0 +1,36 @@
+name: Daily database backup
+
+# Drives nightly backups for the SECASPI SHELTER backend. The app runs on Render's Free
+# plan, where the web service sleeps when idle and so can't keep Laravel's `schedule:work`
+# alive — meaning the in-app 01:30 backup would rarely fire. Instead, this free GitHub
+# Actions cron POSTs to the token-guarded /api/internal/backup endpoint once a day. The
+# request wakes the service, which then runs spatie/laravel-backup (dump -> R2/S3).
+#
+# Required repository secrets (Settings -> Secrets and variables -> Actions):
+#   BACKUP_URL            e.g. https://<your-app>.onrender.com/api/internal/backup
+#   BACKUP_TRIGGER_TOKEN  the same value set as BACKUP_TRIGGER_TOKEN in Render's env
+
+on:
+  schedule:
+    # 01:30 UTC daily. GitHub cron is always UTC; adjust if you want a local-time slot.
+    - cron: '30 1 * * *'
+  workflow_dispatch: {} # lets you run a backup on demand from the Actions tab
+
+jobs:
+  trigger-backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger backup endpoint
+        run: |
+          # Retries absorb Render's cold start: the first request may stall while the
+          # service wakes, so we allow a long timeout and retry on any failure. -f makes
+          # curl exit non-zero on a non-2xx response so a failed backup shows red here.
+          curl -fsS -X POST "$BACKUP_URL" \
+            -H "X-Backup-Token: $BACKUP_TOKEN" \
+            --max-time 300 \
+            --retry 3 \
+            --retry-delay 30 \
+            --retry-all-errors
+        env:
+          BACKUP_URL: ${{ secrets.BACKUP_URL }}
+          BACKUP_TOKEN: ${{ secrets.BACKUP_TRIGGER_TOKEN }}

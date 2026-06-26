@@ -14,6 +14,14 @@ use Spatie\DbDumper\Compressors\GzipCompressor;
 
 return [
 
+    /*
+     * Shared secret for the HTTP backup trigger (POST /api/internal/backup). An external
+     * scheduler (GitHub Actions) sends this in the X-Backup-Token header to kick off a
+     * backup, which is how nightly backups run on a Render Free service that sleeps and so
+     * can't keep `schedule:work` alive. If this is empty the trigger endpoint is disabled.
+     */
+    'trigger_token' => env('BACKUP_TRIGGER_TOKEN'),
+
     'backup' => [
         /*
          * The name of this application. Also used as the folder name backups are stored
