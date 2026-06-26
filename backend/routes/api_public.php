@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\AnimalController;
 use App\Http\Controllers\BackupController;
+use App\Http\Controllers\MatchmakerController;
 use App\Http\Controllers\RescueReportController;
 use App\Http\Controllers\SettingController;
 
@@ -26,6 +27,9 @@ Route::get('/animals/{animal}', [AnimalController::class, 'show']);
 
 // ---- Rescue report submission (Phase 4) ----
 Route::post('/rescue-reports', [RescueReportController::class, 'store']);
+
+// ---- Smart adoption matchmaker (lifestyle quiz -> ranked animals) ----
+Route::post('/matchmaker', [MatchmakerController::class, 'match']);
 
 // ---- Public Home API (DB-backed) ----
 // Note: uses raw table access for now since models may not exist yet.

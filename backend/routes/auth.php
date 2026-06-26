@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\DonationController;
+use App\Http\Controllers\MessageController;
 use App\Http\Controllers\AdoptionApplicationController;
 use App\Http\Controllers\FosterApplicationController;
 use App\Http\Controllers\RescueReportController;
@@ -62,6 +63,13 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('/rescue-reports/{report}/read',     [RescueReportController::class, 'adminMarkRead'])->middleware('role:staff');
     Route::put('/profile',                           [ProfileController::class, 'update']);
     Route::post('/profile/change-password',          [ProfileController::class, 'changePassword']);
+
+    // ---- Messaging (member ⇄ staff/admin) ----
+    Route::get('/conversations',                     [MessageController::class, 'index']);
+    Route::post('/conversations',                    [MessageController::class, 'store']);
+    Route::get('/conversations/{conversation}',      [MessageController::class, 'show']);
+    Route::post('/conversations/{conversation}/messages', [MessageController::class, 'reply']);
+    Route::get('/admin/conversations',               [MessageController::class, 'adminIndex'])->middleware('role:staff');
 
     // ---- Notifications (Phase 8) ----
     Route::get('/notifications',                     [NotificationController::class, 'index']);

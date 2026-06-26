@@ -90,9 +90,12 @@ export default function Adoption() {
       <div className="ui-container" style={{ padding: '3rem 6vw' }}>
         <p className="ui-eyebrow" style={{ marginBottom: '1rem' }}>Available for Adoption</p>
         <h1 className="ui-h1" style={{ marginBottom: '0.6rem' }}>Meet your new best friend</h1>
-        <p className="ui-muted" style={{ maxWidth: 640, marginBottom: '2rem' }}>
+        <p className="ui-muted" style={{ maxWidth: 640, marginBottom: '1.2rem' }}>
           Browse dogs in our database and start an adoption or foster request.
         </p>
+        <button className="ui-btn-primary" style={{ marginBottom: '2rem' }} onClick={() => navigate('/matchmaker')}>
+          ✨ Not sure who fits? Find your match
+        </button>
 
         <div className="adoptControls">
           <div className="adoptSearch">

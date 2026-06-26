@@ -7,6 +7,7 @@ import ForgotPassword from './pages/user/ForgotPassword';
 import ResetPassword from './pages/user/ResetPassword';
 import Home from './pages/user/Home';
 import Adoption from './pages/user/Adoption';
+import Matchmaker from './pages/user/Matchmaker';
 import AnimalDetail from './pages/user/AnimalDetail';
 import AdoptionApply from './pages/user/AdoptionApply';
 import FosterApply from './pages/user/FosterApply';
@@ -54,6 +55,7 @@ export default function AppRouter() {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/" element={<Home />} />
         <Route path="/adopt" element={<Adoption />} />
+        <Route path="/matchmaker" element={<Matchmaker />} />
         <Route path="/transparency" element={<Transparency />} />
         <Route path="/adopt/:id" element={<AnimalDetail />} />
         <Route

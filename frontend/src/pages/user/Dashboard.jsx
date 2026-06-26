@@ -19,6 +19,7 @@ import { adminListVolunteerApplications, getMyVolunteer, requestVolunteerTask } 
 import VolunteersAdmin from '../admin/VolunteersAdmin';
 import ReportsAdmin from '../admin/ReportsAdmin';
 import AnalyticsAdmin from '../admin/AnalyticsAdmin';
+import Messages from '../Messages';
 import SettingsAdmin from '../admin/SettingsAdmin';
 import VisitationsAdmin from '../admin/VisitationsAdmin';
 import RemindersAdmin from '../admin/RemindersAdmin';
@@ -31,7 +32,7 @@ const fallbackRole = 'user';
 // auto-expand the category that contains the active item.
 const ITEM_CATEGORY = {
   animals: 'cat_animals', reminders: 'cat_animals',
-  requests: 'cat_requests', rescues: 'cat_requests', visitations: 'cat_requests',
+  requests: 'cat_requests', rescues: 'cat_requests', visitations: 'cat_requests', messages: 'cat_requests',
   donations: 'cat_ops', reports: 'cat_ops', users: 'cat_ops', settings: 'cat_ops', volunteers: 'cat_ops',
 };
 const NAV_CATEGORY_KEYS = ['cat_animals', 'cat_requests', 'cat_ops'];
@@ -46,7 +47,7 @@ const atLeast = (r, min) => rankOf(r) >= rankOf(min);
 // Settings stay admin-only. Items missing here default to admin (fail closed).
 const ITEM_MIN_ROLE = {
   animals: 'staff', reminders: 'staff',
-  requests: 'staff', rescues: 'staff', visitations: 'staff',
+  requests: 'staff', rescues: 'staff', visitations: 'staff', messages: 'staff',
   donations: 'staff', reports: 'staff', volunteers: 'staff',
   users: 'admin', settings: 'admin',
 };
@@ -569,6 +570,7 @@ export default function Dashboard() {
         { key: 'requests', label: 'Adoption & Foster', icon: '📩', badge: pendingAdoptionCount + pendingFosterCount },
         { key: 'rescues', label: 'Rescue Reports', icon: '🚨', badge: pendingRescueCount },
         { key: 'visitations', label: 'Visit Requests', icon: '📅', badge: pendingVisitationCount },
+        { key: 'messages', label: 'Messages', icon: '💬' },
       ],
     },
     {
@@ -703,12 +705,20 @@ export default function Dashboard() {
             )}
 
             {activeTab === 'user' && (
-              <button
-                className={'dashNavBtn ' + (activeNav === 'profile' ? 'dashNavBtnActive' : '')}
-                onClick={() => setActiveNav('profile')}
-              >
-                👤 Profile
-              </button>
+              <>
+                <button
+                  className={'dashNavBtn ' + (activeNav === 'messages' ? 'dashNavBtnActive' : '')}
+                  onClick={() => setActiveNav('messages')}
+                >
+                  💬 Messages
+                </button>
+                <button
+                  className={'dashNavBtn ' + (activeNav === 'profile' ? 'dashNavBtnActive' : '')}
+                  onClick={() => setActiveNav('profile')}
+                >
+                  👤 Profile
+                </button>
+              </>
             )}
             <button className="dashNavBtn" onClick={handleLogout}>
               🚪 Logout
@@ -761,6 +771,7 @@ export default function Dashboard() {
               {activeNav === 'requests' ? <AdoptionRequestsAdmin onUnreadChanged={fetchPendingCounts} /> : null}
               {activeNav === 'rescues' ? <RescueReportsAdmin onUnreadChanged={fetchPendingCounts} /> : null}
               {activeNav === 'visitations' ? <VisitationsAdmin /> : null}
+              {activeNav === 'messages' ? <Messages staff /> : null}
               {activeNav === 'reminders' ? <RemindersAdmin onChanged={fetchPendingCounts} /> : null}
               {activeNav === 'donations' ? <DonationsAdmin isAdmin={isAdminRole} /> : null}
               {activeNav === 'volunteers' ? <VolunteersAdmin /> : null}
@@ -783,6 +794,7 @@ export default function Dashboard() {
           ) : (
             <div>
               {activeNav === 'dashboard' ? <UserApplications applications={applications} loading={appsLoading} /> : null}
+              {activeNav === 'messages' ? <Messages /> : null}
               {activeNav === 'profile' ? <UserProfile key={user?.id} user={user} onProfileUpdated={setUser} /> : null}
               {/* default user sections */}
               {activeNav === 'dashboard' ? <UserProfile key={user?.id} user={user} onProfileUpdated={setUser} /> : null}
