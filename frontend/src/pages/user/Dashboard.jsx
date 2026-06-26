@@ -32,7 +32,7 @@ const fallbackRole = 'user';
 const ITEM_CATEGORY = {
   animals: 'cat_animals', reminders: 'cat_animals',
   requests: 'cat_requests', rescues: 'cat_requests', visitations: 'cat_requests',
-  donations: 'cat_ops', reports: 'cat_ops', analytics: 'cat_ops', users: 'cat_ops', settings: 'cat_ops', volunteers: 'cat_ops',
+  donations: 'cat_ops', reports: 'cat_ops', users: 'cat_ops', settings: 'cat_ops', volunteers: 'cat_ops',
 };
 const NAV_CATEGORY_KEYS = ['cat_animals', 'cat_requests', 'cat_ops'];
 
@@ -47,7 +47,7 @@ const atLeast = (r, min) => rankOf(r) >= rankOf(min);
 const ITEM_MIN_ROLE = {
   animals: 'staff', reminders: 'staff',
   requests: 'staff', rescues: 'staff', visitations: 'staff',
-  donations: 'staff', reports: 'staff', analytics: 'staff', volunteers: 'staff',
+  donations: 'staff', reports: 'staff', volunteers: 'staff',
   users: 'admin', settings: 'admin',
 };
 
@@ -575,7 +575,6 @@ export default function Dashboard() {
       key: 'cat_ops', label: 'Operations', icon: '🛠️',
       items: [
         { key: 'donations', label: 'Donations', icon: '💰', badge: pendingDonationCount },
-        { key: 'analytics', label: 'Insights', icon: '📊' },
         { key: 'reports', label: 'Reports', icon: '📈' },
         { key: 'users', label: 'Users', icon: '👥' },
         { key: 'volunteers', label: 'Personnel', icon: '👥', badge: pendingVolunteerCount },
@@ -752,7 +751,12 @@ export default function Dashboard() {
 
           {activeTab === 'admin' ? (
             <div>
-              {activeNav === 'dashboard' ? <ActivityFeed activity={overview?.activity} /> : null}
+              {activeNav === 'dashboard' ? (
+                <>
+                  <AnalyticsAdmin />
+                  <ActivityFeed activity={overview?.activity} />
+                </>
+              ) : null}
               {activeNav === 'animals' ? <AnimalsAdmin /> : null}
               {activeNav === 'requests' ? <AdoptionRequestsAdmin onUnreadChanged={fetchPendingCounts} /> : null}
               {activeNav === 'rescues' ? <RescueReportsAdmin onUnreadChanged={fetchPendingCounts} /> : null}
@@ -760,7 +764,6 @@ export default function Dashboard() {
               {activeNav === 'reminders' ? <RemindersAdmin onChanged={fetchPendingCounts} /> : null}
               {activeNav === 'donations' ? <DonationsAdmin isAdmin={isAdminRole} /> : null}
               {activeNav === 'volunteers' ? <VolunteersAdmin /> : null}
-              {activeNav === 'analytics' ? <AnalyticsAdmin /> : null}
               {activeNav === 'reports' ? <ReportsAdmin isAdmin={isAdminRole} /> : null}
               {/* Users & Settings are admin-only — guarded here too so a forced nav can't mount them. */}
               {isAdminRole && activeNav === 'users' ? <UsersAdmin currentUserId={user?.id} /> : null}
