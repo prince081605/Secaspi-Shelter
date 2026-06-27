@@ -1,10 +1,30 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { MapContainer, TileLayer, CircleMarker, useMapEvents, useMap } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 import { getFeaturedAnimals, getImpactStats } from "../../lib/publicHomeApi.js";
 import { createReport } from "../../lib/rescueApi.js";
 import { auth } from "../../lib/auth.js";
 import { getPublicSettings, settingImageUrl } from "../../lib/settingsApi.js";
 import "./LandingPage.css";
+
+// Default map view: Metro Manila (the shelter operates in the Philippines).
+const RESCUE_MAP_DEFAULT = [14.5995, 120.9842];
+
+// Click anywhere on the map to drop/move the rescue pin.
+function ClickToPin({ onPin }) {
+  useMapEvents({ click: (e) => onPin(e.latlng.lat, e.latlng.lng) });
+  return null;
+}
+
+// Recenter the map when the pin moves (e.g. after "use my current location").
+function RecenterOnPin({ lat, lng }) {
+  const map = useMap();
+  useEffect(() => {
+    if (lat != null && lng != null) map.flyTo([lat, lng], 16);
+  }, [lat, lng, map]);
+  return null;
+}
 
 const animalsFallback = [
   { id: 1, name: "Bingo", age: "2 yrs", species: "Dog", status: "Available for adoption", photo: null },
@@ -282,21 +302,41 @@ function RescueForm({ form, reportPhoto, reportState, onChange, onPhotoChange, o
           </div>
           <div className="ui-field">
             <label className="ui-label ui-label-required">Location</label>
-            <input className="ui-input" name="location" required value={form.location} onChange={onChange} placeholder="Street, Barangay, City" />
-            <button
-              type="button"
-              className="lp-btn lp-btn-ghost"
-              style={{ marginTop: 8, fontSize: 13 }}
-              onClick={() => {
-                if (!navigator.geolocation) return;
-                navigator.geolocation.getCurrentPosition(
-                  (pos) => onPinLocation(pos.coords.latitude, pos.coords.longitude),
-                  () => onPinLocation(null, null),
-                );
-              }}
-            >
-              📍 {form.latitude ? "Location pinned ✓ (re-pin)" : "Pin my current location (for the rescue map)"}
-            </button>
+            <input className="ui-input" name="location" required value={form.location} onChange={onChange} placeholder="Be specific: house no. / street, landmark, barangay, city" />
+            <div style={{ fontSize: 12, color: "var(--lp-ink-soft)", marginTop: 6 }}>
+              The more detailed, the faster our team finds the animal. Pin the exact spot on the map below 👇
+            </div>
+
+            <div style={{ display: "flex", gap: 8, alignItems: "center", margin: "8px 0" }}>
+              <button
+                type="button"
+                className="lp-btn lp-btn-ghost"
+                style={{ fontSize: 13 }}
+                onClick={() => {
+                  if (!navigator.geolocation) return;
+                  navigator.geolocation.getCurrentPosition(
+                    (pos) => onPinLocation(pos.coords.latitude, pos.coords.longitude),
+                    () => {},
+                  );
+                }}
+              >
+                📍 Use my current location
+              </button>
+              <span style={{ fontSize: 12, color: form.latitude ? "var(--lp-brand, #c1612e)" : "var(--lp-ink-soft)" }}>
+                {form.latitude ? "Exact spot pinned ✓" : "No pin yet — tap the map"}
+              </span>
+            </div>
+
+            <div style={{ height: 260, borderRadius: 12, overflow: "hidden", border: "1px solid var(--lp-line, #e7ddc9)" }}>
+              <MapContainer center={form.latitude ? [form.latitude, form.longitude] : RESCUE_MAP_DEFAULT} zoom={form.latitude ? 16 : 12} style={{ height: "100%", width: "100%" }} scrollWheelZoom>
+                <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                <ClickToPin onPin={onPinLocation} />
+                <RecenterOnPin lat={form.latitude} lng={form.longitude} />
+                {form.latitude != null && form.longitude != null && (
+                  <CircleMarker center={[form.latitude, form.longitude]} radius={10} pathOptions={{ color: "#c0392b", fillOpacity: 0.85 }} />
+                )}
+              </MapContainer>
+            </div>
           </div>
           <div className="ui-field"><label className="ui-label">Condition</label><select className="ui-select" name="condition" value={form.condition} onChange={onChange}><option>Injured or sick</option><option>Stray / no owner</option><option>Abandoned</option><option>In immediate danger</option><option>Other</option></select></div>
           <div className="ui-field"><label className="ui-label">Details</label><textarea className="ui-textarea" name="details" value={form.details} onChange={onChange} placeholder="Describe what you see..." /></div>

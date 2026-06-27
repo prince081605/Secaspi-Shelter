@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
+import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
 import { adminListRescueReports, adminMarkRescueReportRead, adminUpdateRescueReport } from '../../lib/rescueApi';
 import StatusBadge from '../../components/StatusBadge';
 
 const STATUSES = ['pending', 'assigned', 'in_progress', 'resolved'];
 const NEXT_STATUS = { pending: 'assigned', assigned: 'in_progress', in_progress: 'resolved' };
 const NEXT_LABEL = { pending: 'Mark assigned', assigned: 'Mark in progress', in_progress: 'Mark resolved' };
+const URGENCY_COLOR = { critical: '#c0392b', high: '#e67e22', medium: '#d8a657', low: '#7c8b6b' };
 
 function photoSrc(path) {
   if (!path) return '';
@@ -15,6 +18,53 @@ function UrgencyBadge({ urgency }) {
   const u = String(urgency || '').toLowerCase();
   const cls = u === 'critical' || u === 'high' ? 'badge badgeOrange' : 'badge';
   return <span className={cls}>{urgency}</span>;
+}
+
+// Full report view: details, photo, and the exact spot on the map (from the report's coordinates).
+function DetailPanel({ report }) {
+  const hasPin = report.latitude != null && report.longitude != null;
+  const center = hasPin ? [Number(report.latitude), Number(report.longitude)] : null;
+
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div className="dashFormGrid">
+        <div><strong>Reporter:</strong> {report.reporter_name || 'Anonymous'}</div>
+        <div><strong>Contact:</strong> {report.contact_number || '—'}</div>
+        <div><strong>Urgency:</strong> <UrgencyBadge urgency={report.urgency} /></div>
+        <div><strong>Status:</strong> <StatusBadge status={report.status} /></div>
+        <div style={{ gridColumn: '1 / -1' }}><strong>Location:</strong> {report.location || '—'}</div>
+      </div>
+      <div style={{ marginTop: 6 }}><strong>Description:</strong> {report.description || '—'}</div>
+      {report.admin_notes && <div style={{ marginTop: 6 }}><strong>Notes:</strong> {report.admin_notes}</div>}
+
+      {report.photo_url && (
+        <div style={{ marginTop: 10 }}>
+          <strong>Photo:</strong>
+          <div><img src={photoSrc(report.photo_url)} alt="Rescue report" style={{ maxWidth: 320, marginTop: 6, borderRadius: 8 }} /></div>
+        </div>
+      )}
+
+      <div style={{ marginTop: 10 }}>
+        <strong>📍 Exact location:</strong>
+        {hasPin ? (
+          <div style={{ height: 300, marginTop: 6, borderRadius: 10, overflow: 'hidden' }}>
+            <MapContainer center={center} zoom={16} style={{ height: '100%', width: '100%' }} scrollWheelZoom>
+              <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+              <CircleMarker center={center} radius={11} pathOptions={{ color: URGENCY_COLOR[report.urgency] || '#c0392b', fillOpacity: 0.85 }}>
+                <Popup>
+                  <strong>{report.location}</strong><br />Urgency: {report.urgency}
+                </Popup>
+              </CircleMarker>
+            </MapContainer>
+          </div>
+        ) : (
+          <div className="ui-empty" style={{ marginTop: 6 }}>
+            No precise pin was provided for this report — only the typed location above.
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function TriagePanel({ report, onSaved }) {
@@ -75,7 +125,7 @@ function TriagePanel({ report, onSaved }) {
 }
 
 function ReportRow({ report, onChanged, onUnreadChanged }) {
-  const [expanded, setExpanded] = useState(false);
+  const [mode, setMode] = useState(''); // '' | 'triage' | 'detail'
   const isUnread = !report.read_at;
 
   const handleInteracted = () => {
@@ -83,9 +133,9 @@ function ReportRow({ report, onChanged, onUnreadChanged }) {
     onUnreadChanged?.();
   };
 
-  const toggleExpanded = async () => {
-    const next = !expanded;
-    setExpanded(next);
+  const open = async (which) => {
+    const next = mode === which ? '' : which;
+    setMode(next);
     if (next && isUnread) {
       try {
         await adminMarkRescueReportRead(report.id);
@@ -105,14 +155,17 @@ function ReportRow({ report, onChanged, onUnreadChanged }) {
         <td><StatusBadge status={report.status} /></td>
         <td>{report.assigned_to || '—'}</td>
         <td>{(report.created_at || '').slice(0, 10)}</td>
-        <td>
-          <button className="dashBtn" onClick={toggleExpanded}>{expanded ? 'Hide' : 'Triage'}</button>
+        <td style={{ whiteSpace: 'nowrap' }}>
+          <button className="dashBtn" onClick={() => open('detail')}>{mode === 'detail' ? 'Hide' : 'Detail'}</button>
+          <button className="dashBtn" style={{ marginLeft: 6 }} onClick={() => open('triage')}>{mode === 'triage' ? 'Hide' : 'Triage'}</button>
         </td>
       </tr>
-      {expanded && (
+      {mode && (
         <tr>
           <td colSpan={7} className="dashExpandPanel">
-            <TriagePanel report={report} onSaved={handleInteracted} />
+            {mode === 'detail'
+              ? <DetailPanel report={report} />
+              : <TriagePanel report={report} onSaved={handleInteracted} />}
           </td>
         </tr>
       )}
