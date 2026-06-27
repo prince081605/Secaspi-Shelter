@@ -45,7 +45,8 @@ class AiAssistantTest extends TestCase
             ], 200),
         ]);
 
-        $this->postJson('/api/assistant/chat', ['message' => 'Which pet suits a small apartment?'])
+        // An off-topic question (animal/shelter FAQs are now answered for free) reaches the model.
+        $this->postJson('/api/assistant/chat', ['message' => 'Tell me about general pet nutrition advice'])
             ->assertOk()
             ->assertJsonPath('source', 'ai')
             ->assertJsonPath('reply', 'Buddy would be a great pick for you!');
