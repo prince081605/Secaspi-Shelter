@@ -57,6 +57,9 @@ class DatabaseSeeder extends Seeder
 
         // Care guides (idempotent — safe to re-run on every deploy)
         $this->call(CareGuideSeeder::class);
+
+        // Assistant FAQ knowledge base (idempotent — keyed on the question text)
+        $this->call(FaqSeeder::class);
     }
 }
 

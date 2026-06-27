@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Animal;
 use App\Models\Setting;
 use App\Services\AiAssistantService;
+use App\Services\FaqMatcher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Validator;
@@ -20,7 +21,7 @@ use Illuminate\Support\Str;
  */
 class AiAssistantController extends Controller
 {
-    public function chat(Request $request, AiAssistantService $assistant)
+    public function chat(Request $request, AiAssistantService $assistant, FaqMatcher $matcher)
     {
         $validator = Validator::make($request->all(), [
             'message' => ['required', 'string', 'max:500'],
@@ -35,7 +36,7 @@ class AiAssistantController extends Controller
         $settings = Setting::getAll();
 
         // 1. FAQ-first — free, instant answers for the common stuff.
-        if ($faq = $this->faqAnswer($message, $settings)) {
+        if ($faq = $this->faqAnswer($message, $settings, $matcher)) {
             return response()->json(['reply' => $faq, 'source' => 'faq']);
         }
 
@@ -79,79 +80,27 @@ class AiAssistantController extends Controller
      * about our available animals, all without any paid API call. Returns null only for
      * genuinely off-topic questions (the model handles those when a key is configured).
      */
-    private function faqAnswer(string $message, array $settings): ?string
+    private function faqAnswer(string $message, array $settings, FaqMatcher $matcher): ?string
     {
         $m = Str::lower(trim($message));
         $has = fn (array $words) => collect($words)->contains(fn ($w) => str_contains($m, $w));
 
-        // --- Greetings & small talk ---------------------------------------------------------
+        // --- Greetings & small talk (kept inline) -------------------------------------------
         if (preg_match('/^(hi|hello|hey|yo|good (morning|afternoon|evening)|kumusta|kamusta)\b/', $m)) {
             return "Hello! 🐾 I can help you adopt, foster, donate, volunteer, book a visit, report a stray, or find an animal that fits you. What would you like to know?";
         }
         if ($has(['thank', 'salamat'])) {
             return "You're welcome! Is there anything else I can help you with? 😊";
         }
-        if ($has(['what can you do', 'what can you help', 'who are you', 'what are you', 'how can you help', 'help me'])) {
+        if ($has(['what can you do', 'what can you help', 'who are you', 'what are you', 'how can you help'])) {
             return "I can answer questions about adopting, fostering, donating, volunteering, visiting, reporting strays, and our available animals. Try “how do I adopt?”, “do you have small dogs?”, or take our Matchmaker quiz for tailored picks.";
         }
 
-        // --- Adoption -----------------------------------------------------------------------
-        if ($has(['how do i adopt', 'how to adopt', 'adoption process', 'adopt a', 'requirements', 'requirement to adopt', 'how can i adopt', 'adoption step'])) {
-            $policies = trim($settings['adoption_policies'] ?? '');
+        // --- Trainable knowledge base (admin-curated, similarity-matched) -------------------
+        if ($entry = $matcher->match($message)) {
+            $entry->increment('hits');
 
-            return $policies !== ''
-                ? $policies
-                : 'To adopt: browse our available animals, submit an adoption application, and our team reviews it and arranges a home visit before finalizing. Start on the Adoption page — or try the Matchmaker quiz to find a good fit first.';
-        }
-        if (($has(['fee', 'cost', 'price', 'how much', 'magkano', 'payment']) && $has(['adopt', 'adoption', 'pet', 'dog', 'cat']))) {
-            return 'Adoption involves a small processing/care fee that helps cover vaccination and basic care — our team confirms the exact amount during your application. The goal is responsible rehoming, not profit.';
-        }
-        if ($has(['foster'])) {
-            return "Fostering means temporarily caring for an animal until it's adopted. Submit a foster request from an animal's page (or the Foster option) and we'll coordinate dates and support with you.";
-        }
-
-        // --- Donations & transparency -------------------------------------------------------
-        if ($has(['where does the money', 'how are donations', 'donation used', 'where do donations', 'transparency', 'how is the money'])) {
-            return 'Donations go to food, medical treatment, vaccinations, and shelter operations. You can see totals and a breakdown on our Transparency page.';
-        }
-        if ($has(['donate', 'donation', 'gcash', 'support you', 'give money', 'contribute'])) {
-            return 'Thank you for considering a donation! 💛 You can give via GCash, cash, or bank transfer from the Donate page after logging in — every bit helps feed and treat our animals. You can also see your impact and badges on your dashboard.';
-        }
-
-        // --- Volunteer ----------------------------------------------------------------------
-        if ($has(['volunteer', 'volunteering', 'help out', 'join your team', 'work with you'])) {
-            return "We'd love your help! 🤝 Submit a volunteer application from the Volunteer page and our team will reach out about onboarding and tasks.";
-        }
-
-        // --- Visiting & hours ---------------------------------------------------------------
-        if ($has(['visit', 'opening hour', 'open hours', 'what time', 'hours', 'schedule a visit', 'tour', 'come over', 'meet the'])) {
-            return 'You can book a visit to meet our animals through the Visit page after logging in — pick a date and time slot and we\'ll confirm it.';
-        }
-
-        // --- Location & contact -------------------------------------------------------------
-        if ($has(['where are you', 'where is', 'location', 'address', 'how to get', 'find you'])) {
-            return ! empty($settings['address'])
-                ? "We're located at {$settings['address']}. You can book a visit through the Visit page."
-                : 'Please contact us for our exact location and directions, or book a visit on the Visit page.';
-        }
-        if ($has(['contact', 'phone', 'email', 'reach you', 'number', 'message you'])) {
-            $parts = array_filter([
-                ! empty($settings['contact_email']) ? "email {$settings['contact_email']}" : null,
-                ! empty($settings['contact_phone']) ? "call {$settings['contact_phone']}" : null,
-            ]);
-
-            return ($parts ? 'You can ' . implode(' or ', $parts) . '.' : 'Please reach out through our contact options on the site.')
-                . ' Logged-in users can also message us directly from the dashboard.';
-        }
-
-        // --- Rescue / strays ----------------------------------------------------------------
-        if ($has(['lost', 'found a', 'stray', 'rescue', 'report a', 'injured', 'abandoned', 'saw a dog'])) {
-            return 'If you\'ve spotted a stray or an animal in distress, please file a rescue report from our home page — add the location (you can pin it on the map) and a photo, and our rescue team will respond as fast as possible.';
-        }
-
-        // --- Health / care ------------------------------------------------------------------
-        if ($has(['vaccin', 'dewor', 'health', 'sick', 'medical', 'spay', 'neuter'])) {
-            return 'Our animals receive vaccinations and basic medical care, and each profile lists its health records. For specific medical questions about an animal, book a visit or contact our team.';
+            return $entry->answer;
         }
 
         // --- Live animal availability (answered from real data) -----------------------------
@@ -165,7 +114,10 @@ class AiAssistantController extends Controller
     /** Answer "do you have…/which…/show me…" style questions from currently-available animals. */
     private function animalAnswer(string $m): ?string
     {
-        $triggers = ['animal', 'dog', 'puppy', 'puppies', 'cat', 'kitten', 'available', 'adopt', 'looking for', 'do you have', 'show me', 'which', 'recommend', 'suit', 'good with', 'any '];
+        // Require a clear "list/find an animal" intent — not just the presence of "dog"/"puppy",
+        // so questions like "I saw a hurt puppy" or "can I see the dogs" fall through to the
+        // knowledge base (rescue / visit) instead of being answered with an availability list.
+        $triggers = ['available', 'do you have', 'show me', 'looking for', 'find me', 'which', 'recommend', 'suit', 'good with', 'any ', 'what dogs', 'what cats', 'small dog', 'big dog', 'large dog', 'small cat', 'adoptable'];
         if (! collect($triggers)->contains(fn ($t) => str_contains($m, $t))) {
             return null;
         }

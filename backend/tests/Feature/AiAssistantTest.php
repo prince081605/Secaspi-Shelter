@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\FaqEntry;
 use App\Models\Setting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -14,6 +15,13 @@ class AiAssistantTest extends TestCase
     public function test_faq_questions_are_answered_without_calling_the_api(): void
     {
         Http::fake(); // any outbound call would be recorded — we assert none happen
+
+        FaqEntry::create([
+            'question' => 'How do I adopt a dog?',
+            'answer' => 'Submit an adoption application and we will review it.',
+            'tags' => 'adoption process apply',
+            'enabled' => true,
+        ]);
 
         $this->postJson('/api/assistant/chat', ['message' => 'How do I adopt a dog?'])
             ->assertOk()

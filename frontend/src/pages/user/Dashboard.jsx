@@ -22,6 +22,7 @@ import AnalyticsAdmin from '../admin/AnalyticsAdmin';
 import Messages from '../Messages';
 import RescueMapAdmin from '../admin/RescueMapAdmin';
 import ImpactPanel from './ImpactPanel';
+import FaqTrainingAdmin from '../admin/FaqTrainingAdmin';
 import SettingsAdmin from '../admin/SettingsAdmin';
 import VisitationsAdmin from '../admin/VisitationsAdmin';
 import RemindersAdmin from '../admin/RemindersAdmin';
@@ -35,7 +36,7 @@ const fallbackRole = 'user';
 const ITEM_CATEGORY = {
   animals: 'cat_animals', reminders: 'cat_animals',
   requests: 'cat_requests', rescues: 'cat_requests', rescuemap: 'cat_requests', visitations: 'cat_requests', messages: 'cat_requests',
-  donations: 'cat_ops', reports: 'cat_ops', users: 'cat_ops', settings: 'cat_ops', volunteers: 'cat_ops',
+  donations: 'cat_ops', reports: 'cat_ops', users: 'cat_ops', settings: 'cat_ops', volunteers: 'cat_ops', faqs: 'cat_ops',
 };
 const NAV_CATEGORY_KEYS = ['cat_animals', 'cat_requests', 'cat_ops'];
 
@@ -51,7 +52,7 @@ const ITEM_MIN_ROLE = {
   animals: 'staff', reminders: 'staff',
   requests: 'staff', rescues: 'staff', rescuemap: 'staff', visitations: 'staff', messages: 'staff',
   donations: 'staff', reports: 'staff', volunteers: 'staff',
-  users: 'admin', settings: 'admin',
+  users: 'admin', settings: 'admin', faqs: 'admin',
 };
 
 
@@ -583,6 +584,7 @@ export default function Dashboard() {
         { key: 'reports', label: 'Reports', icon: '📈' },
         { key: 'users', label: 'Users', icon: '👥' },
         { key: 'volunteers', label: 'Personnel', icon: '👥', badge: pendingVolunteerCount },
+        { key: 'faqs', label: 'AI Training', icon: '🧠' },
         { key: 'settings', label: 'Settings', icon: '⚙️' },
       ],
     },
@@ -787,6 +789,7 @@ export default function Dashboard() {
               {activeNav === 'volunteers' ? <VolunteersAdmin /> : null}
               {activeNav === 'reports' ? <ReportsAdmin isAdmin={isAdminRole} /> : null}
               {/* Users & Settings are admin-only — guarded here too so a forced nav can't mount them. */}
+              {isAdminRole && activeNav === 'faqs' ? <FaqTrainingAdmin /> : null}
               {isAdminRole && activeNav === 'users' ? <UsersAdmin currentUserId={user?.id} /> : null}
               {isAdminRole && activeNav === 'settings' ? (
                 <>
