@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\DonationController;
+use App\Http\Controllers\ImpactController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\AdoptionApplicationController;
 use App\Http\Controllers\FosterApplicationController;
@@ -64,6 +65,9 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('/rescue-reports/{report}/read',     [RescueReportController::class, 'adminMarkRead'])->middleware('role:staff');
     Route::put('/profile',                           [ProfileController::class, 'update']);
     Route::post('/profile/change-password',          [ProfileController::class, 'changePassword']);
+
+    // ---- Donor & volunteer impact (gamification) ----
+    Route::get('/impact/me', [ImpactController::class, 'me']);
 
     // ---- Messaging (member ⇄ staff/admin) ----
     Route::get('/conversations',                     [MessageController::class, 'index']);

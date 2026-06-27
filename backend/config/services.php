@@ -35,4 +35,13 @@ return [
         ],
     ],
 
+    // AI Shelter Assistant. Provider-agnostic OpenAI-compatible Chat Completions API.
+    // Leave OPENAI_API_KEY empty to run the assistant in free FAQ-only mode (no paid calls).
+    'openai' => [
+        'key' => env('OPENAI_API_KEY'),
+        'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
+        'base_url' => env('OPENAI_BASE_URL', 'https://api.openai.com/v1'),
+        'max_tokens' => (int) env('OPENAI_MAX_TOKENS', 320),
+    ],
+
 ];

@@ -33,6 +33,12 @@ class SettingController extends Controller
             'about_us_content' => ['nullable', 'string'],
             'adoption_policies' => ['nullable', 'string'],
             'donation_monthly_goal' => ['nullable', 'numeric', 'min:0'],
+            // AI Shelter Assistant controls (the API key lives in env, never here).
+            'ai_assistant_enabled' => ['nullable', 'in:0,1'],
+            'ai_daily_message_cap' => ['nullable', 'integer', 'min:1', 'max:1000'],
+            'ai_persona' => ['nullable', 'string', 'max:500'],
+            // Cost of one meal, used to turn donations into "X meals funded" on the impact page.
+            'cost_per_meal' => ['nullable', 'numeric', 'min:1'],
         ]);
 
         if ($validator->fails()) {

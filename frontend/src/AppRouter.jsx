@@ -20,6 +20,7 @@ import DonationHistory from './pages/user/DonationHistory';
 import Receipt from './pages/user/Receipt';
 import NotFound from './pages/user/NotFound';
 import { auth } from './lib/auth';
+import AiAssistant from './components/AiAssistant';
 
 function RequireAuth({ children }) {
   const [ok, setOk] = useState(null);
@@ -124,6 +125,7 @@ export default function AppRouter() {
         />
         <Route path="*" element={<NotFound />} />
       </Routes>
+      <AiAssistant />
     </BrowserRouter>
   );
 }

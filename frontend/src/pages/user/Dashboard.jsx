@@ -21,6 +21,7 @@ import ReportsAdmin from '../admin/ReportsAdmin';
 import AnalyticsAdmin from '../admin/AnalyticsAdmin';
 import Messages from '../Messages';
 import RescueMapAdmin from '../admin/RescueMapAdmin';
+import ImpactPanel from './ImpactPanel';
 import SettingsAdmin from '../admin/SettingsAdmin';
 import VisitationsAdmin from '../admin/VisitationsAdmin';
 import RemindersAdmin from '../admin/RemindersAdmin';
@@ -709,6 +710,12 @@ export default function Dashboard() {
             {activeTab === 'user' && (
               <>
                 <button
+                  className={'dashNavBtn ' + (activeNav === 'impact' ? 'dashNavBtnActive' : '')}
+                  onClick={() => setActiveNav('impact')}
+                >
+                  🏆 My Impact
+                </button>
+                <button
                   className={'dashNavBtn ' + (activeNav === 'messages' ? 'dashNavBtnActive' : '')}
                   onClick={() => setActiveNav('messages')}
                 >
@@ -798,6 +805,7 @@ export default function Dashboard() {
             <div>
               {activeNav === 'dashboard' ? <UserApplications applications={applications} loading={appsLoading} /> : null}
               {activeNav === 'messages' ? <Messages /> : null}
+              {activeNav === 'impact' ? <ImpactPanel /> : null}
               {activeNav === 'profile' ? <UserProfile key={user?.id} user={user} onProfileUpdated={setUser} /> : null}
               {/* default user sections */}
               {activeNav === 'dashboard' ? <UserProfile key={user?.id} user={user} onProfileUpdated={setUser} /> : null}

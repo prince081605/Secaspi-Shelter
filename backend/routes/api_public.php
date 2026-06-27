@@ -2,8 +2,10 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use App\Http\Controllers\AiAssistantController;
 use App\Http\Controllers\AnimalController;
 use App\Http\Controllers\BackupController;
+use App\Http\Controllers\ImpactController;
 use App\Http\Controllers\MatchmakerController;
 use App\Http\Controllers\RescueReportController;
 use App\Http\Controllers\SettingController;
@@ -30,6 +32,12 @@ Route::post('/rescue-reports', [RescueReportController::class, 'store']);
 
 // ---- Smart adoption matchmaker (lifestyle quiz -> ranked animals) ----
 Route::post('/matchmaker', [MatchmakerController::class, 'match']);
+
+// ---- AI shelter assistant (FAQ-first, cost-capped) ----
+Route::post('/assistant/chat', [AiAssistantController::class, 'chat']);
+
+// ---- Public impact leaderboards (gamification) ----
+Route::get('/impact/leaderboard', [ImpactController::class, 'leaderboard']);
 
 // ---- Public Home API (DB-backed) ----
 // Note: uses raw table access for now since models may not exist yet.
