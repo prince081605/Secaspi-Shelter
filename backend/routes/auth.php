@@ -61,7 +61,6 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('/admin/foster-applications',          [FosterApplicationController::class, 'adminIndex'])->middleware('role:staff');
     Route::put('/admin/foster-applications/{application}',   [FosterApplicationController::class, 'adminUpdate'])->middleware('role:staff');
     Route::get('/rescue-reports',                    [RescueReportController::class, 'index'])->middleware('role:staff');
-    Route::get('/rescue-reports/map',                [RescueReportController::class, 'map'])->middleware('role:staff');
     Route::post('/rescue-reports/{report}/status',   [RescueReportController::class, 'updateStatus'])->middleware('role:staff');
     Route::post('/rescue-reports/{report}/read',     [RescueReportController::class, 'adminMarkRead'])->middleware('role:staff');
     Route::put('/profile',                           [ProfileController::class, 'update']);

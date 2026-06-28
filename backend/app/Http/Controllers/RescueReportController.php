@@ -88,20 +88,6 @@ class RescueReportController extends Controller
         return response()->json($reports);
     }
 
-    /**
-     * Lightweight feed for the rescue map: every report that has coordinates, with just the
-     * fields a marker needs. Not paginated (a map plots them all at once).
-     */
-    public function map()
-    {
-        $reports = RescueReport::whereNotNull('latitude')
-            ->whereNotNull('longitude')
-            ->orderByDesc('id')
-            ->get(['id', 'location', 'latitude', 'longitude', 'urgency', 'status', 'created_at']);
-
-        return response()->json(['reports' => $reports]);
-    }
-
     public function updateStatus(Request $request, RescueReport $report)
     {
         $validator = Validator::make($request->all(), [
