@@ -22,9 +22,9 @@ Legend: ✅ done · ⏳ in progress · ⬜ pending.
 
 > **Progress (as of 2026-06-30, branch `audit/report-and-global-cleanup`):**
 > **Done** — §0.1 cleanup · §0.2 backend · HIGH security (auth + public/AI) · HIGH admin pagination (§§3–8).
-> **In progress** — §0.2 frontend splits (`AnimalsAdmin`/`LandingPage`/`AdoptionRequestsAdmin` done; **`Dashboard` deferred**, `markRead` trait pending) · MED security (CSV-injection, staff-gate, public field exposure done; private-disk uploads + AI cost cap pending).
-> **Pending** — MED functional/perf · LOW.
-> Suite **127 green**.
+> **In progress** — §0.2 frontend splits (3 done; **`Dashboard` deferred**, `markRead` trait pending) · MED security (CSV-injection, staff-gate, public exposure done; private-disk uploads + AI cost cap pending) · MED functional/perf (orphaned mark-reads §4/7/8, foster status sync §4, donation dates §5 done; queue/N+1 §9, aggregate endpoints §3/11, code-split §2/11 pending).
+> **Pending** — LOW.
+> Suite **130 green**.
 
 | Pass | Scope | Status | Where |
 |---|---|---|---|
@@ -35,7 +35,7 @@ Legend: ✅ done · ⏳ in progress · ⬜ pending.
 | **HIGH security (public/AI)** | `throttle:5,1` on the public rescue write (§6) + `throttle:20,1` on the public AI chat (§10), per IP | ✅ done | suite **121 green** (+2 `PublicRateLimitTest` cases) |
 | **HIGH functional** | Admin-table pagination via shared `components/Pagination.jsx` across **all** admin tables — §3 Animals + Intakes, §4 Adoption (inbox/ongoing/completed) + Foster, §5 Donations, §6 Rescue, §7 Volunteers + Personnel, §8 Visitations. Adoption inbox excludes decided rows server-side (`exclude_decided`) so it paginates cleanly | ✅ done | suite **119 green** (+3 `AdoptionApplicationTest`); browser-verified Donations 1→2 of 9, Adoption inbox 1→2 of 2 (decided rows excluded) |
 | MED security | **✅ CSV-injection (§11)** · **✅ staff-grant gate (§7)** · **✅ public field exposure (§2/3** — settings whitelist, medical cost/vet hidden, generic public errors**)**; ⬜ private-disk uploads (§5/6/7), AI cost cap (§10) | ⏳ in progress | suite **127 green** (+6 tests); Appendix A3 #4–8 |
-| MED functional/perf | Orphaned mark-reads (§4/7/8); foster status sync (§4); donation dates (§5); queue notifications + N+1 (§9); aggregate poll/stat endpoints (§3/11); code-split (§2/11) | ⬜ pending | Appendix A3 #9–11 |
+| MED functional/perf | **✅ orphaned mark-reads (§4/7/8)** · **✅ foster status sync (§4)** · **✅ donation dates (§5)**; ⬜ queue notifications + N+1 (§9), aggregate poll/stat endpoints (§3/11), code-split (§2/11) | ⏳ in progress | suite **130 green** (+3 foster tests); Appendix A3 #9–11 |
 | LOW | Remaining dead code (axios, email-verif stub, `staff()` report), debounce, autocomplete, magic numbers, `<Link>` nav | ⬜ pending | Appendix A2/A3 |
 
 > Module scorecards reflect the **as-audited** state; they're not re-scored until a module's fixes
@@ -482,15 +482,15 @@ the missing animal-status guard and the foster→animal-status gap in code.
   loading/empty/error states, sub-tab navigation. Errors logged server-side with context.
 
 ### A. Functional
-- **[MED] Reviewing an adoption application never clears its "unread" highlight.** The backend
-  built `adminMarkRead` (route + controller) **specifically** so review-only clears unread, and
-  `adminMarkAdoptionApplicationRead` exists in `animalsApi.js:92` — but it is **called nowhere**;
-  the "Review" button only expands the row. Unread clears only on a status change. → Call it when
-  a row is expanded. _(`AdoptionRequestsAdmin.jsx:227`.)_
-- **[MED] Foster approval never updates the animal's status.** Unlike adoption, no foster
-  transition (approved/active/completed/declined) touches the animal — so a fostered animal stays
-  publicly `available` and can still receive adoption applications. → Sync animal status
-  (e.g. active→`fostered`, completed/declined→`available`). _(`FosterApplicationController.php:120-146`.)_
+- **[MED] ✅ RESOLVED — reviewing an adoption application now clears its "unread" highlight.**
+  `ApplicationRow`'s Review button now calls `adminMarkAdoptionApplicationRead` on open (when
+  unread) and refreshes, so review-only triage clears the highlight (the endpoint that was built
+  for exactly this). _(`AdoptionRequestRows.jsx`.)_
+- **[MED] ✅ RESOLVED — foster transitions now sync the animal's status.** `adminUpdate` sets the
+  animal `fostered` when the foster goes `active`, and back to `available` when an active foster
+  is `completed`/`declined` — so a fostered animal leaves the public adoption pool and returns when
+  the foster ends. Covered by `FosterStatusSyncTest` (active→fostered, completed→available,
+  never-active→untouched). _(`FosterApplicationController.php`.)_
 - **[MED] Apply endpoints don't check animal availability.** `store()` (both controllers) only
   runs the 30-day guard — never `$animal->status`. A direct link lets a user apply to adopt/foster
   an already-`adopted` or `archived` animal. → Reject when status isn't applicable.
@@ -588,12 +588,9 @@ unauthenticated (HTTP 200).
 - Mass-assignment safe (status server-forced `pending`); errors logged with context.
 
 ### A. Functional
-- **[MED] Donation dates render blank in History and Receipt.** Both read `d.created_at`, but the
-  `donations` table has no `created_at` (only `donated_at`; model `$timestamps = false`). Confirmed
-  live: the payload has `donated_at`, no `created_at` → the Date column/field is empty.
-  (`DashboardController` maps `donated_at`→`created_at`; `DonationController::index` returns the raw
-  model without that mapping.) → Expose a `date`/`donated_at` field and read it in the UI.
-  _(`DonationController.php:68`, `DonationHistory.jsx:89`, `Receipt.jsx:86`.)_
+- **[MED] ✅ RESOLVED — donation dates no longer render blank.** The `donations` row exposes
+  `donated_at` (not `created_at`), so `DonationHistory` and `Receipt` now read
+  `donated_at` (with a `created_at` fallback). _(`DonationHistory.jsx`, `Receipt.jsx`.)_
 - **[MED] ✅ RESOLVED — `DonationsAdmin` now paginates** (was `data?.data` only, capping at the
   newest 20 of 180). Uses the shared `Pagination` component; browser-verified page 1→2 of 9.
 - **[LOW] `verify()` has no state-machine guard** — an already-verified donation can be re-verified
@@ -783,11 +780,9 @@ never called (orphaned); reviewed the staff-promotion path end-to-end (controlle
   `VolunteerApply` has a clean 3-state self-service UX (dashboard / pending / form).
 
 ### A. Functional
-- **[MED] Volunteer-application mark-read is orphaned** (second instance after §4). 
-  `adminMarkVolunteerApplicationRead` (`volunteersApi.js:38`) is **never called**, and
-  `VolunteersAdmin` doesn't import it or render any unread highlight — so the backend's
-  `read_at` / `unread` filter / mark-read endpoint are **entirely unwired**. → Wire mark-read +
-  unread highlighting, or remove the unused backend capability.
+- **[MED] ✅ RESOLVED — volunteer-application mark-read is now wired.** `RequestRow` renders the
+  `dashRowUnread` highlight (from `read_at`) and calls `adminMarkVolunteerApplicationRead` when
+  Details is opened. Browser-verified: 6/10 rows highlighted. _(`VolunteersAdmin.jsx`.)_
 - **[MED] ✅ RESOLVED — pagination added** to `PersonnelRoster`, `VolunteerRequests`, and the
   Intakes table (`IntakesSection`), via the shared `Pagination` component.
 - **[LOW] `AddPersonForm` user search only covers page 1** (`adminListUsers`→`data?.data`); picking
@@ -882,10 +877,10 @@ intake docs to a private disk [MED-sec], (3) wire/await volunteer mark-read + un
   highlighting.
 
 ### A. Functional
-- **[MED] Visitation mark-read is orphaned** (third instance, after §4 and §7).
-  `adminMarkVisitationRead` (`visitationsApi.js:30`) is never called and `VisitationsAdmin` shows
-  no unread highlight — despite the backend comment claiming it "mirrors the adoption pattern."
-  → Wire it, or drop the unused backend capability.
+- **[MED] ✅ RESOLVED — visitation mark-read is now wired.** `VisitationRow` renders the
+  `dashRowUnread` highlight and calls `adminMarkVisitationRead` when Details is opened.
+  Browser-verified end-to-end: opening an unread row dropped the highlighted count 5→4.
+  _(`VisitationsAdmin.jsx`.)_
 - **[MED] ✅ RESOLVED — `VisitationsAdmin` now paginates** (was `data?.data` only). Uses the shared
   `Pagination` component. (`RemindersAdmin` is a bounded 30-day feed — no pagination needed.)
 - **[PASS]** Reminder auto-sync works end-to-end (vaccination `next_due` / medical
@@ -1304,7 +1299,7 @@ panels + Recharts (code-split) [MED-perf], (3) one aggregated pending-counts end
 |---|---|---|---|
 | **No rate limiting** — ✅ RESOLVED for auth (§1), public rescue (§6), public AI chat (§10) via per-IP `throttle`; messaging (§9) left as low-risk optional | 1, 6, 9, 10 | HIGH | Global `throttle` + tight per-route caps |
 | **Admin tables have no pagination** (read only page 1, cap 12–20) — ✅ RESOLVED across §§3–8 via shared `components/Pagination.jsx` | 3, 4, 5, 6, 7, 8 | HIGH/MED | Reuse the public `Adoption.jsx` pagination pattern |
-| **Orphaned "mark-read on review"** (route+controller+helper built, never called) | 4, 7, 8 (wired only in 6) | MED | Wire the 3 helpers, or remove the unused backend capability |
+| **Orphaned "mark-read on review"** (route+controller+helper built, never called) — ✅ RESOLVED: all 3 wired (§4/7/8) | 4, 7, 8 (wired only in 6) | MED | Wire the 3 helpers, or remove the unused backend capability |
 | **Sensitive uploads on the public disk** (served unauthenticated) | 5, 6, 7 | MED | Private disk + signed URLs |
 | **No frontend code-splitting** (Leaflet/Recharts/all admin panels eager) | 2, 11 | MED | `React.lazy` per route/panel |
 | **Duplicated helpers & serializers** (`photoSrc`/`peso`/query-builder; `toItem`/`toAdminItem`) | 3–8, 11 | MED | `lib/format.js`/`lib/url.js`; API Resources |
@@ -1339,8 +1334,8 @@ panels + Recharts (code-split) [MED-perf], (3) one aggregated pending-counts end
 8. ⬜ Trust proxies for real client IP + add a **global** AI daily spend cap (§10).
 
 **MEDIUM (functional / perf)**
-9. Wire the 3 orphaned mark-reads (§4/7/8); fix the foster→animal status sync + apply-to-unavailable guard (§4).
-10. Fix blank donation dates (expose/read `donated_at`) (§5); fix register response `role:null` (§1).
+9. ⏳ **✅ Wired the 3 orphaned mark-reads (§4/7/8); ✅ fixed the foster→animal status sync (§4)**; ⬜ apply-to-unavailable guard (§4) still pending.
+10. ⏳ **✅ Fixed blank donation dates (read `donated_at`) (§5)**; ⬜ register response `role:null` (§1) still pending.
 11. Queue notifications (`ShouldQueue`) + remove the messaging N+1 (§9); replace the 4-call animal stat strip and the 8-poll dashboard with aggregated endpoints (§3, §11); code-split the bundle (§2/11).
 
 **LOW** — dead-code removal (A2), debounce admin searches, autocomplete/`htmlFor` on forms, magic-number `80220`→single source, timezone-safe booking bounds, `<Link>` instead of `<a>` on internal nav, cap max donation/report rows.

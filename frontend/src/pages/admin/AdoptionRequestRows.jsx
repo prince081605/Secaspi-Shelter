@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { adminUpdateAdoptionApplication } from '../../lib/animalsApi';
+import { adminUpdateAdoptionApplication, adminMarkAdoptionApplicationRead } from '../../lib/animalsApi';
 import { settingImageUrl } from '../../lib/settingsApi';
 import StatusBadge from '../../components/StatusBadge';
 
@@ -193,6 +193,21 @@ export function ApplicationRow({ application, onChanged, onUnreadChanged }) {
     onUnreadChanged?.();
   };
 
+  // Reviewing (opening) an application clears its unread highlight even without a status change —
+  // this is what the backend's adminMarkRead endpoint was built for.
+  const toggleReview = async () => {
+    const next = !expanded;
+    setExpanded(next);
+    if (next && isUnread) {
+      try {
+        await adminMarkAdoptionApplicationRead(application.id);
+        handleInteracted();
+      } catch {
+        // non-critical: the highlight just won't clear until the next interaction
+      }
+    }
+  };
+
   const setStatus = async (status) => {
     setError('');
     try {
@@ -221,7 +236,7 @@ export function ApplicationRow({ application, onChanged, onUnreadChanged }) {
         <td>{(application.created_at || '').slice(0, 10)}</td>
         <td className="dashActionsCell">
           <span className="dashActionsRow">
-            <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Review'}</button>
+            <button className="dashBtn" onClick={toggleReview}>{expanded ? 'Hide' : 'Review'}</button>
           </span>
         </td>
       </tr>

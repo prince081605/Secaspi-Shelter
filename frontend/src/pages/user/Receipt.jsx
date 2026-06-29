@@ -83,7 +83,7 @@ export default function Receipt() {
             </div>
             <div className="receiptRow">
               <span className="receiptLabel">Date</span>
-              <span className="receiptValue">{(donation.created_at || '').slice(0, 10)}</span>
+              <span className="receiptValue">{(donation.donated_at || donation.created_at || '').slice(0, 10)}</span>
             </div>
 
             <div className="receiptActions" style={{ marginTop: '2rem', display: 'flex', gap: '0.8rem' }}>

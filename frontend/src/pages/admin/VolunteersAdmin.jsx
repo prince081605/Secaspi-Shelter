@@ -9,6 +9,7 @@ import {
   adminDeleteVolunteerTask,
   adminListVolunteerApplications,
   adminUpdateVolunteerApplication,
+  adminMarkVolunteerApplicationRead,
 } from '../../lib/volunteersApi';
 import { adminListUsers } from '../../lib/usersApi';
 import StatusBadge from '../../components/StatusBadge';
@@ -262,6 +263,7 @@ function RequestRow({ application, onChanged }) {
   const [expanded, setExpanded] = useState(false);
   const [notes, setNotes] = useState(application.admin_notes || '');
   const [error, setError] = useState('');
+  const isUnread = !application.read_at;
 
   const decide = async (status) => {
     setError('');
@@ -273,9 +275,23 @@ function RequestRow({ application, onChanged }) {
     }
   };
 
+  // Opening Details clears the unread highlight, independent of any approve/reject action.
+  const toggleDetails = async () => {
+    const next = !expanded;
+    setExpanded(next);
+    if (next && isUnread) {
+      try {
+        await adminMarkVolunteerApplicationRead(application.id);
+        onChanged();
+      } catch {
+        // non-critical: the highlight just won't clear until the next interaction
+      }
+    }
+  };
+
   return (
     <>
-      <tr>
+      <tr className={isUnread ? 'dashRowUnread' : ''}>
         <td>{application.applicant?.full_name || '—'}<br /><span style={{ fontSize: 12, color: 'var(--muted)' }}>{application.applicant?.email}</span></td>
         <td>{application.availability || '—'}</td>
         <td><StatusBadge status={application.status} /></td>
@@ -288,7 +304,7 @@ function RequestRow({ application, onChanged }) {
                 <button className="dashBtn dashBtnDanger" onClick={() => decide('rejected')}>Reject</button>
               </>
             )}
-            <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Details'}</button>
+            <button className="dashBtn" onClick={toggleDetails}>{expanded ? 'Hide' : 'Details'}</button>
           </span>
         </td>
       </tr>

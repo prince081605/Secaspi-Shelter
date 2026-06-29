@@ -86,7 +86,7 @@ export default function DonationHistory() {
                     <td style={{ padding: '0.9rem 1.1rem', borderBottom: '1px solid var(--line)' }}>
                       <span className={`ui-tag ${statusVariant(d.status)}`}>{d.status}</span>
                     </td>
-                    <td style={{ padding: '0.9rem 1.1rem', borderBottom: '1px solid var(--line)' }}>{(d.created_at || '').slice(0, 10)}</td>
+                    <td style={{ padding: '0.9rem 1.1rem', borderBottom: '1px solid var(--line)' }}>{(d.donated_at || d.created_at || '').slice(0, 10)}</td>
                     <td style={{ padding: '0.9rem 1.1rem', borderBottom: '1px solid var(--line)' }}>
                       <button className="ui-btn-secondary" onClick={() => navigate(`/donations/${d.id}`)}>Receipt</button>
                     </td>

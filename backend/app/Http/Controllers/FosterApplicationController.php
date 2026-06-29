@@ -9,7 +9,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
 
 class FosterApplicationController extends Controller
 {
@@ -134,8 +133,20 @@ class FosterApplicationController extends Controller
             return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
         }
 
+        $previousStatus = $application->status;
         $application->update($validator->validated());
         $statusChanged = $application->wasChanged('status');
+
+        // Keep the animal's public status in sync with the foster lifecycle (mirrors adoption).
+        // Fostering starts → reserve the animal (out of the adoption pool); it ends → release it.
+        if ($statusChanged) {
+            if ($application->status === 'active') {
+                $application->animal()->update(['status' => 'fostered']);
+            } elseif (in_array($application->status, ['completed', 'declined'], true) && $previousStatus === 'active') {
+                $application->animal()->update(['status' => 'available']);
+            }
+        }
+
         $application = $application->fresh(['animal.mainPhoto', 'user']);
 
         if ($statusChanged) {

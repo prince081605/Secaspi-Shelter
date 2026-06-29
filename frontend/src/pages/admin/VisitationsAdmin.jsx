@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { adminListVisitations, adminUpdateVisitation } from '../../lib/visitationsApi';
+import { adminListVisitations, adminUpdateVisitation, adminMarkVisitationRead } from '../../lib/visitationsApi';
 import StatusBadge from '../../components/StatusBadge';
 import Pagination from '../../components/Pagination';
 
@@ -46,6 +46,7 @@ function NotesPanel({ visitation, onSaved }) {
 function VisitationRow({ visitation, onChanged }) {
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState('');
+  const isUnread = !visitation.read_at;
 
   const setStatus = async (status) => {
     setError('');
@@ -57,9 +58,23 @@ function VisitationRow({ visitation, onChanged }) {
     }
   };
 
+  // Opening Details clears the unread highlight, independent of any approve/reject action.
+  const toggleDetails = async () => {
+    const next = !expanded;
+    setExpanded(next);
+    if (next && isUnread) {
+      try {
+        await adminMarkVisitationRead(visitation.id);
+        onChanged();
+      } catch {
+        // non-critical: the highlight just won't clear until the next interaction
+      }
+    }
+  };
+
   return (
     <>
-      <tr>
+      <tr className={isUnread ? 'dashRowUnread' : ''}>
         <td>{visitation.visitor?.full_name || '—'}</td>
         <td>{visitation.requested_date || '—'}</td>
         <td>{SLOT_LABELS[visitation.time_slot] || visitation.time_slot}</td>
@@ -76,7 +91,7 @@ function VisitationRow({ visitation, onChanged }) {
             {visitation.status === 'approved' && (
               <button className="dashBtn" onClick={() => setStatus('completed')}>Mark completed</button>
             )}
-            <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Details'}</button>
+            <button className="dashBtn" onClick={toggleDetails}>{expanded ? 'Hide' : 'Details'}</button>
           </span>
         </td>
       </tr>
