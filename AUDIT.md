@@ -1,9 +1,11 @@
 # SECASPI Shelter — Audit Report
 
-**Status:** ✅ complete — all 12 modules audited · report-only (no application code changed)
-**Dates:** 2026-06-29
+**Status:** ✅ Audit complete — all 12 modules audited · ⏳ fix passes underway — application code is
+now being changed in separate, approved passes (see the **Fix progress tracker** below).
+**Dates:** audited 2026-06-29 · fixes ongoing (last updated 2026-06-30)
 **Method:** static code tracing + live app run (Laravel :8001 + Vite :5173, admin session + public
-pages) + live API probes + full PHPUnit suite (111 green). **Project average ≈ 79/100** (see Appendix A4).
+pages) + live API probes + full PHPUnit suite (**111 green** as audited → **119 green** after the fix
+passes to date). **Project average ≈ 79/100** as-audited (see Appendix A4; modules not yet re-scored).
 
 Severity legend: **[CRIT]** critical · **[HIGH]** high · **[MED]** medium · **[LOW]** low ·
 **[NIT]** cosmetic/nice-to-have.
@@ -17,6 +19,11 @@ tracked below.
 ## Fix progress tracker
 
 Legend: ✅ done · ⏳ in progress · ⬜ pending.
+
+> **Progress (as of 2026-06-30, branch `audit/report-and-global-cleanup`, latest commit `507c172`):**
+> **Done** — §0.1 cleanup · §0.2 backend extraction · HIGH auth security · HIGH admin pagination (§§3–8).
+> **Pending** — §0.2 frontend component splits · HIGH public/AI rate-limits · MED security · MED functional/perf · LOW.
+> Suite **119 green**. _Paused here at the user's request._
 
 | Pass | Scope | Status | Where |
 |---|---|---|---|
