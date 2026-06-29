@@ -22,14 +22,15 @@ Legend: ✅ done · ⏳ in progress · ⬜ pending.
 
 > **Progress (as of 2026-06-30, branch `audit/report-and-global-cleanup`):**
 > **Done** — §0.1 cleanup · §0.2 backend extraction · **HIGH security (auth + public/AI rate-limits)** · HIGH admin pagination (§§3–8).
-> **Pending** — §0.2 frontend component splits · MED security · MED functional/perf · LOW.
-> Suite **121 green**. _All three HIGH-tier rows are now complete._
+> **In progress** — §0.2 frontend component splits (`AnimalsAdmin`→`IntakesAdmin` done; `Dashboard`/`LandingPage`/`AdoptionRequestsAdmin` pending).
+> **Pending** — MED security · MED functional/perf · LOW.
+> Suite **121 green**. _All three HIGH-tier rows complete; now chipping at the §0.2 frontend splits._
 
 | Pass | Scope | Status | Where |
 |---|---|---|---|
 | **Global cleanup** | §0.1 dead code: `App.jsx`, `dashboardMockData.js`, `dummy.php`, orphaned rescue-map endpoint + route + 2 tests; planning docs → `/docs` | ✅ done | branch `audit/report-and-global-cleanup` (commit `147f801`); suite 109 green, build clean |
 | §0.2 structural (backend) | `PublicHomeController` extraction (4 home/* closures), shared `PublicStats::maskName` (was 3×), shared `PublicStats::topDonors` (was 2×) | ✅ done | branch `audit/report-and-global-cleanup`; suite **113 green** (+4 new `PublicHomeTest`), routes rebound |
-| §0.2 structural (frontend) | split oversized components (`AnimalsAdmin`, `Dashboard`, `LandingPage`, `AdoptionRequestsAdmin`); shared admin `markRead`/`adminIndex` trait | ⬜ pending | per module (2, 3, 4, 11) |
+| §0.2 structural (frontend) | split oversized components — **✅ `AnimalsAdmin`→`IntakesAdmin` extracted** (Intakes UI moved out, ~1,240→~850 lines, browser-verified); ⬜ `Dashboard`, `LandingPage`, `AdoptionRequestsAdmin` splits + shared `markRead`/`adminIndex` trait | ⏳ in progress | per module (2, 3, 4, 11) |
 | **HIGH security (auth)** | `throttle` on login/register/forgot/reset (§1); revoke tokens on password reset + revoke other sessions on change-password (§1) | ✅ done | suite **116 green** (+3 new `AuthTest` cases) |
 | **HIGH security (public/AI)** | `throttle:5,1` on the public rescue write (§6) + `throttle:20,1` on the public AI chat (§10), per IP | ✅ done | suite **121 green** (+2 `PublicRateLimitTest` cases) |
 | **HIGH functional** | Admin-table pagination via shared `components/Pagination.jsx` across **all** admin tables — §3 Animals + Intakes, §4 Adoption (inbox/ongoing/completed) + Foster, §5 Donations, §6 Rescue, §7 Volunteers + Personnel, §8 Visitations. Adoption inbox excludes decided rows server-side (`exclude_decided`) so it paginates cleanly | ✅ done | suite **119 green** (+3 `AdoptionApplicationTest`); browser-verified Donations 1→2 of 9, Adoption inbox 1→2 of 2 (decided rows excluded) |
@@ -67,10 +68,11 @@ Legend: ✅ done · ⏳ in progress · ⬜ pending.
 > Verification: backend suite **113 green** (+4 new `PublicHomeTest`), routes rebound to the new
 > controller (`php artisan route:list`).
 
-- **[MED] Oversized files** (maintainability / re-render cost): `AnimalsAdmin.jsx` (1219),
+- **[MED] ⏳ Oversized files** (maintainability / re-render cost): `AnimalsAdmin.jsx` (1219),
   `Dashboard.jsx` (819), `LandingPage.jsx` (623), `AdoptionRequestsAdmin.jsx` (576);
   backend `AnimalController` (484), `ReportController` (459). → Extract sub-components /
-  form/table/modal pieces and helper services. _(Detailed per module. **⬜ pending.**)_
+  form/table/modal pieces and helper services. _(Detailed per module. **✅ `AnimalsAdmin`→`IntakesAdmin`
+  extracted** (~1,240→~850 lines); `Dashboard`/`LandingPage`/`AdoptionRequestsAdmin` ⬜ pending.)_
 - **[MED] ✅ ~270 lines of raw analytics inlined in `routes/api_public.php`** (`home/stats`,
   `home/impact`, `home/transparency`, `home/featured-animals`) — **moved to `PublicHomeController`**.
   The route file now registers four controller actions; the closures (and the file's `DB`/`Storage`
@@ -384,9 +386,11 @@ medical cost/vet exposure; **live browser** screenshot of the public Adoption pa
   view toggle, semantic tables, table+cards modes); public layout polished (screenshot).
 
 ### C. Code
-- **[MED] `AnimalsAdmin.jsx` (1219 lines) mixes two domains.** ~370 lines are the **Intakes** UI
-  (`NewIntakeForm`, `AssessmentPanel`, `IntakeRow`, `IntakesSection`) that belong to the Intakes
-  module. → Extract `IntakesAdmin.jsx` (~30% smaller file). _(Coordinated with Module 7.)_
+- **[MED] ✅ RESOLVED — `AnimalsAdmin.jsx` no longer mixes two domains.** The ~390-line **Intakes** UI
+  (`NewIntakeForm`, `AssessmentPanel`, `IntakeRow`, the queue section) was extracted to
+  `IntakesAdmin.jsx` (default-exported, rendered by `AnimalsAdmin`); the host file dropped from
+  ~1,240 to ~850 lines. Browser-verified: queue + assessment panel + animals listing all work.
+  _(Coordinated with Module 7.)_
 - **[MED] `show()` and `toAdminDetail()` duplicate the response-shaping** (medical/vaccination/
   photo/qr blocks). → One shared serializer / API Resource.
 - **[MED] Behavioral-trait vocabulary is hardcoded in 3 places** — `AnimalsAdmin.BEHAVIORAL_ISSUES`,
@@ -797,8 +801,8 @@ never called (orphaned); reviewed the staff-promotion path end-to-end (controlle
 - **[LOW]** Apply form lacks `autocomplete`/`htmlFor`.
 
 ### C. Code
-- **[MED] The Intakes UI lives inside `AnimalsAdmin.jsx`** (~370 lines) but belongs here. →
-  Extract `IntakesAdmin.jsx` (also §3 C-1).
+- **[MED] ✅ RESOLVED — the Intakes UI was extracted from `AnimalsAdmin.jsx`** into
+  `IntakesAdmin.jsx` (~390 lines moved; also §3 C-1).
 - **[MED] Role-onboarding logic is duplicated** between `VolunteerController::adminStore` and
   `VolunteerApplicationController::adminUpdate` (forceFill role + `Volunteer` create). → Share.
 - **[LOW]** More per-controller serializers (`toItem`/`toAdminItem`/`toListItem`/`toDetail`)
