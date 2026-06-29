@@ -13,6 +13,7 @@ import {
 import { adminListUsers } from '../../lib/usersApi';
 import StatusBadge from '../../components/StatusBadge';
 import ConfirmButton from '../../components/ConfirmButton';
+import Pagination from '../../components/Pagination';
 
 const NEXT_TASK_STATUS = { assigned: 'ongoing', ongoing: 'completed' };
 
@@ -317,14 +318,23 @@ function VolunteerRequests() {
   const [error, setError] = useState('');
   const [status, setStatusFilter] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState({ current_page: 1, last_page: 1 });
+
+  // Changing the status filter starts a fresh result set, so jump back to page 1.
+  const changeStatus = (value) => {
+    setPage(1);
+    setStatusFilter(value);
+  };
 
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    adminListVolunteerApplications({ status })
+    adminListVolunteerApplications({ status, page })
       .then((data) => {
         if (!mounted) return;
         setApplications(data?.data || []);
+        setMeta({ current_page: data?.current_page || 1, last_page: data?.last_page || 1 });
         setError('');
       })
       .catch((err) => {
@@ -335,15 +345,16 @@ function VolunteerRequests() {
         if (mounted) setLoading(false);
       });
     return () => { mounted = false; };
-  }, [status, refreshKey]);
+  }, [status, refreshKey, page]);
 
+  // Keep the current page on refresh (approve/reject); only the status filter resets it.
   const refresh = () => setRefreshKey((k) => k + 1);
 
   return (
     <>
       {error && <div className="ui-error">{error}</div>}
       <div className="dashFilterBar">
-        <select className="ui-input" style={{ maxWidth: 180 }} aria-label="Filter volunteer requests by status" value={status} onChange={(e) => setStatusFilter(e.target.value)}>
+        <select className="ui-input" style={{ maxWidth: 180 }} aria-label="Filter volunteer requests by status" value={status} onChange={(e) => changeStatus(e.target.value)}>
           <option value="">All statuses</option>
           {['pending', 'approved', 'rejected'].map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
@@ -373,6 +384,8 @@ function VolunteerRequests() {
           </table>
         </div>
       )}
+
+      {!loading && applications.length > 0 && <Pagination meta={meta} onPage={setPage} />}
     </>
   );
 }
@@ -383,14 +396,17 @@ function PersonnelRoster({ type, onChanged }) {
   const [error, setError] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState({ current_page: 1, last_page: 1 });
 
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    adminListVolunteers({ type })
+    adminListVolunteers({ type, page })
       .then((data) => {
         if (!mounted) return;
         setPersonnel(data?.data || []);
+        setMeta({ current_page: data?.current_page || 1, last_page: data?.last_page || 1 });
         setError('');
       })
       .catch((err) => {
@@ -401,8 +417,9 @@ function PersonnelRoster({ type, onChanged }) {
         if (mounted) setLoading(false);
       });
     return () => { mounted = false; };
-  }, [type, refreshKey]);
+  }, [type, refreshKey, page]);
 
+  // Keep the current page on refresh so an open Tasks panel isn't collapsed.
   const refresh = () => {
     setShowAdd(false);
     setRefreshKey((k) => k + 1);
@@ -445,6 +462,8 @@ function PersonnelRoster({ type, onChanged }) {
           </table>
         </div>
       )}
+
+      {!loading && personnel.length > 0 && <Pagination meta={meta} onPage={setPage} />}
     </>
   );
 }

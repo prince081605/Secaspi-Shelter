@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Animal;
 use App\Models\AdoptionApplication;
+use App\Models\Animal;
 use App\Notifications\AdoptionStatusChanged;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -45,7 +45,7 @@ class AdoptionApplicationController extends Controller
             ], 409);
         }
 
-        $referenceNo = 'ADP-' . strtoupper(Str::random(8));
+        $referenceNo = 'ADP-'.strtoupper(Str::random(8));
 
         try {
             $application = AdoptionApplication::create([
@@ -104,6 +104,11 @@ class AdoptionApplicationController extends Controller
 
         if ($status = $request->query('status')) {
             $query->where('status', $status);
+        } elseif ($request->boolean('exclude_decided')) {
+            // The admin "Application" inbox excludes approved/completed requests — those are
+            // tracked in their own "Ongoing" and "Completed" tabs — so the inbox paginates
+            // cleanly server-side instead of relying on a client-side filter.
+            $query->whereNotIn('status', ['approved', 'completed']);
         }
 
         if ($request->boolean('unread')) {

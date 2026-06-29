@@ -25,7 +25,7 @@ Legend: ✅ done · ⏳ in progress · ⬜ pending.
 | §0.2 structural (frontend) | split oversized components (`AnimalsAdmin`, `Dashboard`, `LandingPage`, `AdoptionRequestsAdmin`); shared admin `markRead`/`adminIndex` trait | ⬜ pending | per module (2, 3, 4, 11) |
 | **HIGH security (auth)** | `throttle` on login/register/forgot/reset (§1); revoke tokens on password reset + revoke other sessions on change-password (§1) | ✅ done | suite **116 green** (+3 new `AuthTest` cases) |
 | **HIGH security (public/AI)** | Rate-limit public rescue write (§6) + public AI chat (§10) | ⬜ pending | Appendix A3 #1 |
-| **HIGH functional** | Admin-table pagination via shared `components/Pagination.jsx` — **✅ §3 Animals, §5 Donations, §6 Rescue, §8 Visitations** (browser-verified Donations 1→2 of 9, Animals 1→2 of 3); ⬜ §4 Adoption/Foster + §7 Volunteers/Personnel/Intakes (multi-list, pending) | ⏳ in progress | Appendix A3 #3 |
+| **HIGH functional** | Admin-table pagination via shared `components/Pagination.jsx` across **all** admin tables — §3 Animals + Intakes, §4 Adoption (inbox/ongoing/completed) + Foster, §5 Donations, §6 Rescue, §7 Volunteers + Personnel, §8 Visitations. Adoption inbox excludes decided rows server-side (`exclude_decided`) so it paginates cleanly | ✅ done | suite **119 green** (+3 `AdoptionApplicationTest`); browser-verified Donations 1→2 of 9, Adoption inbox 1→2 of 2 (decided rows excluded) |
 | MED security | Private-disk uploads (§5/6/7); CSV-injection (§11); staff-grant gate (§7); public field exposure (§2/3); AI cost cap (§10) | ⬜ pending | Appendix A3 #4–8 |
 | MED functional/perf | Orphaned mark-reads (§4/7/8); foster status sync (§4); donation dates (§5); queue notifications + N+1 (§9); aggregate poll/stat endpoints (§3/11); code-split (§2/11) | ⬜ pending | Appendix A3 #9–11 |
 | LOW | Remaining dead code (axios, email-verif stub, `staff()` report), debounce, autocomplete, magic numbers, `<Link>` nav | ⬜ pending | Appendix A2/A3 |
@@ -484,8 +484,11 @@ the missing animal-status guard and the foster→animal-status gap in code.
   runs the 30-day guard — never `$animal->status`. A direct link lets a user apply to adopt/foster
   an already-`adopted` or `archived` animal. → Reject when status isn't applicable.
   _(`AdoptionApplicationController.php:16`, `FosterApplicationController.php:16`.)_
-- **[MED] No pagination on any requests table** (adoption application/ongoing/completed + foster)
-  — all read `data?.data`, capping at 20 (same pattern as Module 3).
+- **[MED] ✅ RESOLVED — pagination added to every requests table** (adoption inbox/ongoing/completed
+  + foster), via the shared `Pagination` component. The adoption "Application" inbox now excludes
+  approved/completed **server-side** (new `exclude_decided` flag on `adminIndex`, replacing the old
+  client-side `visibleApplications` filter) so it paginates correctly. Browser-verified: inbox
+  page 1→2 of 2 with only pending/declined shown.
 - **[LOW] Approving one application doesn't auto-decline the animal's other pending applications**
   (nor notify those applicants); stale `pending` rows linger after the animal is reserved.
 
@@ -771,8 +774,8 @@ never called (orphaned); reviewed the staff-promotion path end-to-end (controlle
   `VolunteersAdmin` doesn't import it or render any unread highlight — so the backend's
   `read_at` / `unread` filter / mark-read endpoint are **entirely unwired**. → Wire mark-read +
   unread highlighting, or remove the unused backend capability.
-- **[MED] No pagination** in `PersonnelRoster`, `VolunteerRequests`, or the Intakes table — all
-  `data?.data`, `paginate(20)`. Same systemic gap as Modules 3–6.
+- **[MED] ✅ RESOLVED — pagination added** to `PersonnelRoster`, `VolunteerRequests`, and the
+  Intakes table (`IntakesSection`), via the shared `Pagination` component.
 - **[LOW] `AddPersonForm` user search only covers page 1** (`adminListUsers`→`data?.data`); picking
   a user beyond the first page requires typing a query.
 - **[LOW] Intake→Animal conversion drops `estimated_age`** (string "~2 years" can't map to the
@@ -1287,7 +1290,7 @@ panels + Recharts (code-split) [MED-perf], (3) one aggregated pending-counts end
 | Theme | Modules | Severity | Fix |
 |---|---|---|---|
 | **No rate limiting** (auth, public rescue, public AI chat, messaging) | 1, 6, 9, 10 | HIGH | Global `throttle` + tight per-route caps |
-| **Admin tables have no pagination** (read only page 1, cap 12–20) — ⏳ §§3,5,6,8 done (shared `Pagination`); §§4,7 pending | 3, 4, 5, 6, 7, 8 | HIGH/MED | Reuse the public `Adoption.jsx` pagination pattern |
+| **Admin tables have no pagination** (read only page 1, cap 12–20) — ✅ RESOLVED across §§3–8 via shared `components/Pagination.jsx` | 3, 4, 5, 6, 7, 8 | HIGH/MED | Reuse the public `Adoption.jsx` pagination pattern |
 | **Orphaned "mark-read on review"** (route+controller+helper built, never called) | 4, 7, 8 (wired only in 6) | MED | Wire the 3 helpers, or remove the unused backend capability |
 | **Sensitive uploads on the public disk** (served unauthenticated) | 5, 6, 7 | MED | Private disk + signed URLs |
 | **No frontend code-splitting** (Leaflet/Recharts/all admin panels eager) | 2, 11 | MED | `React.lazy` per route/panel |
@@ -1311,8 +1314,8 @@ panels + Recharts (code-split) [MED-perf], (3) one aggregated pending-counts end
 1. ⏳ Rate-limit auth + all public write/AI endpoints (§1, 6, 10) — brute force / spam / cost.
    **✅ auth done** (`throttle` on login/register/forgot/reset); ⬜ public rescue write (§6) + AI chat (§10) pending.
 2. ✅ **DONE** — Revoke Sanctum tokens on password reset (and other sessions on change-password) (§1).
-3. ⏳ Add pagination to every admin table — the Animals list silently hides 38 of 58 records (§3; also 4–8).
-   **✅ §§3,5,6,8 done** (shared `components/Pagination.jsx`, browser-verified); ⬜ §4 Adoption/Foster + §7 Volunteers/Personnel/Intakes pending.
+3. ✅ **DONE** — Added pagination to every admin table (§§3–8) via shared `components/Pagination.jsx`;
+   the Animals list no longer hides 38 of 58 records. Adoption inbox excludes decided rows server-side.
 
 **MEDIUM (security)**
 4. Move donation proofs / rescue photos / intake docs to a **private** disk + signed URLs (§5/6/7).

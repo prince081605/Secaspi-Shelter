@@ -877,14 +877,21 @@ function IntakesSection({ onConverted }) {
   const [status, setStatusFilter] = useState('');
   const [showNew, setShowNew] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState({ current_page: 1, last_page: 1 });
+
+  // Either filter starting a fresh result set jumps back to page 1.
+  const changeType = (value) => { setPage(1); setIntakeType(value); };
+  const changeStatus = (value) => { setPage(1); setStatusFilter(value); };
 
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    adminListIntakes({ intake_type: intakeType, status })
+    adminListIntakes({ intake_type: intakeType, status, page })
       .then((data) => {
         if (!mounted) return;
         setIntakes(data?.data || []);
+        setMeta({ current_page: data?.current_page || 1, last_page: data?.last_page || 1 });
         setError('');
       })
       .catch((err) => {
@@ -895,8 +902,9 @@ function IntakesSection({ onConverted }) {
         if (mounted) setLoading(false);
       });
     return () => { mounted = false; };
-  }, [intakeType, status, refreshKey]);
+  }, [intakeType, status, refreshKey, page]);
 
+  // Keep the current page on refresh so an open assessment panel isn't collapsed.
   const refresh = () => {
     setShowNew(false);
     setRefreshKey((k) => k + 1);
@@ -909,11 +917,11 @@ function IntakesSection({ onConverted }) {
       {error && <div className="ui-error">{error}</div>}
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
-        <select className="ui-input" style={{ maxWidth: 160 }} aria-label="Filter intakes by type" value={intakeType} onChange={(e) => setIntakeType(e.target.value)}>
+        <select className="ui-input" style={{ maxWidth: 160 }} aria-label="Filter intakes by type" value={intakeType} onChange={(e) => changeType(e.target.value)}>
           <option value="">All types</option>
           {INTAKE_TYPES.map((t) => <option key={t} value={t}>{t.replace('_', ' ')}</option>)}
         </select>
-        <select className="ui-input" style={{ maxWidth: 160 }} aria-label="Filter intakes by status" value={status} onChange={(e) => setStatusFilter(e.target.value)}>
+        <select className="ui-input" style={{ maxWidth: 160 }} aria-label="Filter intakes by status" value={status} onChange={(e) => changeStatus(e.target.value)}>
           <option value="">Active (excl. converted)</option>
           {INTAKE_STATUSES.map((s) => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
         </select>
@@ -949,6 +957,8 @@ function IntakesSection({ onConverted }) {
           </table>
         </div>
       )}
+
+      {!loading && intakes.length > 0 && <Pagination meta={meta} onPage={setPage} />}
     </>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { adminListAdoptionApplications, adminUpdateAdoptionApplication } from '../../lib/animalsApi';
 import { getPublicSettings, settingImageUrl } from '../../lib/settingsApi';
 import StatusBadge from '../../components/StatusBadge';
+import Pagination from '../../components/Pagination';
 import FosterRequestsAdmin from './FosterRequestsAdmin';
 
 const STATUSES = ['pending', 'approved', 'declined', 'completed'];
@@ -349,14 +350,26 @@ export default function AdoptionRequestsAdmin({ onUnreadChanged }) {
   const [error, setError] = useState('');
   const [status, setStatusFilter] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [appPage, setAppPage] = useState(1);
+  const [appMeta, setAppMeta] = useState({ current_page: 1, last_page: 1 });
 
   const [approvedApplications, setApprovedApplications] = useState([]);
   const [approvedLoading, setApprovedLoading] = useState(true);
   const [approvedError, setApprovedError] = useState('');
+  const [approvedPage, setApprovedPage] = useState(1);
+  const [approvedMeta, setApprovedMeta] = useState({ current_page: 1, last_page: 1 });
 
   const [completedApplications, setCompletedApplications] = useState([]);
   const [completedLoading, setCompletedLoading] = useState(true);
   const [completedError, setCompletedError] = useState('');
+  const [completedPage, setCompletedPage] = useState(1);
+  const [completedMeta, setCompletedMeta] = useState({ current_page: 1, last_page: 1 });
+
+  // Changing the status filter starts a fresh inbox result set, so jump back to page 1.
+  const changeStatus = (value) => {
+    setAppPage(1);
+    setStatusFilter(value);
+  };
 
   const [siteSettings, setSiteSettings] = useState({});
   const [subTab, setSubTab] = useState('ongoing');
@@ -371,10 +384,13 @@ export default function AdoptionRequestsAdmin({ onUnreadChanged }) {
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    adminListAdoptionApplications({ status })
+    // The inbox excludes approved/completed (those have their own tabs) — done server-side via
+    // exclude_decided when no explicit status is chosen, so pagination stays correct.
+    adminListAdoptionApplications({ status, exclude_decided: status === '' ? 1 : undefined, page: appPage })
       .then((data) => {
         if (!mounted) return;
         setApplications(data?.data || []);
+        setAppMeta({ current_page: data?.current_page || 1, last_page: data?.last_page || 1 });
         setError('');
       })
       .catch((err) => {
@@ -385,15 +401,16 @@ export default function AdoptionRequestsAdmin({ onUnreadChanged }) {
         if (mounted) setLoading(false);
       });
     return () => { mounted = false; };
-  }, [status, refreshKey]);
+  }, [status, refreshKey, appPage]);
 
   useEffect(() => {
     let mounted = true;
     setApprovedLoading(true);
-    adminListAdoptionApplications({ status: 'approved' })
+    adminListAdoptionApplications({ status: 'approved', page: approvedPage })
       .then((data) => {
         if (!mounted) return;
         setApprovedApplications(data?.data || []);
+        setApprovedMeta({ current_page: data?.current_page || 1, last_page: data?.last_page || 1 });
         setApprovedError('');
       })
       .catch((err) => {
@@ -404,15 +421,16 @@ export default function AdoptionRequestsAdmin({ onUnreadChanged }) {
         if (mounted) setApprovedLoading(false);
       });
     return () => { mounted = false; };
-  }, [refreshKey]);
+  }, [refreshKey, approvedPage]);
 
   useEffect(() => {
     let mounted = true;
     setCompletedLoading(true);
-    adminListAdoptionApplications({ status: 'completed' })
+    adminListAdoptionApplications({ status: 'completed', page: completedPage })
       .then((data) => {
         if (!mounted) return;
         setCompletedApplications(data?.data || []);
+        setCompletedMeta({ current_page: data?.current_page || 1, last_page: data?.last_page || 1 });
         setCompletedError('');
       })
       .catch((err) => {
@@ -423,15 +441,11 @@ export default function AdoptionRequestsAdmin({ onUnreadChanged }) {
         if (mounted) setCompletedLoading(false);
       });
     return () => { mounted = false; };
-  }, [refreshKey]);
+  }, [refreshKey, completedPage]);
 
+  // Keep the current page on refresh so an open row panel isn't collapsed; only the status
+  // filter resets the inbox page (see changeStatus).
   const refresh = () => setRefreshKey((k) => k + 1);
-  // Approved and completed requests are tracked exclusively in the "Ongoing" and "Completed"
-  // tables above, so once a request reaches either state it drops out of the main list
-  // (unless explicitly filtered for).
-  const visibleApplications = status === ''
-    ? applications.filter((a) => a.status !== 'approved' && a.status !== 'completed')
-    : applications;
 
   return (
     <>
@@ -495,6 +509,7 @@ export default function AdoptionRequestsAdmin({ onUnreadChanged }) {
               </table>
             </div>
           )}
+          {!approvedLoading && approvedApplications.length > 0 && <Pagination meta={approvedMeta} onPage={setApprovedPage} />}
         </>
       )}
 
@@ -526,6 +541,7 @@ export default function AdoptionRequestsAdmin({ onUnreadChanged }) {
               </table>
             </div>
           )}
+          {!completedLoading && completedApplications.length > 0 && <Pagination meta={completedMeta} onPage={setCompletedPage} />}
         </>
       )}
 
@@ -535,7 +551,7 @@ export default function AdoptionRequestsAdmin({ onUnreadChanged }) {
           {error && <div className="ui-error">{error}</div>}
 
           <div className="dashFilterBar">
-            <select className="ui-input" style={{ maxWidth: 180 }} aria-label="Filter adoption requests by status" value={status} onChange={(e) => setStatusFilter(e.target.value)}>
+            <select className="ui-input" style={{ maxWidth: 180 }} aria-label="Filter adoption requests by status" value={status} onChange={(e) => changeStatus(e.target.value)}>
               <option value="">All statuses</option>
               {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
@@ -543,7 +559,7 @@ export default function AdoptionRequestsAdmin({ onUnreadChanged }) {
 
           {loading ? (
             <div className="ui-empty">Loading…</div>
-          ) : visibleApplications.length === 0 ? (
+          ) : applications.length === 0 ? (
             <div className="ui-empty">No adoption applications match this filter.</div>
           ) : (
             <div className="dashTableWrap">
@@ -560,13 +576,14 @@ export default function AdoptionRequestsAdmin({ onUnreadChanged }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {visibleApplications.map((a) => (
+                  {applications.map((a) => (
                     <ApplicationRow key={a.id} application={a} onChanged={refresh} onUnreadChanged={onUnreadChanged} />
                   ))}
                 </tbody>
               </table>
             </div>
           )}
+          {!loading && applications.length > 0 && <Pagination meta={appMeta} onPage={setAppPage} />}
         </>
       )}
       </>

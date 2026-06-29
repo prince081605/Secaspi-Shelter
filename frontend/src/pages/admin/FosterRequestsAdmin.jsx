@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { adminListFosterApplications, adminUpdateFosterApplication } from '../../lib/animalsApi';
 import StatusBadge from '../../components/StatusBadge';
+import Pagination from '../../components/Pagination';
 
 const STATUSES = ['pending', 'approved', 'active', 'completed', 'declined'];
 
@@ -134,14 +135,23 @@ export default function FosterRequestsAdmin() {
   const [error, setError] = useState('');
   const [status, setStatusFilter] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState({ current_page: 1, last_page: 1 });
+
+  // Changing the status filter starts a fresh result set, so jump back to page 1.
+  const changeStatus = (value) => {
+    setPage(1);
+    setStatusFilter(value);
+  };
 
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    adminListFosterApplications({ status })
+    adminListFosterApplications({ status, page })
       .then((data) => {
         if (!mounted) return;
         setApplications(data?.data || []);
+        setMeta({ current_page: data?.current_page || 1, last_page: data?.last_page || 1 });
         setError('');
       })
       .catch((err) => {
@@ -152,8 +162,10 @@ export default function FosterRequestsAdmin() {
         if (mounted) setLoading(false);
       });
     return () => { mounted = false; };
-  }, [status, refreshKey]);
+  }, [status, refreshKey, page]);
 
+  // Keep the current page on refresh (status changes / monitoring saves); only the status
+  // filter resets the page.
   const refresh = () => setRefreshKey((k) => k + 1);
 
   return (
@@ -162,7 +174,7 @@ export default function FosterRequestsAdmin() {
       {error && <div className="ui-error">{error}</div>}
 
       <div className="dashFilterBar">
-        <select className="ui-input" style={{ maxWidth: 180 }} aria-label="Filter foster requests by status" value={status} onChange={(e) => setStatusFilter(e.target.value)}>
+        <select className="ui-input" style={{ maxWidth: 180 }} aria-label="Filter foster requests by status" value={status} onChange={(e) => changeStatus(e.target.value)}>
           <option value="">All statuses</option>
           {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
@@ -193,6 +205,8 @@ export default function FosterRequestsAdmin() {
           </table>
         </div>
       )}
+
+      {!loading && applications.length > 0 && <Pagination meta={meta} onPage={setPage} />}
     </>
   );
 }
