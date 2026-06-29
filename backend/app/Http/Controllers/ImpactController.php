@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Setting;
+use App\Support\PublicStats;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -38,17 +39,7 @@ class ImpactController extends Controller
 
     public function leaderboard()
     {
-        $topDonors = DB::table('donations')
-            ->join('users', 'users.id', '=', 'donations.user_id')
-            ->where('donations.status', 'verified')
-            ->where('donations.is_anonymous', false)
-            ->select('users.full_name', DB::raw('SUM(donations.amount) as total'))
-            ->groupBy('users.id', 'users.full_name')
-            ->orderByDesc('total')
-            ->limit(5)
-            ->get()
-            ->map(fn ($r) => ['name' => $this->maskName($r->full_name), 'total' => (float) $r->total])
-            ->values();
+        $topDonors = PublicStats::topDonors();
 
         $topVolunteers = DB::table('volunteers')
             ->join('users', 'users.id', '=', 'volunteers.user_id')
@@ -57,7 +48,7 @@ class ImpactController extends Controller
             ->orderByDesc('volunteers.hours_rendered')
             ->limit(5)
             ->get()
-            ->map(fn ($r) => ['name' => $this->maskName($r->full_name), 'hours' => (float) $r->hours])
+            ->map(fn ($r) => ['name' => PublicStats::maskName($r->full_name), 'hours' => (float) $r->hours])
             ->values();
 
         return response()->json(['top_donors' => $topDonors, 'top_volunteers' => $topVolunteers]);
@@ -76,20 +67,5 @@ class ImpactController extends Controller
         ];
 
         return array_map(fn ($b) => $b + ['earned' => (bool) $b['earned']], $defs);
-    }
-
-    /** "Juan D." — never the full legal name on public surfaces. */
-    private function maskName(?string $fullName): string
-    {
-        $parts = preg_split('/\s+/', trim((string) $fullName)) ?: [];
-        if (empty($parts[0])) {
-            return 'Anonymous';
-        }
-        $name = $parts[0];
-        if (count($parts) > 1) {
-            $name .= ' ' . mb_substr(end($parts), 0, 1) . '.';
-        }
-
-        return $name;
     }
 }

@@ -9,7 +9,29 @@ Severity legend: **[CRIT]** critical · **[HIGH]** high · **[MED]** medium · *
 **[NIT]** cosmetic/nice-to-have.
 
 Each issue is written as: **Problem → Why it matters → Proposed fix → File(s)**.
-Nothing here is changed yet; this is the agreed report. Fixes happen in a later, approved pass.
+The audit itself changed no application code; fixes are applied in separate, approved passes and
+tracked below.
+
+---
+
+## Fix progress tracker
+
+Legend: ✅ done · ⏳ in progress · ⬜ pending.
+
+| Pass | Scope | Status | Where |
+|---|---|---|---|
+| **Global cleanup** | §0.1 dead code: `App.jsx`, `dashboardMockData.js`, `dummy.php`, orphaned rescue-map endpoint + route + 2 tests; planning docs → `/docs` | ✅ done | branch `audit/report-and-global-cleanup` (commit `147f801`); suite 109 green, build clean |
+| §0.2 structural (backend) | `PublicHomeController` extraction (4 home/* closures), shared `PublicStats::maskName` (was 3×), shared `PublicStats::topDonors` (was 2×) | ✅ done | branch `audit/report-and-global-cleanup`; suite **113 green** (+4 new `PublicHomeTest`), routes rebound |
+| §0.2 structural (frontend) | split oversized components (`AnimalsAdmin`, `Dashboard`, `LandingPage`, `AdoptionRequestsAdmin`); shared admin `markRead`/`adminIndex` trait | ⬜ pending | per module (2, 3, 4, 11) |
+| **HIGH security** | Rate-limit auth/public/AI (§1/6/10); revoke tokens on password reset/change (§1) | ⬜ pending | Appendix A3 #1–2 |
+| **HIGH functional** | Admin-table pagination (§3 first, then 4–8) | ⬜ pending | Appendix A3 #3 |
+| MED security | Private-disk uploads (§5/6/7); CSV-injection (§11); staff-grant gate (§7); public field exposure (§2/3); AI cost cap (§10) | ⬜ pending | Appendix A3 #4–8 |
+| MED functional/perf | Orphaned mark-reads (§4/7/8); foster status sync (§4); donation dates (§5); queue notifications + N+1 (§9); aggregate poll/stat endpoints (§3/11); code-split (§2/11) | ⬜ pending | Appendix A3 #9–11 |
+| LOW | Remaining dead code (axios, email-verif stub, `staff()` report), debounce, autocomplete, magic numbers, `<Link>` nav | ⬜ pending | Appendix A2/A3 |
+
+> Module scorecards reflect the **as-audited** state; they're not re-scored until a module's fixes
+> land. As each pass completes, its row flips to ✅ and the affected module sections get a resolution
+> note (see §0.1 for the pattern).
 
 ---
 
@@ -32,19 +54,28 @@ Nothing here is changed yet; this is the agreed report. Fixes happen in a later,
 
 ### 0.2 Structural / duplication candidates (confirmed per module)
 
+> ⏳ **PARTIALLY RESOLVED — structural pass (backend), 2026-06-29.** The two backend duplication
+> items below are done; the frontend component splits + the `markRead`/`adminIndex` trait remain.
+> Verification: backend suite **113 green** (+4 new `PublicHomeTest`), routes rebound to the new
+> controller (`php artisan route:list`).
+
 - **[MED] Oversized files** (maintainability / re-render cost): `AnimalsAdmin.jsx` (1219),
   `Dashboard.jsx` (819), `LandingPage.jsx` (623), `AdoptionRequestsAdmin.jsx` (576);
   backend `AnimalController` (484), `ReportController` (459). → Extract sub-components /
-  form/table/modal pieces and helper services. _(Detailed per module.)_
-- **[MED] ~270 lines of raw analytics live inline in `routes/api_public.php`** (`home/stats`,
-  `home/impact`, `home/transparency`, `home/featured-animals`) as closures with raw `DB::table`
-  queries, instead of a controller. Overlaps with `ImpactController` / `DashboardController` /
-  `AnalyticsController`. → Move to a `PublicHomeController`; assess query reuse. _(Module 2.)_
-- **[MED] Duplicated "First L." donor-name masking** appears at least twice in
-  `api_public.php` (`home/impact` and `home/transparency`). → Extract one helper. _(Module 2/5.)_
+  form/table/modal pieces and helper services. _(Detailed per module. **⬜ pending.**)_
+- **[MED] ✅ ~270 lines of raw analytics inlined in `routes/api_public.php`** (`home/stats`,
+  `home/impact`, `home/transparency`, `home/featured-animals`) — **moved to `PublicHomeController`**.
+  The route file now registers four controller actions; the closures (and the file's `DB`/`Storage`
+  imports) are gone. Behaviour preserved verbatim (error contracts + the `80220` default are left
+  for the separate §2 security/magic-number passes). _(Module 2.)_
+- **[MED] ✅ Duplicated "First L." donor-name masking** (was 3×: `ImpactController::maskName` +
+  inline copies in `home/impact` and `home/transparency`) — **extracted to
+  `App\Support\PublicStats::maskName`**. The near-identical `top_donors` query (was 2×:
+  `ImpactController::leaderboard` + `home/impact`) is now the shared `PublicStats::topDonors`.
+  _(Module 2/5.)_
 - **[LOW] Repeated admin `markRead` / `adminIndex` patterns** across controllers
   (adoption, foster, rescue, visitation, volunteer-application). → Assess a shared trait/base.
-  _(Cross-cutting, Module 12.)_
+  _(Cross-cutting, Module 12. **⬜ pending.**)_
 
 > These structural items are starting hypotheses; each is confirmed, quantified, or dismissed in
 > its module section below.
@@ -227,14 +258,14 @@ endpoints are consumed by `ImpactPanel` (not dead).
   `ImpactPanel`, `AuthLayout`. Works, but inconsistent with the CSS-file approach used elsewhere.
 
 ### C. Code
-- **[MED] "First L." name masking is duplicated 3×:** the canonical `ImpactController::maskName`
-  plus inline copies in `api_public.php` `home/impact` and `home/transparency`. → One shared
-  helper. _(`ImpactController.php:82`, `api_public.php:101-112, 170-179`.)_
-- **[MED] `top_donors` computed twice** by near-identical queries — `ImpactController::leaderboard`
-  and `api_public.php` `home/impact`. → Consolidate.
-- **[MED] ~270 lines of analytics live as route closures** in `api_public.php` instead of a
-  controller (raw `DB::table`), inconsistent with the rest of the app. → Extract a
-  `PublicHomeController`. _(confirms §0.2.)_
+- **[MED] ✅ RESOLVED — "First L." name masking was duplicated 3×** (`ImpactController::maskName`
+  plus inline copies in `home/impact` and `home/transparency`). Now one shared
+  `App\Support\PublicStats::maskName`. _(was `ImpactController.php:82`, `api_public.php:101-112, 170-179`.)_
+- **[MED] ✅ RESOLVED — `top_donors` computed twice** by near-identical queries
+  (`ImpactController::leaderboard` and `home/impact`). Now the shared `PublicStats::topDonors`.
+- **[MED] ✅ RESOLVED — ~270 lines of analytics lived as route closures** in `api_public.php`
+  instead of a controller. Extracted to `PublicHomeController` (`stats`/`impact`/`transparency`/
+  `featuredAnimals`); the route file now binds four controller actions. _(was §0.2.)_
 - **[LOW] `Home.jsx` is a pointless pass-through** (`return <LandingPage/>` + ~36 trailing blank
   lines). → Route `/` directly to `LandingPage`, delete `Home.jsx`.
 - **[LOW] `SettingController::publicIndex` and `adminIndex` have identical bodies** (`Setting::getAll()`).
