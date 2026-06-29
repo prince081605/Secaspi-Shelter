@@ -25,7 +25,7 @@ Legend: ✅ done · ⏳ in progress · ⬜ pending.
 | §0.2 structural (frontend) | split oversized components (`AnimalsAdmin`, `Dashboard`, `LandingPage`, `AdoptionRequestsAdmin`); shared admin `markRead`/`adminIndex` trait | ⬜ pending | per module (2, 3, 4, 11) |
 | **HIGH security (auth)** | `throttle` on login/register/forgot/reset (§1); revoke tokens on password reset + revoke other sessions on change-password (§1) | ✅ done | suite **116 green** (+3 new `AuthTest` cases) |
 | **HIGH security (public/AI)** | Rate-limit public rescue write (§6) + public AI chat (§10) | ⬜ pending | Appendix A3 #1 |
-| **HIGH functional** | Admin-table pagination (§3 first, then 4–8) | ⬜ pending | Appendix A3 #3 |
+| **HIGH functional** | Admin-table pagination — **§3 `AnimalsAdmin` ✅ done** (Prev/Next + page reset, reuses `Adoption.jsx` pattern; browser-verified page 1→2 of 3, all 58 rows reachable); §§4–8 tables ⬜ pending | ⏳ in progress | Appendix A3 #3 |
 | MED security | Private-disk uploads (§5/6/7); CSV-injection (§11); staff-grant gate (§7); public field exposure (§2/3); AI cost cap (§10) | ⬜ pending | Appendix A3 #4–8 |
 | MED functional/perf | Orphaned mark-reads (§4/7/8); foster status sync (§4); donation dates (§5); queue notifications + N+1 (§9); aggregate poll/stat endpoints (§3/11); code-split (§2/11) | ⬜ pending | Appendix A3 #9–11 |
 | LOW | Remaining dead code (axios, email-verif stub, `staff()` report), debounce, autocomplete, magic numbers, `<Link>` nav | ⬜ pending | Appendix A2/A3 |
@@ -355,12 +355,13 @@ medical cost/vet exposure; **live browser** screenshot of the public Adoption pa
 - Mass-assignment uses `validated()` only; uploads validated `image|max:5120`.
 
 ### A. Functional
-- **[HIGH] Admin animal list has no pagination and silently caps at 20.** `adminIndex`
-  paginates 20/page, but `AnimalsAdmin` reads only `data.data`, never sends `page`, and renders
-  no Prev/Next. With 58 animals, staff can only ever see/edit/archive/delete the newest 20 — the
-  rest are **unreachable from the admin UI**. (Ironically the public page has full pagination.)
-  → Add pagination (reuse the `Adoption.jsx` pattern). _(`AnimalsAdmin.jsx:969-986`,
-  `AnimalController.php:63`.)_
+- **[HIGH] ✅ RESOLVED — Admin animal list now paginates.** `AnimalsAdmin` was reading only
+  `data.data`, never sending `page`, and rendering no controls — so with 58 animals staff could
+  only ever reach the newest 20. Added `page`/`meta` state, sends `page`, renders Prev/Next +
+  "Page X of Y", and resets to page 1 on filter change / after mutations (reuses the
+  `Adoption.jsx` pattern). Browser-verified: page 1→2 of 3, Prev disabled on page 1, all 58 rows
+  reachable (20+20+18). _(`AnimalsAdmin.jsx`, `AnimalsAdmin.css`; backend `adminIndex` already
+  paginated.)_
 - **[MED] Same cap likely hits the Intakes table** in this file (`adminListIntakes` → `data?.data`,
   no page controls) — confirmed in Module 7.
 
@@ -1285,7 +1286,7 @@ panels + Recharts (code-split) [MED-perf], (3) one aggregated pending-counts end
 | Theme | Modules | Severity | Fix |
 |---|---|---|---|
 | **No rate limiting** (auth, public rescue, public AI chat, messaging) | 1, 6, 9, 10 | HIGH | Global `throttle` + tight per-route caps |
-| **Admin tables have no pagination** (read only page 1, cap 12–20) | 3, 4, 5, 6, 7, 8 | HIGH/MED | Reuse the public `Adoption.jsx` pagination pattern |
+| **Admin tables have no pagination** (read only page 1, cap 12–20) — ⏳ §3 `AnimalsAdmin` done | 3, 4, 5, 6, 7, 8 | HIGH/MED | Reuse the public `Adoption.jsx` pagination pattern |
 | **Orphaned "mark-read on review"** (route+controller+helper built, never called) | 4, 7, 8 (wired only in 6) | MED | Wire the 3 helpers, or remove the unused backend capability |
 | **Sensitive uploads on the public disk** (served unauthenticated) | 5, 6, 7 | MED | Private disk + signed URLs |
 | **No frontend code-splitting** (Leaflet/Recharts/all admin panels eager) | 2, 11 | MED | `React.lazy` per route/panel |
@@ -1309,7 +1310,8 @@ panels + Recharts (code-split) [MED-perf], (3) one aggregated pending-counts end
 1. ⏳ Rate-limit auth + all public write/AI endpoints (§1, 6, 10) — brute force / spam / cost.
    **✅ auth done** (`throttle` on login/register/forgot/reset); ⬜ public rescue write (§6) + AI chat (§10) pending.
 2. ✅ **DONE** — Revoke Sanctum tokens on password reset (and other sessions on change-password) (§1).
-3. Add pagination to every admin table — the Animals list silently hides 38 of 58 records (§3; also 4–8).
+3. ⏳ Add pagination to every admin table — the Animals list silently hides 38 of 58 records (§3; also 4–8).
+   **✅ §3 `AnimalsAdmin` done** (browser-verified); ⬜ §§4–8 admin tables pending.
 
 **MEDIUM (security)**
 4. Move donation proofs / rescue photos / intake docs to a **private** disk + signed URLs (§5/6/7).

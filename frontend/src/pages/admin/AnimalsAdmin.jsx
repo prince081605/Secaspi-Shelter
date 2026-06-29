@@ -965,14 +965,23 @@ export default function AnimalsAdmin() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [viewMode, setViewMode] = useState('table');
   const [stats, setStats] = useState({ total: 0, available: 0, adopted: 0, archived: 0 });
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState({ current_page: 1, last_page: 1 });
+
+  // Update a filter field and jump back to page 1 (a new filter has its own page set).
+  const updateFilter = (key) => (value) => {
+    setPage(1);
+    setFilters((f) => ({ ...f, [key]: value }));
+  };
 
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    adminListAnimals(filters)
+    adminListAnimals({ ...filters, page })
       .then((data) => {
         if (!mounted) return;
         setAnimals(data?.data || []);
+        setMeta({ current_page: data?.current_page || 1, last_page: data?.last_page || 1 });
         setError('');
       })
       .catch((err) => {
@@ -983,7 +992,7 @@ export default function AnimalsAdmin() {
         if (mounted) setLoading(false);
       });
     return () => { mounted = false; };
-  }, [filters, refreshKey]);
+  }, [filters, refreshKey, page]);
 
   // Stat strip reflects true totals across all animals (not just the current filtered
   // page), so it's fetched separately from the main listing using paginate()'s `total`.
@@ -1011,6 +1020,7 @@ export default function AnimalsAdmin() {
   const refresh = () => {
     setShowCreate(false);
     setEditingAnimal(null);
+    setPage(1);
     setRefreshKey((k) => k + 1);
   };
 
@@ -1107,7 +1117,7 @@ export default function AnimalsAdmin() {
               placeholder="Search name/species/breed"
               aria-label="Search animals by name, species, or breed"
               value={filters.q}
-              onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))}
+              onChange={(e) => updateFilter('q')(e.target.value)}
             />
           </div>
           <select
@@ -1115,7 +1125,7 @@ export default function AnimalsAdmin() {
             style={{ maxWidth: 160 }}
             aria-label="Filter animals by status"
             value={filters.status}
-            onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
+            onChange={(e) => updateFilter('status')(e.target.value)}
           >
             <option value="">All statuses</option>
             {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -1125,7 +1135,7 @@ export default function AnimalsAdmin() {
             style={{ maxWidth: 140 }}
             aria-label="Filter animals by size"
             value={filters.size}
-            onChange={(e) => setFilters((f) => ({ ...f, size: e.target.value }))}
+            onChange={(e) => updateFilter('size')(e.target.value)}
           >
             <option value="">All sizes</option>
             {SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -1212,6 +1222,26 @@ export default function AnimalsAdmin() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {!loading && animals.length > 0 && meta.last_page > 1 && (
+        <div className="aa-pagination">
+          <button
+            className="dashBtn"
+            disabled={meta.current_page <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            ← Prev
+          </button>
+          <span className="aa-page-label">Page {meta.current_page} of {meta.last_page}</span>
+          <button
+            className="dashBtn"
+            disabled={meta.current_page >= meta.last_page}
+            onClick={() => setPage((p) => Math.min(meta.last_page, p + 1))}
+          >
+            Next →
+          </button>
         </div>
       )}
     </div>

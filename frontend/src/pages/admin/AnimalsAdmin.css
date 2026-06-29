@@ -62,6 +62,11 @@
 }
 .aa-view-toggle button.active { background: var(--aa-terracotta); color: #fff; }
 
+/* ---------- Pagination ---------- */
+.aa-pagination { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 20px; }
+.aa-page-label { font-size: 13px; color: var(--aa-ink-soft); font-family: 'Work Sans', sans-serif; }
+.aa-pagination .dashBtn:disabled { opacity: .5; cursor: not-allowed; }
+
 /* ---------- Table view ---------- */
 .aa-module .dashTableWrap { border-radius: var(--aa-radius); }
 .aa-module .dashTable { border-color: var(--aa-line); background: var(--aa-paper); border-radius: var(--aa-radius); }
