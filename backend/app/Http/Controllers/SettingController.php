@@ -8,9 +8,24 @@ use Illuminate\Support\Facades\Validator;
 
 class SettingController extends Controller
 {
+    /**
+     * Keys safe to expose on the unauthenticated public endpoint — branding, contact, hero,
+     * socials, public images, the donation goal, and whether the AI assistant is enabled.
+     * Internal AI config (`ai_persona`, `ai_daily_message_cap`) and `cost_per_meal` are withheld.
+     */
+    private const PUBLIC_KEYS = [
+        'shelter_name', 'contact_email', 'contact_phone', 'address',
+        'social_facebook', 'social_instagram', 'social_twitter',
+        'hero_title', 'hero_subtitle', 'about_us_content', 'adoption_policies',
+        'banner_image_path', 'logo_path', 'fund_usage_image_path',
+        'donation_monthly_goal', 'ai_assistant_enabled',
+    ];
+
     public function publicIndex()
     {
-        return response()->json(Setting::getAll());
+        $public = array_intersect_key(Setting::getAll(), array_flip(self::PUBLIC_KEYS));
+
+        return response()->json($public);
     }
 
     public function adminIndex()

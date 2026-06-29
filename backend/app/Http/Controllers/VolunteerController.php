@@ -19,7 +19,7 @@ class VolunteerController extends Controller
     {
         $volunteer = Volunteer::with('tasks')->where('user_id', $request->user()->id)->first();
 
-        if (!$volunteer) {
+        if (! $volunteer) {
             return response()->json(['volunteer' => null]);
         }
 
@@ -34,7 +34,7 @@ class VolunteerController extends Controller
     {
         $volunteer = Volunteer::where('user_id', $request->user()->id)->first();
 
-        if (!$volunteer) {
+        if (! $volunteer) {
             return response()->json(['message' => 'Only approved volunteers can request tasks.'], 403);
         }
 
@@ -86,6 +86,13 @@ class VolunteerController extends Controller
 
         $data = $validator->validated();
         $data['type'] = $data['type'] ?? 'volunteer';
+
+        // Granting staff-level access promotes the account's role to `staff`, so it's an
+        // admin-only action — a staff member must not be able to mint more staff (privilege
+        // -escalation boundary). Adding volunteers stays open to staff (route role:staff).
+        if ($data['type'] === 'staff' && ! $request->user()->hasRoleAtLeast('admin')) {
+            return response()->json(['message' => 'Only an admin can add staff members.'], 403);
+        }
 
         $volunteer = Volunteer::create($data);
 

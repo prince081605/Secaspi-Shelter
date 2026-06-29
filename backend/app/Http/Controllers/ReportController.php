@@ -67,16 +67,33 @@ class ReportController extends Controller
     {
         $data = $this->resolveData($request);
 
-        $filename = $request->query('type') . '-report-' . now()->format('Y-m-d') . '.csv';
+        $filename = $request->query('type').'-report-'.now()->format('Y-m-d').'.csv';
 
         return response()->streamDownload(function () use ($data) {
             $out = fopen('php://output', 'w');
             fputcsv($out, array_column($data['columns'], 'label'));
             foreach ($data['rows'] as $row) {
-                fputcsv($out, array_map(fn ($c) => $row[$c['key']] ?? '', $data['columns']));
+                fputcsv($out, array_map(fn ($c) => $this->csvSafe($row[$c['key']] ?? ''), $data['columns']));
             }
             fclose($out);
         }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    /**
+     * Neutralize CSV/spreadsheet formula injection. A cell whose value begins with =, +, -, @,
+     * tab, or CR is executed as a formula by Excel/Sheets (e.g. =HYPERLINK(...), =cmd|...). Several
+     * report fields are anonymous public input (rescue reporter_name/location, donor/applicant
+     * names), so prefix such values with a single quote to force literal display.
+     */
+    private function csvSafe($value): string
+    {
+        $value = (string) $value;
+
+        if ($value !== '' && in_array($value[0], ['=', '+', '-', '@', "\t", "\r"], true)) {
+            return "'".$value;
+        }
+
+        return $value;
     }
 
     public function exportPdf(Request $request)
@@ -92,7 +109,7 @@ class ReportController extends Controller
             'rows' => $data['rows'],
         ]);
 
-        $filename = $type . '-report-' . now()->format('Y-m-d') . '.pdf';
+        $filename = $type.'-report-'.now()->format('Y-m-d').'.pdf';
 
         return $pdf->download($filename);
     }
@@ -100,7 +117,7 @@ class ReportController extends Controller
     private function resolveData(Request $request): array
     {
         $validator = Validator::make($request->all(), [
-            'type' => ['required', 'in:' . implode(',', self::TYPES)],
+            'type' => ['required', 'in:'.implode(',', self::TYPES)],
         ]);
 
         if ($validator->fails()) {
@@ -299,11 +316,11 @@ class ReportController extends Controller
             ['label' => 'Pending', 'value' => (int) ($statusTotals['pending']->count ?? 0)],
             ['label' => 'Verified', 'value' => (int) ($statusTotals['verified']->count ?? 0)],
             ['label' => 'Rejected', 'value' => (int) ($statusTotals['rejected']->count ?? 0)],
-            ['label' => 'Verified total', 'value' => '₱' . number_format($statusTotals['verified']->total ?? 0, 2)],
-            ['label' => 'Pending total', 'value' => '₱' . number_format($statusTotals['pending']->total ?? 0, 2)],
+            ['label' => 'Verified total', 'value' => '₱'.number_format($statusTotals['verified']->total ?? 0, 2)],
+            ['label' => 'Pending total', 'value' => '₱'.number_format($statusTotals['pending']->total ?? 0, 2)],
         ];
         foreach ($byMethod as $method => $total) {
-            $summary[] = ['label' => ucfirst($method) . ' (verified)', 'value' => '₱' . number_format($total, 2)];
+            $summary[] = ['label' => ucfirst($method).' (verified)', 'value' => '₱'.number_format($total, 2)];
         }
 
         return [
@@ -321,7 +338,7 @@ class ReportController extends Controller
                 'id' => $d->id,
                 'reference_no' => $d->reference_no,
                 'donor_name' => $d->user->full_name ?? '—',
-                'amount' => '₱' . number_format($d->amount, 2),
+                'amount' => '₱'.number_format($d->amount, 2),
                 'payment_method' => $d->payment_method,
                 'status' => $d->status,
                 'donated_at' => (string) $d->donated_at,

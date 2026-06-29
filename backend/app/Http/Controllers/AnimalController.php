@@ -98,14 +98,13 @@ class AnimalController extends Controller
                     ->filter()
                     ->map(fn ($path) => Storage::url($path))
                     ->values(),
+                // Public payload deliberately omits cost / vet_name / notes — those are internal
+                // medical details, exposed only on the staff-gated admin animal view.
                 'medical_records' => $animal->medicalRecords->map(fn ($m) => [
                     'id' => $m->id,
                     'type' => $m->type,
                     'description' => $m->description,
-                    'vet_name' => $m->vet_name,
-                    'cost' => $m->cost,
                     'record_date' => $m->record_date,
-                    'notes' => $m->notes,
                 ])->values(),
                 'vaccinations' => $animal->vaccinations->map(fn ($v) => [
                     'id' => $v->id,
@@ -130,7 +129,7 @@ class AnimalController extends Controller
             'gender' => ['nullable', 'in:male,female'],
             'size' => ['nullable', 'in:small,medium,large'],
             'weight' => ['nullable', 'numeric', 'min:0'],
-            'status' => ['nullable', 'in:' . implode(',', self::STATUSES)],
+            'status' => ['nullable', 'in:'.implode(',', self::STATUSES)],
             'rescue_story' => ['nullable', 'string'],
             'behavioral_assessment' => ['nullable', 'array'],
             'behavioral_assessment.*' => ['string', 'max:100'],
@@ -190,7 +189,7 @@ class AnimalController extends Controller
             'gender' => ['nullable', 'in:male,female'],
             'size' => ['nullable', 'in:small,medium,large'],
             'weight' => ['nullable', 'numeric', 'min:0'],
-            'status' => ['nullable', 'in:' . implode(',', self::STATUSES)],
+            'status' => ['nullable', 'in:'.implode(',', self::STATUSES)],
             'rescue_story' => ['nullable', 'string'],
             'behavioral_assessment' => ['nullable', 'array'],
             'behavioral_assessment.*' => ['string', 'max:100'],
@@ -268,7 +267,7 @@ class AnimalController extends Controller
         foreach ($request->file('photos') as $i => $file) {
             $created[] = $animal->photos()->create([
                 'photo_url' => $file->store('animals'),
-                'is_main' => !$hasMain && $i === 0,
+                'is_main' => ! $hasMain && $i === 0,
             ]);
         }
 
@@ -302,7 +301,7 @@ class AnimalController extends Controller
      */
     private function applySearch($query, string $q): void
     {
-        $needle = '%' . mb_strtolower($q) . '%';
+        $needle = '%'.mb_strtolower($q).'%';
         $query->where(function ($w) use ($needle) {
             $w->whereRaw('LOWER(name) LIKE ?', [$needle])
                 ->orWhereRaw('LOWER(species) LIKE ?', [$needle])
@@ -316,10 +315,10 @@ class AnimalController extends Controller
             return $animal->qr_code_path;
         }
 
-        $url = rtrim(config('app.frontend_url'), '/') . '/adopt/' . $animal->id;
+        $url = rtrim(config('app.frontend_url'), '/').'/adopt/'.$animal->id;
 
         $result = (new Builder(
-            writer: new SvgWriter(),
+            writer: new SvgWriter,
             data: $url,
             size: 300,
             margin: 10,
@@ -388,9 +387,13 @@ class AnimalController extends Controller
         // Determine age range
         $ageRange = null;
         if ($animal->age !== null) {
-            if ($animal->age < 2) $ageRange = 'puppy';
-            elseif ($animal->age < 7) $ageRange = 'adult';
-            else $ageRange = 'senior';
+            if ($animal->age < 2) {
+                $ageRange = 'puppy';
+            } elseif ($animal->age < 7) {
+                $ageRange = 'adult';
+            } else {
+                $ageRange = 'senior';
+            }
         }
 
         foreach ($guides as $guide) {
@@ -433,7 +436,7 @@ class AnimalController extends Controller
             }
 
             // General guides (no keywords match everything)
-            if (!$guide->breed_keywords && !$guide->age_range && !$guide->behavioral_keywords) {
+            if (! $guide->breed_keywords && ! $guide->age_range && ! $guide->behavioral_keywords) {
                 $matchScore += 0.5;
             }
 
@@ -444,7 +447,7 @@ class AnimalController extends Controller
                     'category' => $guide->category,
                     'content' => $guide->content,
                     'matchScore' => $matchScore,
-                    'is_behavioral' => !empty($guide->behavioral_keywords),
+                    'is_behavioral' => ! empty($guide->behavioral_keywords),
                 ];
             }
         }
@@ -454,6 +457,7 @@ class AnimalController extends Controller
             if ($a['is_behavioral'] !== $b['is_behavioral']) {
                 return $a['is_behavioral'] ? -1 : 1;
             }
+
             return $b['matchScore'] <=> $a['matchScore'];
         });
 
@@ -461,6 +465,7 @@ class AnimalController extends Controller
         // can visually prioritize behavior-matched guides.
         return array_map(function ($g) {
             unset($g['matchScore']);
+
             return $g;
         }, $matched);
     }

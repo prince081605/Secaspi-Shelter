@@ -21,10 +21,10 @@ tracked below.
 Legend: ✅ done · ⏳ in progress · ⬜ pending.
 
 > **Progress (as of 2026-06-30, branch `audit/report-and-global-cleanup`):**
-> **Done** — §0.1 cleanup · §0.2 backend extraction · **HIGH security (auth + public/AI rate-limits)** · HIGH admin pagination (§§3–8).
-> **In progress** — §0.2 frontend component splits (`AnimalsAdmin`, `LandingPage`, `AdoptionRequestsAdmin` done; `Dashboard` + the shared `markRead` trait pending).
-> **Pending** — MED security · MED functional/perf · LOW.
-> Suite **121 green**. _All three HIGH-tier rows complete; now chipping at the §0.2 frontend splits._
+> **Done** — §0.1 cleanup · §0.2 backend · HIGH security (auth + public/AI) · HIGH admin pagination (§§3–8).
+> **In progress** — §0.2 frontend splits (`AnimalsAdmin`/`LandingPage`/`AdoptionRequestsAdmin` done; **`Dashboard` deferred**, `markRead` trait pending) · MED security (CSV-injection, staff-gate, public field exposure done; private-disk uploads + AI cost cap pending).
+> **Pending** — MED functional/perf · LOW.
+> Suite **127 green**.
 
 | Pass | Scope | Status | Where |
 |---|---|---|---|
@@ -34,7 +34,7 @@ Legend: ✅ done · ⏳ in progress · ⬜ pending.
 | **HIGH security (auth)** | `throttle` on login/register/forgot/reset (§1); revoke tokens on password reset + revoke other sessions on change-password (§1) | ✅ done | suite **116 green** (+3 new `AuthTest` cases) |
 | **HIGH security (public/AI)** | `throttle:5,1` on the public rescue write (§6) + `throttle:20,1` on the public AI chat (§10), per IP | ✅ done | suite **121 green** (+2 `PublicRateLimitTest` cases) |
 | **HIGH functional** | Admin-table pagination via shared `components/Pagination.jsx` across **all** admin tables — §3 Animals + Intakes, §4 Adoption (inbox/ongoing/completed) + Foster, §5 Donations, §6 Rescue, §7 Volunteers + Personnel, §8 Visitations. Adoption inbox excludes decided rows server-side (`exclude_decided`) so it paginates cleanly | ✅ done | suite **119 green** (+3 `AdoptionApplicationTest`); browser-verified Donations 1→2 of 9, Adoption inbox 1→2 of 2 (decided rows excluded) |
-| MED security | Private-disk uploads (§5/6/7); CSV-injection (§11); staff-grant gate (§7); public field exposure (§2/3); AI cost cap (§10) | ⬜ pending | Appendix A3 #4–8 |
+| MED security | **✅ CSV-injection (§11)** · **✅ staff-grant gate (§7)** · **✅ public field exposure (§2/3** — settings whitelist, medical cost/vet hidden, generic public errors**)**; ⬜ private-disk uploads (§5/6/7), AI cost cap (§10) | ⏳ in progress | suite **127 green** (+6 tests); Appendix A3 #4–8 |
 | MED functional/perf | Orphaned mark-reads (§4/7/8); foster status sync (§4); donation dates (§5); queue notifications + N+1 (§9); aggregate poll/stat endpoints (§3/11); code-split (§2/11) | ⬜ pending | Appendix A3 #9–11 |
 | LOW | Remaining dead code (axios, email-verif stub, `staff()` report), debounce, autocomplete, magic numbers, `<Link>` nav | ⬜ pending | Appendix A2/A3 |
 
@@ -295,14 +295,13 @@ endpoints are consumed by `ImpactPanel` (not dead).
   sums/counts/group-bys on every public hit. → Cache (5–15 min).
 
 ### E. Security
-- **[MED] Public endpoints leak raw exception messages.** `home/transparency` and
-  `home/featured-animals` catch blocks return `'error' => $e->getMessage()` with `500` to
-  anonymous clients → internal/SQL detail disclosure. → Log server-side; return a generic
-  message. _(`api_public.php:203-208, 277-283`.)_
-- **[MED] `/api/home/settings` dumps ALL settings publicly.** Confirmed live: anonymous response
-  includes `ai_assistant_enabled`, `ai_daily_message_cap`, `ai_persona` (and would include
-  `cost_per_meal`). The public page needs only branding/contact/hero/social. → Whitelist public
-  keys in `publicIndex`. _(`SettingController.php:11`.)_
+- **[MED] ✅ RESOLVED — public endpoints no longer leak raw exception messages.** The
+  `PublicHomeController::transparency`/`featuredAnimals` catch blocks now `Log::error` the exception
+  server-side and return only a generic `message` (no `error`/SQL detail) to anonymous clients.
+- **[MED] ✅ RESOLVED — `/api/home/settings` no longer dumps all settings.** `publicIndex` now
+  whitelists public keys (branding/contact/hero/socials/images/donation goal + `ai_assistant_enabled`);
+  internal `ai_persona`, `ai_daily_message_cap`, and `cost_per_meal` are withheld. Covered by
+  `PublicExposureTest::test_public_settings_endpoint_whitelists_keys`. _(`SettingController.php`.)_
 - **[PASS]** No SQLi (bound query builder); strict matchmaker validation; consistent donor masking.
 
 ### F. Database
@@ -411,10 +410,10 @@ medical cost/vet exposure; **live browser** screenshot of the public Adoption pa
   DB `update` (side-effect on read; concurrent first-views can double-generate). _(see E-3.)_
 
 ### E. Security
-- **[MED] Public animal detail leaks treatment cost + vet name.** Confirmed live: anonymous
-  `GET /api/animals/57` returns `medical_records[].cost` ("5603.00") and `vet_name` ("Dr. Lim").
-  The UI hides them, but the API ships them to anyone. → Omit cost/vet_name/notes from the public
-  `show()` payload. _(`AnimalController.php:101-109`.)_
+- **[MED] ✅ RESOLVED — public animal detail no longer leaks treatment cost + vet name.** The public
+  `show()` `medical_records` map now emits only `id`/`type`/`description`/`record_date`; `cost`,
+  `vet_name`, and `notes` are exposed only on the staff-gated admin view. Covered by
+  `PublicExposureTest::test_public_animal_payload_hides_internal_medical_detail`. _(`AnimalController.php`.)_
 - **[MED] `destroy()` cascade runs without a transaction.** It deletes medical records,
   vaccinations, adoption + foster applications, and photo files, then the animal — a mid-way
   failure leaves partial/orphaned data. It also **erases adoption/foster application history**.
@@ -816,12 +815,11 @@ never called (orphaned); reviewed the staff-promotion path end-to-end (controlle
   active view.
 
 ### E. Security
-- **[MED] Staff can grant the `staff` role (escalation within the staff tier).**
-  `VolunteerController::adminStore` (route `role:staff`) plus the "Add staff" UI promote any user
-  to `type=staff`, which `forceFill`s their account `role` to `staff`. A staff member can thus mint
-  more staff — granting staff-level access is normally an **admin**-only action. → Gate
-  `type=staff` creation behind `admin`; keep volunteer-creation at `role:staff`.
-  _(`VolunteerController.php:74-97`, `routes/auth.php:135`; nav gating confirmed in Module 11.)_
+- **[MED] ✅ RESOLVED — staff can no longer grant the `staff` role.** `VolunteerController::adminStore`
+  now rejects `type=staff` with a `403` unless the requester `hasRoleAtLeast('admin')`, so a staff
+  member can't mint more staff (the account-role `forceFill` only runs after the gate). Volunteer
+  creation stays open at `role:staff`. Covered by `StaffGrantGateTest` (staff→403, admin→201,
+  staff can still add volunteers). _(`VolunteerController.php`.)_
 - **[MED] Intake documents stored on the public disk** (`intakes/`) → served unauthenticated (same
   systemic issue as §5/§6). Docs can include animal photos + reporter PII. → Private disk + signed
   URLs.
@@ -1173,11 +1171,11 @@ nav categories, 6 chart surfaces, no console errors (token revoked + localStorag
 - **[LOW]** Analytics recomputed each view (no cache); `flowByMonth` plucks all 12-month rows into PHP.
 
 ### E. Security
-- **[MED] CSV formula injection in exports.** `exportCsv` writes user-controlled fields (rescue
-  `reporter_name`/`location`, donor/applicant names) via `fputcsv` with no neutralization — a value
-  like `=HYPERLINK(...)`/`=cmd|...` executes when the CSV opens in Excel/Sheets. The rescue reporter
-  fields are **anonymous public input**, so a planted payload fires when staff export. → Prefix
-  leading `= + - @` with `'`. _(`ReportController.php:72-79`.)_
+- **[MED] ✅ RESOLVED — CSV formula injection in exports.** `exportCsv` now routes every cell
+  through `csvSafe()`, which prefixes a leading `=`, `+`, `-`, `@`, tab, or CR with a single quote
+  so a planted `=HYPERLINK(...)`/`=cmd|...` in anonymous rescue `reporter_name`/`location` (or
+  donor/applicant names) is shown literally instead of executing in Excel/Sheets. Covered by
+  `ReportExportTest::test_csv_export_neutralizes_formula_injection`. _(`ReportController.php`.)_
 - **[LOW] Backup endpoint returns Artisan output** (and `$e->getMessage()`) — token-guarded, but
   leaks infra detail if the token leaks. → Return status only; log details.
 - **[PASS] Confirmed the §7 staff-promotion path at the UI layer:** `ITEM_MIN_ROLE.volunteers =
@@ -1310,7 +1308,7 @@ panels + Recharts (code-split) [MED-perf], (3) one aggregated pending-counts end
 | **Sensitive uploads on the public disk** (served unauthenticated) | 5, 6, 7 | MED | Private disk + signed URLs |
 | **No frontend code-splitting** (Leaflet/Recharts/all admin panels eager) | 2, 11 | MED | `React.lazy` per route/panel |
 | **Duplicated helpers & serializers** (`photoSrc`/`peso`/query-builder; `toItem`/`toAdminItem`) | 3–8, 11 | MED | `lib/format.js`/`lib/url.js`; API Resources |
-| **Public endpoints leak internals** (raw `$e->getMessage()`, over-exposed settings, medical cost/vet) | 2, 3 | MED | Whitelist fields; generic error bodies |
+| **Public endpoints leak internals** (raw `$e->getMessage()`, over-exposed settings, medical cost/vet) — ✅ RESOLVED (§2/§3) | 2, 3 | MED | Whitelist fields; generic error bodies |
 | **Half-wired / dead features** (rescue `map()`, email verification, `staff` report, `App.jsx`, axios) | 0, 1, 6, 11, 12 | LOW | Remove or finish |
 
 ## A2. Files / code to remove (verified)
@@ -1334,11 +1332,11 @@ panels + Recharts (code-split) [MED-perf], (3) one aggregated pending-counts end
    the Animals list no longer hides 38 of 58 records. Adoption inbox excludes decided rows server-side.
 
 **MEDIUM (security)**
-4. Move donation proofs / rescue photos / intake docs to a **private** disk + signed URLs (§5/6/7).
-5. Neutralize **CSV formula injection** in report exports (§11).
-6. Gate `type=staff` personnel creation behind `admin` (staff can currently mint staff) (§7).
-7. Whitelist public settings keys; stop returning `$e->getMessage()` publicly; drop medical cost/vet from the public animal payload (§2, §3).
-8. Trust proxies for real client IP + add a **global** AI daily spend cap (§10).
+4. ⬜ Move donation proofs / rescue photos / intake docs to a **private** disk + signed URLs (§5/6/7).
+5. ✅ **DONE** — Neutralize **CSV formula injection** in report exports (§11).
+6. ✅ **DONE** — Gate `type=staff` personnel creation behind `admin` (staff can no longer mint staff) (§7).
+7. ✅ **DONE** — Whitelist public settings keys; stop returning `$e->getMessage()` publicly; drop medical cost/vet from the public animal payload (§2, §3).
+8. ⬜ Trust proxies for real client IP + add a **global** AI daily spend cap (§10).
 
 **MEDIUM (functional / perf)**
 9. Wire the 3 orphaned mark-reads (§4/7/8); fix the foster→animal status sync + apply-to-unavailable guard (§4).

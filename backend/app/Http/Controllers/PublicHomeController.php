@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Support\PublicStats;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -151,10 +152,10 @@ class PublicHomeController extends Controller
                 'fund_usage_image' => $fundUsageImage,
             ]);
         } catch (\Throwable $e) {
-            return response()->json([
-                'message' => 'Failed to load transparency data',
-                'error' => $e->getMessage(),
-            ], 500);
+            // Log internally; never leak exception/SQL detail to anonymous clients.
+            Log::error('Failed to load transparency data', ['exception' => $e]);
+
+            return response()->json(['message' => 'Failed to load transparency data'], 500);
         }
     }
 
@@ -225,11 +226,10 @@ class PublicHomeController extends Controller
                 })->all(),
             ]);
         } catch (\Throwable $e) {
-            // Prevent browser from receiving an empty response.
-            return response()->json([
-                'message' => 'Failed to load featured animals',
-                'error' => $e->getMessage(),
-            ], 500);
+            // Log internally; return a generic message (no exception/SQL detail) to the browser.
+            Log::error('Failed to load featured animals', ['exception' => $e]);
+
+            return response()->json(['message' => 'Failed to load featured animals'], 500);
         }
     }
 }
