@@ -20,10 +20,10 @@ tracked below.
 
 Legend: ✅ done · ⏳ in progress · ⬜ pending.
 
-> **Progress (as of 2026-06-30, branch `audit/report-and-global-cleanup`, latest commit `507c172`):**
-> **Done** — §0.1 cleanup · §0.2 backend extraction · HIGH auth security · HIGH admin pagination (§§3–8).
-> **Pending** — §0.2 frontend component splits · HIGH public/AI rate-limits · MED security · MED functional/perf · LOW.
-> Suite **119 green**. _Paused here at the user's request._
+> **Progress (as of 2026-06-30, branch `audit/report-and-global-cleanup`):**
+> **Done** — §0.1 cleanup · §0.2 backend extraction · **HIGH security (auth + public/AI rate-limits)** · HIGH admin pagination (§§3–8).
+> **Pending** — §0.2 frontend component splits · MED security · MED functional/perf · LOW.
+> Suite **121 green**. _All three HIGH-tier rows are now complete._
 
 | Pass | Scope | Status | Where |
 |---|---|---|---|
@@ -31,7 +31,7 @@ Legend: ✅ done · ⏳ in progress · ⬜ pending.
 | §0.2 structural (backend) | `PublicHomeController` extraction (4 home/* closures), shared `PublicStats::maskName` (was 3×), shared `PublicStats::topDonors` (was 2×) | ✅ done | branch `audit/report-and-global-cleanup`; suite **113 green** (+4 new `PublicHomeTest`), routes rebound |
 | §0.2 structural (frontend) | split oversized components (`AnimalsAdmin`, `Dashboard`, `LandingPage`, `AdoptionRequestsAdmin`); shared admin `markRead`/`adminIndex` trait | ⬜ pending | per module (2, 3, 4, 11) |
 | **HIGH security (auth)** | `throttle` on login/register/forgot/reset (§1); revoke tokens on password reset + revoke other sessions on change-password (§1) | ✅ done | suite **116 green** (+3 new `AuthTest` cases) |
-| **HIGH security (public/AI)** | Rate-limit public rescue write (§6) + public AI chat (§10) | ⬜ pending | Appendix A3 #1 |
+| **HIGH security (public/AI)** | `throttle:5,1` on the public rescue write (§6) + `throttle:20,1` on the public AI chat (§10), per IP | ✅ done | suite **121 green** (+2 `PublicRateLimitTest` cases) |
 | **HIGH functional** | Admin-table pagination via shared `components/Pagination.jsx` across **all** admin tables — §3 Animals + Intakes, §4 Adoption (inbox/ongoing/completed) + Foster, §5 Donations, §6 Rescue, §7 Volunteers + Personnel, §8 Visitations. Adoption inbox excludes decided rows server-side (`exclude_decided`) so it paginates cleanly | ✅ done | suite **119 green** (+3 `AdoptionApplicationTest`); browser-verified Donations 1→2 of 9, Adoption inbox 1→2 of 2 (decided rows excluded) |
 | MED security | Private-disk uploads (§5/6/7); CSV-injection (§11); staff-grant gate (§7); public field exposure (§2/3); AI cost cap (§10) | ⬜ pending | Appendix A3 #4–8 |
 | MED functional/perf | Orphaned mark-reads (§4/7/8); foster status sync (§4); donation dates (§5); queue notifications + N+1 (§9); aggregate poll/stat endpoints (§3/11); code-split (§2/11) | ⬜ pending | Appendix A3 #9–11 |
@@ -711,10 +711,11 @@ NOT NULL [LOW].
 - **[PASS]** No N+1 (flat table, no relations). Paginates server-side (just no UI; see A-2).
 
 ### E. Security
-- **[MED] Public rescue `store()` has no rate limiting or captcha and accepts file uploads.**
-  Confirmed live: 6 rapid anonymous POSTs → all `201`, never `429`. A bot can flood the triage
-  queue and fill storage with 5 MB images (spam / cost / DoS). → Add `throttle` + a honeypot/captcha
-  (the `image|max:5120` rule helps but doesn't limit volume). _(`api_public.php:31`.)_
+- **[MED] ✅ RESOLVED (throttle) — public rescue `store()` is now rate-limited.** Applied
+  `throttle:5,1` (per IP) so the previously-demonstrated flood (6 rapid `201`s) now returns a 429
+  past the cap, blunting triage-queue spam and 5 MB-upload storage abuse. Covered by
+  `PublicRateLimitTest::test_public_rescue_submission_is_rate_limited`. _(A complementary
+  honeypot/captcha remains a separate hardening step; the `image|max:5120` rule still caps size.)_
 - **[MED] Rescue photos stored on the public disk** (`rescue-reports/`) → served unauthenticated
   (same mechanism proven in §5). Lower sensitivity than financial proofs but still uncontrolled.
   → Private disk + signed URLs (shared fix with donations/intakes).
@@ -1060,10 +1061,10 @@ unthrottled public chat route.
   to build the cache key, even on a cache hit.
 
 ### E. Security
-- **[MED] Public `/api/assistant/chat` has no rate limiting.** The **free** path (TF-IDF match +
-  `animalAnswer` DB queries + a `hits` increment) runs on every anonymous request — a CPU/DB DoS
-  vector even when AI is off (the paid path is capped; the free path isn't). → Add `throttle`.
-  _(`api_public.php:37`.)_
+- **[MED] ✅ RESOLVED — public `/api/assistant/chat` is now rate-limited.** Applied `throttle:20,1`
+  (per IP) so the free TF-IDF/DB path can't be hammered as a CPU/DB DoS even when AI is off.
+  Covered by `PublicRateLimitTest::test_public_assistant_chat_is_rate_limited`. _(The global daily
+  AI spend cap + trust-proxies for the real client IP remain MED items — see §10 E-2 / A3 #8.)_
 - **[MED] AI cost controls are weak against a determined abuser.** The daily cap keys on
   `$request->ip()` — unreliable behind Render's proxy (shared/proxy IP unless TrustProxies is set;
   NAT'd networks share one cap; trivially bypassed by IP rotation), and there is **no global daily
@@ -1296,7 +1297,7 @@ panels + Recharts (code-split) [MED-perf], (3) one aggregated pending-counts end
 
 | Theme | Modules | Severity | Fix |
 |---|---|---|---|
-| **No rate limiting** (auth, public rescue, public AI chat, messaging) | 1, 6, 9, 10 | HIGH | Global `throttle` + tight per-route caps |
+| **No rate limiting** — ✅ RESOLVED for auth (§1), public rescue (§6), public AI chat (§10) via per-IP `throttle`; messaging (§9) left as low-risk optional | 1, 6, 9, 10 | HIGH | Global `throttle` + tight per-route caps |
 | **Admin tables have no pagination** (read only page 1, cap 12–20) — ✅ RESOLVED across §§3–8 via shared `components/Pagination.jsx` | 3, 4, 5, 6, 7, 8 | HIGH/MED | Reuse the public `Adoption.jsx` pagination pattern |
 | **Orphaned "mark-read on review"** (route+controller+helper built, never called) | 4, 7, 8 (wired only in 6) | MED | Wire the 3 helpers, or remove the unused backend capability |
 | **Sensitive uploads on the public disk** (served unauthenticated) | 5, 6, 7 | MED | Private disk + signed URLs |
@@ -1318,8 +1319,9 @@ panels + Recharts (code-split) [MED-perf], (3) one aggregated pending-counts end
 ## A3. Fix backlog by severity
 
 **HIGH**
-1. ⏳ Rate-limit auth + all public write/AI endpoints (§1, 6, 10) — brute force / spam / cost.
-   **✅ auth done** (`throttle` on login/register/forgot/reset); ⬜ public rescue write (§6) + AI chat (§10) pending.
+1. ✅ **DONE** — Rate-limit auth + all public write/AI endpoints (§1, 6, 10) — brute force / spam / cost.
+   `throttle` on login/register/forgot/reset (§1), the public rescue write (§6, 5/min), and AI chat
+   (§10, 20/min), all per IP. (Authenticated messaging §9 is low-risk and left as an optional extra.)
 2. ✅ **DONE** — Revoke Sanctum tokens on password reset (and other sessions on change-password) (§1).
 3. ✅ **DONE** — Added pagination to every admin table (§§3–8) via shared `components/Pagination.jsx`;
    the Animals list no longer hides 38 of 58 records. Adoption inbox excludes decided rows server-side.
