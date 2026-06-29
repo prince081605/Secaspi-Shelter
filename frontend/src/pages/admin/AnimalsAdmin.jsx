@@ -26,6 +26,7 @@ import {
 import StatusBadge from '../../components/StatusBadge';
 import ConfirmButton from '../../components/ConfirmButton';
 import TypeToConfirmButton from '../../components/TypeToConfirmButton';
+import Pagination from '../../components/Pagination';
 import './AnimalsAdmin.css';
 
 const STATUSES = ['available', 'adopted', 'fostered', 'medical', 'quarantine', 'archived'];
@@ -1020,7 +1021,8 @@ export default function AnimalsAdmin() {
   const refresh = () => {
     setShowCreate(false);
     setEditingAnimal(null);
-    setPage(1);
+    // Keep the current page so an open Photos/Medical/QR panel isn't collapsed; only filter
+    // changes reset the page (see updateFilter).
     setRefreshKey((k) => k + 1);
   };
 
@@ -1225,25 +1227,7 @@ export default function AnimalsAdmin() {
         </div>
       )}
 
-      {!loading && animals.length > 0 && meta.last_page > 1 && (
-        <div className="aa-pagination">
-          <button
-            className="dashBtn"
-            disabled={meta.current_page <= 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-          >
-            ← Prev
-          </button>
-          <span className="aa-page-label">Page {meta.current_page} of {meta.last_page}</span>
-          <button
-            className="dashBtn"
-            disabled={meta.current_page >= meta.last_page}
-            onClick={() => setPage((p) => Math.min(meta.last_page, p + 1))}
-          >
-            Next →
-          </button>
-        </div>
-      )}
+      {!loading && animals.length > 0 && <Pagination meta={meta} onPage={setPage} />}
     </div>
   );
 }

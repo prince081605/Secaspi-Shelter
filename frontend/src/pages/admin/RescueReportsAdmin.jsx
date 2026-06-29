@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { adminListRescueReports, adminMarkRescueReportRead, adminUpdateRescueReport } from '../../lib/rescueApi';
 import StatusBadge from '../../components/StatusBadge';
+import Pagination from '../../components/Pagination';
 
 const STATUSES = ['pending', 'assigned', 'in_progress', 'resolved'];
 const NEXT_STATUS = { pending: 'assigned', assigned: 'in_progress', in_progress: 'resolved' };
@@ -179,14 +180,23 @@ export default function RescueReportsAdmin({ onUnreadChanged }) {
   const [error, setError] = useState('');
   const [status, setStatusFilter] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState({ current_page: 1, last_page: 1 });
+
+  // Changing the status filter starts a fresh result set, so jump back to page 1.
+  const changeStatus = (value) => {
+    setPage(1);
+    setStatusFilter(value);
+  };
 
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    adminListRescueReports({ status })
+    adminListRescueReports({ status, page })
       .then((data) => {
         if (!mounted) return;
         setReports(data?.data || []);
+        setMeta({ current_page: data?.current_page || 1, last_page: data?.last_page || 1 });
         setError('');
       })
       .catch((err) => {
@@ -197,8 +207,10 @@ export default function RescueReportsAdmin({ onUnreadChanged }) {
         if (mounted) setLoading(false);
       });
     return () => { mounted = false; };
-  }, [status, refreshKey]);
+  }, [status, refreshKey, page]);
 
+  // Keep the current page on refresh (mark-read / triage) so an open row panel isn't collapsed;
+  // only the status filter resets the page (see changeStatus).
   const refresh = () => setRefreshKey((k) => k + 1);
 
   return (
@@ -239,6 +251,8 @@ export default function RescueReportsAdmin({ onUnreadChanged }) {
           </table>
         </div>
       )}
+
+      {!loading && reports.length > 0 && <Pagination meta={meta} onPage={setPage} />}
     </>
   );
 }

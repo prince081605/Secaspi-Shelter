@@ -25,7 +25,7 @@ Legend: ✅ done · ⏳ in progress · ⬜ pending.
 | §0.2 structural (frontend) | split oversized components (`AnimalsAdmin`, `Dashboard`, `LandingPage`, `AdoptionRequestsAdmin`); shared admin `markRead`/`adminIndex` trait | ⬜ pending | per module (2, 3, 4, 11) |
 | **HIGH security (auth)** | `throttle` on login/register/forgot/reset (§1); revoke tokens on password reset + revoke other sessions on change-password (§1) | ✅ done | suite **116 green** (+3 new `AuthTest` cases) |
 | **HIGH security (public/AI)** | Rate-limit public rescue write (§6) + public AI chat (§10) | ⬜ pending | Appendix A3 #1 |
-| **HIGH functional** | Admin-table pagination — **§3 `AnimalsAdmin` ✅ done** (Prev/Next + page reset, reuses `Adoption.jsx` pattern; browser-verified page 1→2 of 3, all 58 rows reachable); §§4–8 tables ⬜ pending | ⏳ in progress | Appendix A3 #3 |
+| **HIGH functional** | Admin-table pagination via shared `components/Pagination.jsx` — **✅ §3 Animals, §5 Donations, §6 Rescue, §8 Visitations** (browser-verified Donations 1→2 of 9, Animals 1→2 of 3); ⬜ §4 Adoption/Foster + §7 Volunteers/Personnel/Intakes (multi-list, pending) | ⏳ in progress | Appendix A3 #3 |
 | MED security | Private-disk uploads (§5/6/7); CSV-injection (§11); staff-grant gate (§7); public field exposure (§2/3); AI cost cap (§10) | ⬜ pending | Appendix A3 #4–8 |
 | MED functional/perf | Orphaned mark-reads (§4/7/8); foster status sync (§4); donation dates (§5); queue notifications + N+1 (§9); aggregate poll/stat endpoints (§3/11); code-split (§2/11) | ⬜ pending | Appendix A3 #9–11 |
 | LOW | Remaining dead code (axios, email-verif stub, `staff()` report), debounce, autocomplete, magic numbers, `<Link>` nav | ⬜ pending | Appendix A2/A3 |
@@ -578,8 +578,8 @@ unauthenticated (HTTP 200).
   (`DashboardController` maps `donated_at`→`created_at`; `DonationController::index` returns the raw
   model without that mapping.) → Expose a `date`/`donated_at` field and read it in the UI.
   _(`DonationController.php:68`, `DonationHistory.jsx:89`, `Receipt.jsx:86`.)_
-- **[MED] `DonationsAdmin` has no pagination** (`data?.data`, `paginate(20)`) — with 180 donations,
-  admins see only the newest 20 per filter. Same pattern as Modules 3–4.
+- **[MED] ✅ RESOLVED — `DonationsAdmin` now paginates** (was `data?.data` only, capping at the
+  newest 20 of 180). Uses the shared `Pagination` component; browser-verified page 1→2 of 9.
 - **[LOW] `verify()` has no state-machine guard** — an already-verified donation can be re-verified
   or flipped verified↔rejected repeatedly, each firing a `DonationStatusChanged` notification; no
   `verified_at`/`verified_by` audit. → Guard transitions; record who/when.
@@ -678,8 +678,9 @@ NOT NULL [LOW].
   caller — the global rescue-map screen was deleted and replaced by the per-report Detail map; only
   the test keeps it alive. → Remove `map()`, `GET /rescue-reports/map`, and `RescueMapTest.php`.
   _(confirms §0.1; `RescueReportController.php:95`, `routes/auth.php:64`.)_
-- **[MED] `RescueReportsAdmin` has no pagination** (`data?.data`, `paginate(12)`) — only the newest
-  12 reports per filter are reachable. Same pattern as Modules 3–5.
+- **[MED] ✅ RESOLVED — `RescueReportsAdmin` now paginates** (was `data?.data` only, capping at the
+  newest 12). Uses the shared `Pagination` component; page is kept on mark-read/triage so an open
+  Detail/Triage panel isn't collapsed (only the status filter resets to page 1).
 - **[PASS]** Mark-read on Detail/Triage open works; per-report map + no-pin fallback verified.
 
 ### B. UI / UX
@@ -869,8 +870,8 @@ intake docs to a private disk [MED-sec], (3) wire/await volunteer mark-read + un
   `adminMarkVisitationRead` (`visitationsApi.js:30`) is never called and `VisitationsAdmin` shows
   no unread highlight — despite the backend comment claiming it "mirrors the adoption pattern."
   → Wire it, or drop the unused backend capability.
-- **[MED] `VisitationsAdmin` has no pagination** (`data?.data`, `paginate(20)`). (`RemindersAdmin`
-  is a bounded 30-day feed — no pagination needed.)
+- **[MED] ✅ RESOLVED — `VisitationsAdmin` now paginates** (was `data?.data` only). Uses the shared
+  `Pagination` component. (`RemindersAdmin` is a bounded 30-day feed — no pagination needed.)
 - **[PASS]** Reminder auto-sync works end-to-end (vaccination `next_due` / medical
   `follow_up_date` → reminder, with overdue surfacing).
 
@@ -1286,7 +1287,7 @@ panels + Recharts (code-split) [MED-perf], (3) one aggregated pending-counts end
 | Theme | Modules | Severity | Fix |
 |---|---|---|---|
 | **No rate limiting** (auth, public rescue, public AI chat, messaging) | 1, 6, 9, 10 | HIGH | Global `throttle` + tight per-route caps |
-| **Admin tables have no pagination** (read only page 1, cap 12–20) — ⏳ §3 `AnimalsAdmin` done | 3, 4, 5, 6, 7, 8 | HIGH/MED | Reuse the public `Adoption.jsx` pagination pattern |
+| **Admin tables have no pagination** (read only page 1, cap 12–20) — ⏳ §§3,5,6,8 done (shared `Pagination`); §§4,7 pending | 3, 4, 5, 6, 7, 8 | HIGH/MED | Reuse the public `Adoption.jsx` pagination pattern |
 | **Orphaned "mark-read on review"** (route+controller+helper built, never called) | 4, 7, 8 (wired only in 6) | MED | Wire the 3 helpers, or remove the unused backend capability |
 | **Sensitive uploads on the public disk** (served unauthenticated) | 5, 6, 7 | MED | Private disk + signed URLs |
 | **No frontend code-splitting** (Leaflet/Recharts/all admin panels eager) | 2, 11 | MED | `React.lazy` per route/panel |
@@ -1311,7 +1312,7 @@ panels + Recharts (code-split) [MED-perf], (3) one aggregated pending-counts end
    **✅ auth done** (`throttle` on login/register/forgot/reset); ⬜ public rescue write (§6) + AI chat (§10) pending.
 2. ✅ **DONE** — Revoke Sanctum tokens on password reset (and other sessions on change-password) (§1).
 3. ⏳ Add pagination to every admin table — the Animals list silently hides 38 of 58 records (§3; also 4–8).
-   **✅ §3 `AnimalsAdmin` done** (browser-verified); ⬜ §§4–8 admin tables pending.
+   **✅ §§3,5,6,8 done** (shared `components/Pagination.jsx`, browser-verified); ⬜ §4 Adoption/Foster + §7 Volunteers/Personnel/Intakes pending.
 
 **MEDIUM (security)**
 4. Move donation proofs / rescue photos / intake docs to a **private** disk + signed URLs (§5/6/7).

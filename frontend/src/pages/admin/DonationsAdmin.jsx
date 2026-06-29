@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { adminListDonations, adminGetDonationStats, adminVerifyDonation } from '../../lib/donationsApi';
 import StatusBadge from '../../components/StatusBadge';
+import Pagination from '../../components/Pagination';
 
 const STATUSES = ['pending', 'verified', 'rejected'];
 
@@ -57,14 +58,23 @@ export default function DonationsAdmin({ isAdmin = false }) {
   const [error, setError] = useState('');
   const [status, setStatusFilter] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState({ current_page: 1, last_page: 1 });
+
+  // Changing the status filter starts a fresh result set, so jump back to page 1.
+  const changeStatus = (value) => {
+    setPage(1);
+    setStatusFilter(value);
+  };
 
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    adminListDonations({ status })
+    adminListDonations({ status, page })
       .then((data) => {
         if (!mounted) return;
         setDonations(data?.data || []);
+        setMeta({ current_page: data?.current_page || 1, last_page: data?.last_page || 1 });
         setError('');
       })
       .catch((err) => {
@@ -75,8 +85,9 @@ export default function DonationsAdmin({ isAdmin = false }) {
         if (mounted) setLoading(false);
       });
     return () => { mounted = false; };
-  }, [status, refreshKey]);
+  }, [status, refreshKey, page]);
 
+  // Keep the current page on refresh (verify/reject); only the status filter resets the page.
   const refresh = () => setRefreshKey((k) => k + 1);
 
   const handleVerify = async (donation, newStatus) => {
@@ -95,7 +106,7 @@ export default function DonationsAdmin({ isAdmin = false }) {
       {error && <div className="ui-error">{error}</div>}
 
       <div className="dashFilterBar">
-        <select className="ui-input" style={{ maxWidth: 180 }} aria-label="Filter donations by status" value={status} onChange={(e) => setStatusFilter(e.target.value)}>
+        <select className="ui-input" style={{ maxWidth: 180 }} aria-label="Filter donations by status" value={status} onChange={(e) => changeStatus(e.target.value)}>
           <option value="">All statuses</option>
           {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
@@ -150,6 +161,8 @@ export default function DonationsAdmin({ isAdmin = false }) {
           </table>
         </div>
       )}
+
+      {!loading && donations.length > 0 && <Pagination meta={meta} onPage={setPage} />}
     </>
   );
 }

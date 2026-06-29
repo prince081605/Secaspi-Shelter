@@ -323,6 +323,17 @@
   margin-bottom: 12px;
 }
 
+/* Shared admin-table pager (see components/Pagination.jsx). */
+.dashPagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 16px;
+}
+.dashPageLabel { font-size: 0.85rem; color: var(--muted); font-family: 'Work Sans', sans-serif; }
+.dashPagination .dashBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
 /* Shared "Actions" table-cell. Deliberately NOT display:flex on the <td> itself —
    that drops it out of table layout sizing, so the cell shrinks to its content's
    height instead of stretching to match the row, breaking vertical centering.

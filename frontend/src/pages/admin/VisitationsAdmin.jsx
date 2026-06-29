@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { adminListVisitations, adminUpdateVisitation } from '../../lib/visitationsApi';
 import StatusBadge from '../../components/StatusBadge';
+import Pagination from '../../components/Pagination';
 
 const STATUSES = ['pending', 'approved', 'rejected', 'completed'];
 const SLOT_LABELS = { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening' };
@@ -100,14 +101,23 @@ export default function VisitationsAdmin() {
   const [error, setError] = useState('');
   const [status, setStatusFilter] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState({ current_page: 1, last_page: 1 });
+
+  // Changing the status filter starts a fresh result set, so jump back to page 1.
+  const changeStatus = (value) => {
+    setPage(1);
+    setStatusFilter(value);
+  };
 
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    adminListVisitations({ status })
+    adminListVisitations({ status, page })
       .then((data) => {
         if (!mounted) return;
         setVisitations(data?.data || []);
+        setMeta({ current_page: data?.current_page || 1, last_page: data?.last_page || 1 });
         setError('');
       })
       .catch((err) => {
@@ -118,8 +128,9 @@ export default function VisitationsAdmin() {
         if (mounted) setLoading(false);
       });
     return () => { mounted = false; };
-  }, [status, refreshKey]);
+  }, [status, refreshKey, page]);
 
+  // Keep the current page on refresh (approve/reject/notes); only the status filter resets it.
   const refresh = () => setRefreshKey((k) => k + 1);
 
   return (
@@ -128,7 +139,7 @@ export default function VisitationsAdmin() {
       {error && <div className="ui-error">{error}</div>}
 
       <div className="dashFilterBar">
-        <select className="ui-input" style={{ maxWidth: 180 }} aria-label="Filter visit requests by status" value={status} onChange={(e) => setStatusFilter(e.target.value)}>
+        <select className="ui-input" style={{ maxWidth: 180 }} aria-label="Filter visit requests by status" value={status} onChange={(e) => changeStatus(e.target.value)}>
           <option value="">All statuses</option>
           {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
@@ -159,6 +170,8 @@ export default function VisitationsAdmin() {
           </table>
         </div>
       )}
+
+      {!loading && visitations.length > 0 && <Pagination meta={meta} onPage={setPage} />}
     </>
   );
 }
