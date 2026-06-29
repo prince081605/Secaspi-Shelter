@@ -163,4 +163,56 @@ class AuthTest extends TestCase
             'password' => 'whatever-123',
         ])->assertStatus(401);
     }
+
+    public function test_password_reset_revokes_all_existing_sessions(): void
+    {
+        $user = User::factory()->create();
+        $user->createToken('old-session-1');
+        $user->createToken('old-session-2');
+        $this->assertSame(2, $user->tokens()->count());
+
+        Cache::put("password_reset:{$user->email}", ['token' => 'reset-token', 'user_id' => $user->id], 1800);
+
+        $this->postJson('/api/reset-password', [
+            'email' => $user->email,
+            'token' => 'reset-token',
+            'password' => 'brand-new-password',
+        ])->assertOk();
+
+        $this->assertSame(0, $user->fresh()->tokens()->count(), 'reset must revoke pre-existing sessions');
+    }
+
+    public function test_change_password_revokes_other_sessions_but_keeps_the_current_one(): void
+    {
+        $user = User::factory()->create(['password' => Hash::make('current-pass')]);
+        // The token we authenticate with (current session) plus one other session.
+        $currentToken = $user->createToken('current-session')->plainTextToken;
+        $user->createToken('other-session');
+        $this->assertSame(2, $user->tokens()->count());
+
+        // Authenticate via the real bearer token so currentAccessToken() resolves to a DB token.
+        $this->withToken($currentToken)->postJson('/api/profile/change-password', [
+            'current_password' => 'current-pass',
+            'password' => 'a-new-password',
+            'password_confirmation' => 'a-new-password',
+        ])->assertOk();
+
+        $tokens = $user->fresh()->tokens;
+        $this->assertCount(1, $tokens, 'only the current session should remain');
+        $this->assertSame('current-session', $tokens->first()->name);
+    }
+
+    public function test_login_is_rate_limited_after_repeated_attempts(): void
+    {
+        $user = User::factory()->create(['password' => Hash::make('correct-horse')]);
+
+        // The route allows 10 attempts per minute; the 11th is throttled with a 429.
+        for ($i = 0; $i < 10; $i++) {
+            $this->postJson('/api/login', ['email' => $user->email, 'password' => 'wrong'])
+                ->assertStatus(401);
+        }
+
+        $this->postJson('/api/login', ['email' => $user->email, 'password' => 'wrong'])
+            ->assertStatus(429);
+    }
 }

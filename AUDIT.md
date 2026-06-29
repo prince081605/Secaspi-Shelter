@@ -23,7 +23,8 @@ Legend: ✅ done · ⏳ in progress · ⬜ pending.
 | **Global cleanup** | §0.1 dead code: `App.jsx`, `dashboardMockData.js`, `dummy.php`, orphaned rescue-map endpoint + route + 2 tests; planning docs → `/docs` | ✅ done | branch `audit/report-and-global-cleanup` (commit `147f801`); suite 109 green, build clean |
 | §0.2 structural (backend) | `PublicHomeController` extraction (4 home/* closures), shared `PublicStats::maskName` (was 3×), shared `PublicStats::topDonors` (was 2×) | ✅ done | branch `audit/report-and-global-cleanup`; suite **113 green** (+4 new `PublicHomeTest`), routes rebound |
 | §0.2 structural (frontend) | split oversized components (`AnimalsAdmin`, `Dashboard`, `LandingPage`, `AdoptionRequestsAdmin`); shared admin `markRead`/`adminIndex` trait | ⬜ pending | per module (2, 3, 4, 11) |
-| **HIGH security** | Rate-limit auth/public/AI (§1/6/10); revoke tokens on password reset/change (§1) | ⬜ pending | Appendix A3 #1–2 |
+| **HIGH security (auth)** | `throttle` on login/register/forgot/reset (§1); revoke tokens on password reset + revoke other sessions on change-password (§1) | ✅ done | suite **116 green** (+3 new `AuthTest` cases) |
+| **HIGH security (public/AI)** | Rate-limit public rescue write (§6) + public AI chat (§10) | ⬜ pending | Appendix A3 #1 |
 | **HIGH functional** | Admin-table pagination (§3 first, then 4–8) | ⬜ pending | Appendix A3 #3 |
 | MED security | Private-disk uploads (§5/6/7); CSV-injection (§11); staff-grant gate (§7); public field exposure (§2/3); AI cost cap (§10) | ⬜ pending | Appendix A3 #4–8 |
 | MED functional/perf | Orphaned mark-reads (§4/7/8); foster status sync (§4); donation dates (§5); queue notifications + N+1 (§9); aggregate poll/stat endpoints (§3/11); code-split (§2/11) | ⬜ pending | Appendix A3 #9–11 |
@@ -150,17 +151,19 @@ rapid failed logins; reviewed `AuthTest.php` (12 cases, all relevant ones passin
 - **[LOW]** Full-page reloads from raw anchors (B-1) compound this.
 
 ### E. Security
-- **[HIGH] No rate limiting on `login`/`register`/`forgot-password`/`reset-password`.**
-  Reproduced live: 12 rapid wrong-password POSTs all returned `401`, never `429`. Enables brute
-  force, credential stuffing, reset-email bombing, and enumeration probing. (The
-  `config/auth.php` `throttle:60` is the password-broker reuse window, **not** HTTP throttling.)
-  → **Fix:** apply `throttle:` middleware (e.g. 5–10/min keyed by IP+email) to these routes.
-  _(`routes/auth.php:30-34`)_
-- **[HIGH] Password reset does not revoke existing tokens.** After a reset (the canonical
-  account-recovery action), any attacker session created before the reset stays valid. → **Fix:**
-  `$user->tokens()->delete()` in `resetPassword()`. _(`AuthController.php:184`)_
-- **[MED] `changePassword` does not revoke other sessions.** Same rationale; revoke all tokens
-  except the current one. _(`ProfileController.php:67`)_
+- **[HIGH] ✅ RESOLVED — rate limiting added to `login`/`register`/`forgot-password`/
+  `reset-password`.** Applied `throttle:10,1` to login/register/reset and `throttle:5,1` to
+  forgot-password (per-IP, per-route; a 429 is returned past the cap). Covered by
+  `AuthTest::test_login_is_rate_limited_after_repeated_attempts` (11th attempt → 429).
+  _(`routes/auth.php:33-37`. `username/suggest` left unthrottled — it's a live keystroke preview.)_
+- **[HIGH] ✅ RESOLVED — password reset now revokes existing tokens.** `resetPassword()` calls
+  `$user->tokens()->delete()` after saving, so any session created before the reset is
+  invalidated. Covered by `AuthTest::test_password_reset_revokes_all_existing_sessions`.
+  _(`AuthController.php`.)_
+- **[MED] ✅ RESOLVED — `changePassword` now revokes other sessions.** Deletes all of the user's
+  tokens except the current one (kept so they stay logged in here). Covered by
+  `AuthTest::test_change_password_revokes_other_sessions_but_keeps_the_current_one`.
+  _(`ProfileController.php`.)_
 - **[LOW] User-enumeration timing side channel:** login skips `Hash::check` when the user is
   missing (faster), and forgot-password only sends mail for real accounts. Response bodies are
   generic (good), but response timing differs. → Optional: constant-time dummy-hash path.
@@ -1303,8 +1306,9 @@ panels + Recharts (code-split) [MED-perf], (3) one aggregated pending-counts end
 ## A3. Fix backlog by severity
 
 **HIGH**
-1. Rate-limit auth + all public write/AI endpoints (§1, 6, 10) — brute force / spam / cost.
-2. Revoke Sanctum tokens on password reset (and other sessions on change-password) (§1).
+1. ⏳ Rate-limit auth + all public write/AI endpoints (§1, 6, 10) — brute force / spam / cost.
+   **✅ auth done** (`throttle` on login/register/forgot/reset); ⬜ public rescue write (§6) + AI chat (§10) pending.
+2. ✅ **DONE** — Revoke Sanctum tokens on password reset (and other sessions on change-password) (§1).
 3. Add pagination to every admin table — the Animals list silently hides 38 of 58 records (§3; also 4–8).
 
 **MEDIUM (security)**

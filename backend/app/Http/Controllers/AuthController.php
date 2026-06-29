@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
@@ -9,24 +10,22 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
-use App\Models\User;
 
 class AuthController extends Controller
 {
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'email'    => ['required', 'email'],
+            'email' => ['required', 'email'],
             'password' => ['required', 'string'],
         ]);
-
 
         if ($validator->fails()) {
             return response()->json(['message' => 'Invalid credentials', 'errors' => $validator->errors()], 422);
         }
 
         $user = User::where('email', $request->input('email'))->first();
-        if (!$user || !Hash::check($request->input('password'), $user->password)) {
+        if (! $user || ! Hash::check($request->input('password'), $user->password)) {
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
@@ -35,8 +34,8 @@ class AuthController extends Controller
         if ($user->isSuspended()) {
             return response()->json([
                 'message' => $user->suspensionMessage(),
-                'status'  => 'suspended',
-                'reason'  => $user->suspension_reason,
+                'status' => 'suspended',
+                'reason' => $user->suspension_reason,
             ], 403);
         }
 
@@ -45,12 +44,12 @@ class AuthController extends Controller
 
         return response()->json([
             'token' => $token,
-            'user'  => [
-                'id'        => $user->id,
+            'user' => [
+                'id' => $user->id,
                 'full_name' => $user->full_name,
-                'username'  => $user->username,
-                'email'     => $user->email,
-                'role'      => $user->role,
+                'username' => $user->username,
+                'email' => $user->email,
+                'role' => $user->role,
             ],
         ]);
 
@@ -78,7 +77,6 @@ class AuthController extends Controller
             'password' => ['required', 'string', 'min:8'],
         ]);
 
-
         if ($validator->fails()) {
             return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
         }
@@ -86,18 +84,18 @@ class AuthController extends Controller
         $user = User::create([
             'full_name' => $request->input('name'),
             // System-assigned (ignores any client-supplied value), guaranteed unique.
-            'username'  => User::generateUsername($request->input('name')),
-            'email'     => $request->input('email'),
-            'password'  => Hash::make($request->input('password')),
+            'username' => User::generateUsername($request->input('name')),
+            'email' => $request->input('email'),
+            'password' => Hash::make($request->input('password')),
         ]);
 
         return response()->json([
             'user' => [
-                'id'        => $user->id,
+                'id' => $user->id,
                 'full_name' => $user->full_name,
-                'username'  => $user->username,
-                'email'     => $user->email,
-                'role'      => $user->role,
+                'username' => $user->username,
+                'email' => $user->email,
+                'role' => $user->role,
             ],
         ], 201);
     }
@@ -113,25 +111,25 @@ class AuthController extends Controller
         }
 
         $email = $request->input('email');
-        $user  = User::where('email', $email)->first();
+        $user = User::where('email', $email)->first();
 
         if ($user) {
             $token = Str::random(64);
             Cache::put("password_reset:{$email}", ['token' => $token, 'user_id' => $user->id], 30 * 60);
 
             $resetUrl = rtrim(config('app.frontend_url'), '/')
-                . '/reset-password?email=' . urlencode($email)
-                . '&token=' . $token;
+                .'/reset-password?email='.urlencode($email)
+                .'&token='.$token;
 
             // Deliver the reset link by email. Wrapped so a mail-transport failure never
             // 500s the request or reveals whether the address exists.
             try {
                 Mail::raw(
                     "Hi {$user->full_name},\n\n"
-                    . "We received a request to reset your SECASPI Shelter password. "
-                    . "Open the link below to choose a new password (valid for 30 minutes):\n\n"
-                    . "{$resetUrl}\n\n"
-                    . "If you didn't request this, you can safely ignore this email.",
+                    .'We received a request to reset your SECASPI Shelter password. '
+                    ."Open the link below to choose a new password (valid for 30 minutes):\n\n"
+                    ."{$resetUrl}\n\n"
+                    ."If you didn't request this, you can safely ignore this email.",
                     function ($message) use ($email) {
                         $message->to($email)->subject('Reset your SECASPI Shelter password');
                     }
@@ -145,7 +143,7 @@ class AuthController extends Controller
             if (app()->environment('local')) {
                 return response()->json([
                     'message' => 'Password reset link sent (development — token shown below).',
-                    'token'   => $token,
+                    'token' => $token,
                 ]);
             }
         }
@@ -159,8 +157,8 @@ class AuthController extends Controller
     public function resetPassword(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'email'    => ['required', 'email'],
-            'token'    => ['required', 'string'],
+            'email' => ['required', 'email'],
+            'token' => ['required', 'string'],
             'password' => ['required', 'string', 'min:8'],
         ]);
 
@@ -172,17 +170,21 @@ class AuthController extends Controller
         $token = $request->input('token');
         $cache = Cache::get("password_reset:{$email}");
 
-        if (!$cache || !hash_equals((string) $cache['token'], (string) $token)) {
+        if (! $cache || ! hash_equals((string) $cache['token'], (string) $token)) {
             return response()->json(['message' => 'Invalid or expired token'], 401);
         }
 
         $user = User::find($cache['user_id']);
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Invalid token'], 401);
         }
 
         $user->password = Hash::make($request->input('password'));
         $user->save();
+
+        // A password reset is the canonical account-recovery action: revoke every existing
+        // session so any attacker token created before the reset is immediately invalidated.
+        $user->tokens()->delete();
 
         Cache::forget("password_reset:{$email}");
 
@@ -193,23 +195,22 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
         return response()->json([
             'user' => [
-                'id'        => $user->id,
+                'id' => $user->id,
                 'full_name' => $user->full_name,
-                'username'  => $user->username,
-                'email'     => $user->email,
-                'phone'     => $user->phone,
-                'role'      => $user->role,
+                'username' => $user->username,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'role' => $user->role,
                 'email_verified' => (int) ($user->email_verified ?? 0),
             ],
         ]);
     }
-
 
     public function logout(Request $request)
     {
