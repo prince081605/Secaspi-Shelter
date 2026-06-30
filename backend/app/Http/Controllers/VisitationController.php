@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\MarksAdminRead;
 use App\Models\Visitation;
 use App\Notifications\VisitationStatusChanged;
 use Illuminate\Http\Request;
@@ -10,15 +11,18 @@ use Illuminate\Support\Facades\Validator;
 
 class VisitationController extends Controller
 {
+    use MarksAdminRead;
+
     private const TIME_SLOTS = ['morning', 'afternoon', 'evening'];
+
     private const STATUSES = ['pending', 'approved', 'rejected', 'completed'];
 
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
             // Must be a real future date, and not more than 30 days out.
-            'requested_date' => ['required', 'date', 'after:today', 'before_or_equal:' . now()->addDays(30)->toDateString()],
-            'time_slot' => ['required', 'in:' . implode(',', self::TIME_SLOTS)],
+            'requested_date' => ['required', 'date', 'after:today', 'before_or_equal:'.now()->addDays(30)->toDateString()],
+            'time_slot' => ['required', 'in:'.implode(',', self::TIME_SLOTS)],
             'num_visitors' => ['required', 'integer', 'min:1', 'max:20'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
@@ -96,7 +100,7 @@ class VisitationController extends Controller
     public function adminUpdate(Request $request, Visitation $visitation)
     {
         $validator = Validator::make($request->all(), [
-            'status' => ['sometimes', 'in:' . implode(',', self::STATUSES)],
+            'status' => ['sometimes', 'in:'.implode(',', self::STATUSES)],
             'admin_notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
@@ -128,9 +132,7 @@ class VisitationController extends Controller
      */
     public function adminMarkRead(Visitation $visitation)
     {
-        if (is_null($visitation->read_at)) {
-            $visitation->update(['read_at' => now()]);
-        }
+        $this->markReadOnce($visitation);
 
         return response()->json(['visitation' => $this->toAdminItem($visitation)]);
     }

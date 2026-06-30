@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\MarksAdminRead;
 use App\Models\RescueReport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -10,17 +11,19 @@ use Illuminate\Support\Facades\Validator;
 
 class RescueReportController extends Controller
 {
+    use MarksAdminRead;
+
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'reporter_name'   => ['nullable', 'string', 'max:150'],
-            'contact_number'  => ['nullable', 'string', 'max:20'],
-            'location'        => ['required', 'string'],
-            'latitude'        => ['nullable', 'numeric', 'between:-90,90'],
-            'longitude'       => ['nullable', 'numeric', 'between:-180,180'],
-            'description'     => ['nullable', 'string'],
-            'urgency'         => ['required', 'in:low,medium,high,critical'],
-            'photo'           => ['nullable', 'image', 'max:5120'],
+            'reporter_name' => ['nullable', 'string', 'max:150'],
+            'contact_number' => ['nullable', 'string', 'max:20'],
+            'location' => ['required', 'string'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'description' => ['nullable', 'string'],
+            'urgency' => ['required', 'in:low,medium,high,critical'],
+            'photo' => ['nullable', 'image', 'max:5120'],
         ]);
 
         if ($validator->fails()) {
@@ -33,21 +36,21 @@ class RescueReportController extends Controller
                 : null;
 
             $report = RescueReport::create([
-                'reporter_name'  => $request->input('reporter_name'),
+                'reporter_name' => $request->input('reporter_name'),
                 'contact_number' => $request->input('contact_number'),
-                'location'       => $request->input('location'),
-                'latitude'       => $request->input('latitude'),
-                'longitude'      => $request->input('longitude'),
-                'description'    => $request->input('description'),
-                'urgency'        => $request->input('urgency'),
-                'status'         => 'pending',
-                'photo_url'      => $photoPath,
-                'created_at'     => now(),
+                'location' => $request->input('location'),
+                'latitude' => $request->input('latitude'),
+                'longitude' => $request->input('longitude'),
+                'description' => $request->input('description'),
+                'urgency' => $request->input('urgency'),
+                'status' => 'pending',
+                'photo_url' => $photoPath,
+                'created_at' => now(),
             ]);
         } catch (\Throwable $e) {
             Log::error('Failed to record rescue report', [
-                'location'  => $request->input('location'),
-                'urgency'   => $request->input('urgency'),
+                'location' => $request->input('location'),
+                'urgency' => $request->input('urgency'),
                 'exception' => $e,
             ]);
 
@@ -56,7 +59,7 @@ class RescueReportController extends Controller
 
         return response()->json([
             'report' => [
-                'id'     => $report->id,
+                'id' => $report->id,
                 'status' => $report->status,
             ],
         ], 201);
@@ -82,6 +85,7 @@ class RescueReportController extends Controller
             if ($report->photo_url) {
                 $report->photo_url = Storage::url($report->photo_url);
             }
+
             return $report;
         });
 
@@ -110,7 +114,7 @@ class RescueReportController extends Controller
         } catch (\Throwable $e) {
             Log::error('Failed to update rescue report', [
                 'report_id' => $report->id,
-                'payload'   => $data,
+                'payload' => $data,
                 'exception' => $e,
             ]);
 
@@ -127,9 +131,7 @@ class RescueReportController extends Controller
      */
     public function adminMarkRead(RescueReport $report)
     {
-        if (is_null($report->read_at)) {
-            $report->update(['read_at' => now()]);
-        }
+        $this->markReadOnce($report);
 
         return response()->json(['report' => $report]);
     }

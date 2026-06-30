@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\MarksAdminRead;
 use App\Models\AdoptionApplication;
 use App\Models\Animal;
 use App\Notifications\AdoptionStatusChanged;
@@ -13,6 +14,8 @@ use Illuminate\Support\Str;
 
 class AdoptionApplicationController extends Controller
 {
+    use MarksAdminRead;
+
     public function store(Request $request, Animal $animal)
     {
         $validator = Validator::make($request->all(), [
@@ -168,9 +171,7 @@ class AdoptionApplicationController extends Controller
      */
     public function adminMarkRead(AdoptionApplication $application)
     {
-        if (is_null($application->read_at)) {
-            $application->update(['read_at' => now()]);
-        }
+        $this->markReadOnce($application);
 
         return response()->json(['application' => $this->toAdminItem($application)]);
     }

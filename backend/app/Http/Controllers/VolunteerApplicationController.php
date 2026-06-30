@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\MarksAdminRead;
 use App\Models\User;
 use App\Models\Volunteer;
 use App\Models\VolunteerApplication;
@@ -12,6 +13,8 @@ use Illuminate\Support\Facades\Validator;
 
 class VolunteerApplicationController extends Controller
 {
+    use MarksAdminRead;
+
     private const STATUSES = ['pending', 'approved', 'rejected'];
 
     public function store(Request $request)
@@ -87,7 +90,7 @@ class VolunteerApplicationController extends Controller
     public function adminUpdate(Request $request, VolunteerApplication $application)
     {
         $validator = Validator::make($request->all(), [
-            'status' => ['sometimes', 'in:' . implode(',', self::STATUSES)],
+            'status' => ['sometimes', 'in:'.implode(',', self::STATUSES)],
             'admin_notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
@@ -130,9 +133,7 @@ class VolunteerApplicationController extends Controller
 
     public function adminMarkRead(VolunteerApplication $application)
     {
-        if (is_null($application->read_at)) {
-            $application->update(['read_at' => now()]);
-        }
+        $this->markReadOnce($application);
 
         return response()->json(['application' => $this->toAdminItem($application)]);
     }
