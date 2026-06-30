@@ -119,6 +119,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
 
     // ---- Admin dashboard overview (Phase 6) ----
     Route::get('/admin/dashboard/overview', [DashboardController::class, 'adminOverview'])->middleware('role:staff');
+    Route::get('/admin/dashboard/pending-counts', [DashboardController::class, 'pendingCounts'])->middleware('role:staff');
 
     // ---- Insights & analytics dashboard ----
     Route::get('/admin/analytics/overview', [AnalyticsController::class, 'overview'])->middleware('role:staff');

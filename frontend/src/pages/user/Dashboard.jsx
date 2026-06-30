@@ -9,13 +9,8 @@ import AdoptionRequestsAdmin from '../admin/AdoptionRequestsAdmin';
 import RescueReportsAdmin from '../admin/RescueReportsAdmin';
 import DonationsAdmin from '../admin/DonationsAdmin';
 import UsersAdmin from '../admin/UsersAdmin';
-import { adminGetOverview } from '../../lib/dashboardApi';
-import { adminListRescueReports } from '../../lib/rescueApi';
-import { adminListAdoptionApplications, adminListFosterApplications } from '../../lib/animalsApi';
-import { adminListDonations } from '../../lib/donationsApi';
-import { adminListVisitations } from '../../lib/visitationsApi';
-import { adminListReminders } from '../../lib/remindersApi';
-import { adminListVolunteerApplications, getMyVolunteer, requestVolunteerTask } from '../../lib/volunteersApi';
+import { adminGetOverview, adminGetPendingCounts } from '../../lib/dashboardApi';
+import { getMyVolunteer, requestVolunteerTask } from '../../lib/volunteersApi';
 import VolunteersAdmin from '../admin/VolunteersAdmin';
 import ReportsAdmin from '../admin/ReportsAdmin';
 import AnalyticsAdmin from '../admin/AnalyticsAdmin';
@@ -504,27 +499,19 @@ export default function Dashboard() {
 
   const fetchPendingCounts = useCallback(() => {
     if (!isStaffPlus) return;
-    adminListRescueReports({ unread: 1, per_page: 1 })
-      .then((data) => { if (mountedRef.current) setPendingRescueCount(data?.total || 0); })
-      .catch(() => { if (mountedRef.current) setPendingRescueCount(0); });
-    adminListAdoptionApplications({ unread: 1, per_page: 1 })
-      .then((data) => { if (mountedRef.current) setPendingAdoptionCount(data?.total || 0); })
-      .catch(() => { if (mountedRef.current) setPendingAdoptionCount(0); });
-    adminListFosterApplications({ status: 'pending', per_page: 1 })
-      .then((data) => { if (mountedRef.current) setPendingFosterCount(data?.total || 0); })
-      .catch(() => { if (mountedRef.current) setPendingFosterCount(0); });
-    adminListDonations({ status: 'pending', per_page: 1 })
-      .then((data) => { if (mountedRef.current) setPendingDonationCount(data?.total || 0); })
-      .catch(() => { if (mountedRef.current) setPendingDonationCount(0); });
-    adminListVisitations({ status: 'pending', per_page: 1 })
-      .then((data) => { if (mountedRef.current) setPendingVisitationCount(data?.total || 0); })
-      .catch(() => { if (mountedRef.current) setPendingVisitationCount(0); });
-    adminListReminders(30)
-      .then((data) => { if (mountedRef.current) setOverdueReminderCount(data?.overdue_count || 0); })
-      .catch(() => { if (mountedRef.current) setOverdueReminderCount(0); });
-    adminListVolunteerApplications({ status: 'pending', per_page: 1 })
-      .then((data) => { if (mountedRef.current) setPendingVolunteerCount(data?.total || 0); })
-      .catch(() => { if (mountedRef.current) setPendingVolunteerCount(0); });
+    // One aggregated request instead of 7 separate polls every 30s (audit §11).
+    adminGetPendingCounts()
+      .then((data) => {
+        if (!mountedRef.current) return;
+        setPendingRescueCount(data?.rescue || 0);
+        setPendingAdoptionCount(data?.adoption || 0);
+        setPendingFosterCount(data?.foster || 0);
+        setPendingDonationCount(data?.donation || 0);
+        setPendingVisitationCount(data?.visitation || 0);
+        setOverdueReminderCount(data?.reminders_overdue || 0);
+        setPendingVolunteerCount(data?.volunteer || 0);
+      })
+      .catch(() => { /* leave counts unchanged on a transient failure */ });
   }, [isStaffPlus]);
 
   useEffect(() => {
