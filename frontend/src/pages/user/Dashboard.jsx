@@ -582,6 +582,9 @@ export default function Dashboard() {
     .filter((cat) => cat.items.length > 0);
 
   const [activeNav, setActiveNav] = useState('dashboard');
+  // On phones the sidebar collapses behind a ☰ toggle; selecting a nav item closes it (see effect
+  // below) so the chosen panel is shown instead of the long nav list.
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [openCategories, setOpenCategories] = useState(() => {
     const allOpen = Object.fromEntries(NAV_CATEGORY_KEYS.map((k) => [k, true]));
     try {
@@ -604,6 +607,8 @@ export default function Dashboard() {
   useEffect(() => {
     const cat = ITEM_CATEGORY[activeNav];
     if (cat) setOpenCategories((prev) => (prev[cat] ? prev : { ...prev, [cat]: true }));
+    // Selecting a destination collapses the mobile nav so the panel is visible immediately.
+    setMobileNavOpen(false);
   }, [activeNav]);
 
   return (
@@ -625,10 +630,21 @@ export default function Dashboard() {
                 </div>
               </div>
             </button>
-            <div className="dashRoleChip">{role ? `Role: ${role}` : 'Role: —'}</div>
+            <div className="dashBrandRight">
+              <div className="dashRoleChip">{role ? `Role: ${role}` : 'Role: —'}</div>
+              <button
+                type="button"
+                className="dashMobileNavToggle"
+                onClick={() => setMobileNavOpen((v) => !v)}
+                aria-label="Toggle navigation menu"
+                aria-expanded={mobileNavOpen}
+              >
+                {mobileNavOpen ? '✕' : '☰'}
+              </button>
+            </div>
           </div>
 
-          <nav className="dashNav">
+          <nav className={'dashNav' + (mobileNavOpen ? ' dashNavMobileOpen' : '')}>
             <button className="dashNavBtn" onClick={() => navigate('/')}>
               ⬅️ Back to Home
             </button>

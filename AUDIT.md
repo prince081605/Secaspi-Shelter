@@ -37,6 +37,7 @@ Legend: ✅ done · ⏳ in progress · ⬜ pending.
 | MED security | **✅ CSV-injection (§11)** · **✅ staff-grant gate (§7)** · **✅ public field exposure (§2/3** — settings whitelist, medical cost/vet hidden, generic public errors**)**; ⬜ private-disk uploads (§5/6/7), AI cost cap (§10) | ⏳ in progress | suite **127 green** (+6 tests); Appendix A3 #4–8 |
 | MED functional/perf | **✅ orphaned mark-reads (§4/7/8)** · **✅ foster status sync (§4)** · **✅ donation dates (§5)** · **✅ messaging N+1 (§9)** (queue/`ShouldQueue` deferred — needs a worker, see §9) · **✅ aggregated dashboard pending-counts (§11) + animal stat-strip count endpoint (§3)**; ⬜ code-split (§2/11) | ⏳ in progress | suite **134 green**; Appendix A3 #9–11 |
 | LOW | Remaining dead code (axios, email-verif stub, `staff()` report), debounce, autocomplete, magic numbers, `<Link>` nav | ⬜ pending | Appendix A2/A3 |
+| **Post-audit: admin dashboard responsiveness** | Not in the original report — admin dashboard overflowed horizontally on phones (239px) and stacked a 968px nav above content. Fixed: `min-width:0` on the grid items (so wide tables/charts scroll inside their wrap instead of stretching the page) + a ☰ mobile-nav toggle that collapses the sidebar (968→107px, auto-collapses on selection). Desktop unchanged. | ✅ done | browser-verified at 375 / 1280px: 0 overflow, toggle works; build clean |
 
 > Module scorecards reflect the **as-audited** state; they're not re-scored until a module's fixes
 > land. As each pass completes, its row flips to ✅ and the affected module sections get a resolution
