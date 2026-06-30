@@ -22,9 +22,10 @@ Legend: ✅ done · ⏳ in progress · ⬜ pending.
 
 > **Progress (as of 2026-06-30, branch `audit/report-and-global-cleanup`):**
 > **Done** — §0.1 cleanup · §0.2 backend · HIGH security (auth + public/AI) · HIGH admin pagination (§§3–8).
-> **In progress** — §0.2 frontend splits (3 done; **`Dashboard` deferred**, `markRead` trait pending) · MED security (CSV-injection, staff-gate, public exposure done; private-disk uploads + AI cost cap pending) · MED functional/perf (mark-reads §4/7/8, foster sync §4, donation dates §5, messaging N+1 §9 done; queue/`ShouldQueue` deferred for deploy-safety; aggregate endpoints §3+§11 done; code-split §2/11 pending).
-> **Pending** — LOW.
-> Suite **134 green**.
+> **In progress** — §0.2 frontend splits (3 done; **`Dashboard` deferred**, `markRead` trait pending) · MED security (CSV-injection, staff-gate, public exposure done; private-disk uploads + AI cost cap pending).
+> **Done (full rows)** — §0.1 · §0.2 backend · all HIGH · **MED functional/perf** (mark-reads, foster sync, donation dates, N+1, aggregate endpoints, route code-split; queue `ShouldQueue` deferred for deploy-safety) · post-audit dashboard responsiveness.
+> **Pending** — remaining MED security · LOW.
+> Suite **134 green**; initial JS bundle 1043 kB → 242 kB.
 
 | Pass | Scope | Status | Where |
 |---|---|---|---|
@@ -35,7 +36,7 @@ Legend: ✅ done · ⏳ in progress · ⬜ pending.
 | **HIGH security (public/AI)** | `throttle:5,1` on the public rescue write (§6) + `throttle:20,1` on the public AI chat (§10), per IP | ✅ done | suite **121 green** (+2 `PublicRateLimitTest` cases) |
 | **HIGH functional** | Admin-table pagination via shared `components/Pagination.jsx` across **all** admin tables — §3 Animals + Intakes, §4 Adoption (inbox/ongoing/completed) + Foster, §5 Donations, §6 Rescue, §7 Volunteers + Personnel, §8 Visitations. Adoption inbox excludes decided rows server-side (`exclude_decided`) so it paginates cleanly | ✅ done | suite **119 green** (+3 `AdoptionApplicationTest`); browser-verified Donations 1→2 of 9, Adoption inbox 1→2 of 2 (decided rows excluded) |
 | MED security | **✅ CSV-injection (§11)** · **✅ staff-grant gate (§7)** · **✅ public field exposure (§2/3** — settings whitelist, medical cost/vet hidden, generic public errors**)**; ⬜ private-disk uploads (§5/6/7), AI cost cap (§10) | ⏳ in progress | suite **127 green** (+6 tests); Appendix A3 #4–8 |
-| MED functional/perf | **✅ orphaned mark-reads (§4/7/8)** · **✅ foster status sync (§4)** · **✅ donation dates (§5)** · **✅ messaging N+1 (§9)** (queue/`ShouldQueue` deferred — needs a worker, see §9) · **✅ aggregated dashboard pending-counts (§11) + animal stat-strip count endpoint (§3)**; ⬜ code-split (§2/11) | ⏳ in progress | suite **134 green**; Appendix A3 #9–11 |
+| MED functional/perf | **✅ mark-reads (§4/7/8) · foster status sync (§4) · donation dates (§5) · messaging N+1 (§9) · aggregate endpoints (§3+§11) · route-level code-split (§2/11)**. (queue/`ShouldQueue` deferred for deploy-safety — needs a worker; LandingPage map lazy-load optional) | ✅ done | suite **134 green**; bundle 1043→242 kB; Appendix A3 #9–11 |
 | LOW | Remaining dead code (axios, email-verif stub, `staff()` report), debounce, autocomplete, magic numbers, `<Link>` nav | ⬜ pending | Appendix A2/A3 |
 | **Post-audit: admin dashboard responsiveness** | Not in the original report — admin dashboard overflowed horizontally on phones (239px) and stacked a 968px nav above content. Fixed: `min-width:0` on the grid items (so wide tables/charts scroll inside their wrap instead of stretching the page) + a ☰ mobile-nav toggle that collapses the sidebar (968→107px, auto-collapses on selection). Desktop unchanged. | ✅ done | browser-verified at 375 / 1280px: 0 overflow, toggle works; build clean |
 
@@ -285,10 +286,13 @@ endpoints are consumed by `ImpactPanel` (not dead).
 - **[LOW] `SettingController::publicIndex` and `adminIndex` have identical bodies** (`Setting::getAll()`).
 
 ### D. Performance
-- **[MED] No route-level code splitting.** `AppRouter` imports all pages eagerly, so heavy
-  dependencies load up front — notably **Leaflet + react-leaflet** (pulled in by `LandingPage`
-  for the rescue-form map, used by a tiny fraction of visitors) and Recharts elsewhere. → Lazy
-  -load routes (`React.lazy`) and the map component. _(Quantified in Module 12; manifests here.)_
+- **[MED] ✅ RESOLVED (routes) — route-level code splitting added.** `AppRouter` now `React.lazy`
+  -loads every page behind a `<Suspense>` boundary, so the initial JS bundle dropped from **~1043 kB
+  (285 kB gzip) to 242 kB (78 kB gzip)**. The 555 kB `Dashboard` chunk (all admin panels + Recharts)
+  and the 153 kB Leaflet chunk are now loaded on demand, not by every visitor. Browser-verified
+  landing / `/adopt` / `/dashboard` all lazy-load cleanly. _(Lazy-loading the **map component**
+  inside `LandingPage` so the landing itself defers Leaflet is an optional further refinement.)_
+  _(`AppRouter.jsx`.)_
 - **[LOW] `LandingPage` fires 4 independent mount fetches** (featured, impact, settings,
   `auth.me`). The `auth.me()` only toggles a Login/Dashboard label yet makes every anonymous
   visitor incur a `401` round-trip. _(`LandingPage.jsx:462-520`.)_
@@ -1346,7 +1350,7 @@ panels + Recharts (code-split) [MED-perf], (3) one aggregated pending-counts end
 **MEDIUM (functional / perf)**
 9. ⏳ **✅ Wired the 3 orphaned mark-reads (§4/7/8); ✅ fixed the foster→animal status sync (§4)**; ⬜ apply-to-unavailable guard (§4) still pending.
 10. ⏳ **✅ Fixed blank donation dates (read `donated_at`) (§5)**; ⬜ register response `role:null` (§1) still pending.
-11. ⏳ **✅ Removed the messaging N+1 (§9)** (queue/`ShouldQueue` deferred for deploy-safety — needs a worker) · **✅ aggregated the 8-poll dashboard (§11) + the 4-call animal stat strip (§3) into count endpoints**; ⬜ code-split the bundle (§2/11).
+11. ⏳ **✅ Removed the messaging N+1 (§9)** (queue/`ShouldQueue` deferred for deploy-safety — needs a worker) · **✅ aggregated the 8-poll dashboard (§11) + the 4-call animal stat strip (§3) into count endpoints** · **✅ route-level code-split (§2/11)** — initial bundle 1043→242 kB.
 
 **LOW** — dead-code removal (A2), debounce admin searches, autocomplete/`htmlFor` on forms, magic-number `80220`→single source, timezone-safe booking bounds, `<Link>` instead of `<a>` on internal nav, cap max donation/report rows.
 
