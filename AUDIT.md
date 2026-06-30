@@ -22,9 +22,9 @@ Legend: ✅ done · ⏳ in progress · ⬜ pending.
 
 > **Progress (as of 2026-06-30, branch `audit/report-and-global-cleanup`):**
 > **Done** — §0.1 cleanup · §0.2 backend · HIGH security (auth + public/AI) · HIGH admin pagination (§§3–8).
-> **In progress** — §0.2 frontend splits (3 done; **`Dashboard` deferred**, `markRead` trait pending) · MED security (CSV-injection, staff-gate, public exposure done; private-disk uploads + AI cost cap pending) · MED functional/perf (orphaned mark-reads §4/7/8, foster status sync §4, donation dates §5 done; queue/N+1 §9, aggregate endpoints §3/11, code-split §2/11 pending).
+> **In progress** — §0.2 frontend splits (3 done; **`Dashboard` deferred**, `markRead` trait pending) · MED security (CSV-injection, staff-gate, public exposure done; private-disk uploads + AI cost cap pending) · MED functional/perf (mark-reads §4/7/8, foster sync §4, donation dates §5, queue + N+1 §9 done; aggregate endpoints §3/11, code-split §2/11 pending).
 > **Pending** — LOW.
-> Suite **130 green**.
+> Suite **131 green**.
 
 | Pass | Scope | Status | Where |
 |---|---|---|---|
@@ -35,7 +35,7 @@ Legend: ✅ done · ⏳ in progress · ⬜ pending.
 | **HIGH security (public/AI)** | `throttle:5,1` on the public rescue write (§6) + `throttle:20,1` on the public AI chat (§10), per IP | ✅ done | suite **121 green** (+2 `PublicRateLimitTest` cases) |
 | **HIGH functional** | Admin-table pagination via shared `components/Pagination.jsx` across **all** admin tables — §3 Animals + Intakes, §4 Adoption (inbox/ongoing/completed) + Foster, §5 Donations, §6 Rescue, §7 Volunteers + Personnel, §8 Visitations. Adoption inbox excludes decided rows server-side (`exclude_decided`) so it paginates cleanly | ✅ done | suite **119 green** (+3 `AdoptionApplicationTest`); browser-verified Donations 1→2 of 9, Adoption inbox 1→2 of 2 (decided rows excluded) |
 | MED security | **✅ CSV-injection (§11)** · **✅ staff-grant gate (§7)** · **✅ public field exposure (§2/3** — settings whitelist, medical cost/vet hidden, generic public errors**)**; ⬜ private-disk uploads (§5/6/7), AI cost cap (§10) | ⏳ in progress | suite **127 green** (+6 tests); Appendix A3 #4–8 |
-| MED functional/perf | **✅ orphaned mark-reads (§4/7/8)** · **✅ foster status sync (§4)** · **✅ donation dates (§5)**; ⬜ queue notifications + N+1 (§9), aggregate poll/stat endpoints (§3/11), code-split (§2/11) | ⏳ in progress | suite **130 green** (+3 foster tests); Appendix A3 #9–11 |
+| MED functional/perf | **✅ orphaned mark-reads (§4/7/8)** · **✅ foster status sync (§4)** · **✅ donation dates (§5)** · **✅ queue notifications + messaging N+1 (§9)**; ⬜ aggregate poll/stat endpoints (§3/11), code-split (§2/11) | ⏳ in progress | suite **131 green**; Appendix A3 #9–11 |
 | LOW | Remaining dead code (axios, email-verif stub, `staff()` report), debounce, autocomplete, magic numbers, `<Link>` nav | ⬜ pending | Appendix A2/A3 |
 
 > Module scorecards reflect the **as-audited** state; they're not re-scored until a module's fixes
@@ -972,14 +972,18 @@ React-escaped message rendering (XSS-safe).
 - **[PASS]** `AppNotification` is a good abstraction; serializers consistent with the app pattern.
 
 ### D. Performance
-- **[MED] N+1 in the conversation lists.** `listItem()` runs **2 queries per conversation** (latest
-  message + unread count); `adminIndex` maps **all** conversations → `1 + 2N` queries, **with no
-  pagination**, and the staff inbox **polls every 30 s**. → Aggregate with `withCount` + a
-  latest-message subquery, and paginate. _(`MessageController.php:143-161, 34-45`.)_
-- **[MED] Notifications are not queued.** No `ShouldQueue`, so a member message fans out a
-  **synchronous** email to every staff/admin in-request — once real SMTP is set, a message to N
-  staff blocks the HTTP response on N sequential sends. → `implements ShouldQueue`.
-  _(`AppNotification.php:29`; affects all 9 notification types.)_
+- **[MED] ✅ RESOLVED (N+1) — conversation lists no longer query per row.** `listItem()` was running
+  2 queries per conversation; the lists now eager-load a `latestMessage` (`hasOne→latestOfMany`)
+  relationship + a `withCount('messages as unread_count')`, so the query count is a small fixed
+  number regardless of conversation count. Guarded by
+  `MessagingTest::test_admin_inbox_does_not_run_a_query_per_conversation` (≤10 queries for 8 convos).
+  _(Inbox **pagination** remains a smaller follow-up; the acute 1+2N scaling is gone.)_
+  _(`MessageController.php`, `Conversation.php`.)_
+- **[MED] ✅ RESOLVED — notifications are now queued.** `AppNotification implements ShouldQueue`
+  (+`Queueable`), so the email fan-out is pushed to the queue instead of blocking the HTTP response
+  once real SMTP is configured; the in-app bell row is still written immediately, and with
+  `QUEUE_CONNECTION=sync` behaviour is unchanged. Affects all 9 notification types.
+  _(`AppNotification.php`.)_
 - **[LOW]** Two 30 s pollers (bell always; messages when open); the messages poll re-runs the N+1.
 
 ### E. Security
@@ -1336,7 +1340,7 @@ panels + Recharts (code-split) [MED-perf], (3) one aggregated pending-counts end
 **MEDIUM (functional / perf)**
 9. ⏳ **✅ Wired the 3 orphaned mark-reads (§4/7/8); ✅ fixed the foster→animal status sync (§4)**; ⬜ apply-to-unavailable guard (§4) still pending.
 10. ⏳ **✅ Fixed blank donation dates (read `donated_at`) (§5)**; ⬜ register response `role:null` (§1) still pending.
-11. Queue notifications (`ShouldQueue`) + remove the messaging N+1 (§9); replace the 4-call animal stat strip and the 8-poll dashboard with aggregated endpoints (§3, §11); code-split the bundle (§2/11).
+11. ⏳ **✅ Queued notifications (`ShouldQueue`) + removed the messaging N+1 (§9)**; ⬜ replace the 4-call animal stat strip and the 8-poll dashboard with aggregated endpoints (§3, §11); ⬜ code-split the bundle (§2/11).
 
 **LOW** — dead-code removal (A2), debounce admin searches, autocomplete/`htmlFor` on forms, magic-number `80220`→single source, timezone-safe booking bounds, `<Link>` instead of `<a>` on internal nav, cap max donation/report rows.
 

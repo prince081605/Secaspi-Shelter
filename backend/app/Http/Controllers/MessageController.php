@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Notifications\NewMessage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 /**
  * In-app messaging between a member and the shelter's staff pool. A member can only see their
@@ -21,11 +22,10 @@ class MessageController extends Controller
     {
         $me = $request->user();
 
-        $conversations = Conversation::where('user_id', $me->id)
-            ->orderByDesc('last_message_at')
-            ->orderByDesc('id')
+        $conversations = $this->conversationList($me)
+            ->where('user_id', $me->id)
             ->get()
-            ->map(fn (Conversation $c) => $this->listItem($c, $me));
+            ->map(fn (Conversation $c) => $this->listItem($c));
 
         return response()->json(['conversations' => $conversations]);
     }
@@ -35,13 +35,27 @@ class MessageController extends Controller
     {
         $me = $request->user();
 
-        $conversations = Conversation::with('user')
-            ->orderByDesc('last_message_at')
-            ->orderByDesc('id')
+        $conversations = $this->conversationList($me)
+            ->with('user')
             ->get()
-            ->map(fn (Conversation $c) => $this->listItem($c, $me));
+            ->map(fn (Conversation $c) => $this->listItem($c));
 
         return response()->json(['conversations' => $conversations]);
+    }
+
+    /**
+     * Base query for a conversation list: eager-loads the latest message and the viewer's unread
+     * count in a fixed number of queries (no per-conversation latest/unread lookups → no N+1).
+     */
+    private function conversationList(User $viewer)
+    {
+        return Conversation::query()
+            ->with('latestMessage')
+            ->withCount(['messages as unread_count' => fn ($q) => $q
+                ->where('sender_id', '!=', $viewer->id)
+                ->whereNull('read_at')])
+            ->orderByDesc('last_message_at')
+            ->orderByDesc('id');
     }
 
     /** Member starts a conversation with an opening message. */
@@ -140,14 +154,9 @@ class MessageController extends Controller
         }
     }
 
-    private function listItem(Conversation $conversation, User $viewer): array
+    private function listItem(Conversation $conversation): array
     {
-        $latest = Message::where('conversation_id', $conversation->id)->orderByDesc('id')->first();
-
-        $unread = Message::where('conversation_id', $conversation->id)
-            ->where('sender_id', '!=', $viewer->id)
-            ->whereNull('read_at')
-            ->count();
+        $latest = $conversation->latestMessage;
 
         return [
             'id' => $conversation->id,
@@ -155,8 +164,8 @@ class MessageController extends Controller
             'status' => $conversation->status,
             'last_message_at' => $conversation->last_message_at,
             'member' => $conversation->user ? $conversation->user->full_name : null,
-            'latest' => $latest ? \Illuminate\Support\Str::limit($latest->body, 80) : null,
-            'unread' => $unread,
+            'latest' => $latest ? Str::limit($latest->body, 80) : null,
+            'unread' => (int) ($conversation->unread_count ?? 0),
         ];
     }
 

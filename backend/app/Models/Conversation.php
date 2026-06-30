@@ -22,6 +22,12 @@ class Conversation extends Model
         return $this->hasMany(Message::class)->orderBy('created_at');
     }
 
+    /** The single most recent message — eager-loaded by the conversation lists to avoid an N+1. */
+    public function latestMessage()
+    {
+        return $this->hasOne(Message::class)->latestOfMany();
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
