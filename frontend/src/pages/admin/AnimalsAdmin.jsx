@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState } from 'react';
 import {
   adminListAnimals,
+  adminGetAnimalStats,
   adminGetAnimal,
   adminCreateAnimal,
   adminUpdateAnimal,
@@ -592,23 +593,18 @@ export default function AnimalsAdmin() {
     return () => { mounted = false; };
   }, [filters, refreshKey, page]);
 
-  // Stat strip reflects true totals across all animals (not just the current filtered
-  // page), so it's fetched separately from the main listing using paginate()'s `total`.
+  // Stat strip reflects true totals across all animals (not just the current filtered page),
+  // fetched in one grouped-count request instead of 4 full-list calls (audit §3).
   useEffect(() => {
     let mounted = true;
-    Promise.all([
-      adminListAnimals({}),
-      adminListAnimals({ status: 'available' }),
-      adminListAnimals({ status: 'adopted' }),
-      adminListAnimals({ status: 'archived' }),
-    ])
-      .then(([all, available, adopted, archived]) => {
+    adminGetAnimalStats()
+      .then((data) => {
         if (!mounted) return;
         setStats({
-          total: all?.total ?? 0,
-          available: available?.total ?? 0,
-          adopted: adopted?.total ?? 0,
-          archived: archived?.total ?? 0,
+          total: data?.total ?? 0,
+          available: data?.available ?? 0,
+          adopted: data?.adopted ?? 0,
+          archived: data?.archived ?? 0,
         });
       })
       .catch(() => {});

@@ -8,6 +8,7 @@ use App\Models\CareGuide;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Writer\SvgWriter;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
@@ -68,6 +69,25 @@ class AnimalController extends Controller
         });
 
         return response()->json($animals);
+    }
+
+    /**
+     * Status counts for the admin animal stat strip, in one grouped query — replaces the 4
+     * separate full-list requests AnimalsAdmin fired just to read each pagination `total`
+     * (audit §3 D-1).
+     */
+    public function adminStats()
+    {
+        $byStatus = Animal::select('status', DB::raw('COUNT(*) as count'))
+            ->groupBy('status')
+            ->pluck('count', 'status');
+
+        return response()->json([
+            'total' => (int) $byStatus->sum(),
+            'available' => (int) ($byStatus['available'] ?? 0),
+            'adopted' => (int) ($byStatus['adopted'] ?? 0),
+            'archived' => (int) ($byStatus['archived'] ?? 0),
+        ]);
     }
 
     public function adminShow(Animal $animal)

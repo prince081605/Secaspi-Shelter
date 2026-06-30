@@ -22,9 +22,9 @@ Legend: ✅ done · ⏳ in progress · ⬜ pending.
 
 > **Progress (as of 2026-06-30, branch `audit/report-and-global-cleanup`):**
 > **Done** — §0.1 cleanup · §0.2 backend · HIGH security (auth + public/AI) · HIGH admin pagination (§§3–8).
-> **In progress** — §0.2 frontend splits (3 done; **`Dashboard` deferred**, `markRead` trait pending) · MED security (CSV-injection, staff-gate, public exposure done; private-disk uploads + AI cost cap pending) · MED functional/perf (mark-reads §4/7/8, foster sync §4, donation dates §5, messaging N+1 §9 done; queue/`ShouldQueue` deferred for deploy-safety; dashboard pending-counts §11 done; §3 stat-strip + code-split §2/11 pending).
+> **In progress** — §0.2 frontend splits (3 done; **`Dashboard` deferred**, `markRead` trait pending) · MED security (CSV-injection, staff-gate, public exposure done; private-disk uploads + AI cost cap pending) · MED functional/perf (mark-reads §4/7/8, foster sync §4, donation dates §5, messaging N+1 §9 done; queue/`ShouldQueue` deferred for deploy-safety; aggregate endpoints §3+§11 done; code-split §2/11 pending).
 > **Pending** — LOW.
-> Suite **133 green**.
+> Suite **134 green**.
 
 | Pass | Scope | Status | Where |
 |---|---|---|---|
@@ -35,7 +35,7 @@ Legend: ✅ done · ⏳ in progress · ⬜ pending.
 | **HIGH security (public/AI)** | `throttle:5,1` on the public rescue write (§6) + `throttle:20,1` on the public AI chat (§10), per IP | ✅ done | suite **121 green** (+2 `PublicRateLimitTest` cases) |
 | **HIGH functional** | Admin-table pagination via shared `components/Pagination.jsx` across **all** admin tables — §3 Animals + Intakes, §4 Adoption (inbox/ongoing/completed) + Foster, §5 Donations, §6 Rescue, §7 Volunteers + Personnel, §8 Visitations. Adoption inbox excludes decided rows server-side (`exclude_decided`) so it paginates cleanly | ✅ done | suite **119 green** (+3 `AdoptionApplicationTest`); browser-verified Donations 1→2 of 9, Adoption inbox 1→2 of 2 (decided rows excluded) |
 | MED security | **✅ CSV-injection (§11)** · **✅ staff-grant gate (§7)** · **✅ public field exposure (§2/3** — settings whitelist, medical cost/vet hidden, generic public errors**)**; ⬜ private-disk uploads (§5/6/7), AI cost cap (§10) | ⏳ in progress | suite **127 green** (+6 tests); Appendix A3 #4–8 |
-| MED functional/perf | **✅ orphaned mark-reads (§4/7/8)** · **✅ foster status sync (§4)** · **✅ donation dates (§5)** · **✅ messaging N+1 (§9)** (queue/`ShouldQueue` deferred — needs a worker, see §9) · **✅ aggregated dashboard pending-counts (§11)**; ⬜ §3 animal stat-strip count endpoint, code-split (§2/11) | ⏳ in progress | suite **133 green**; Appendix A3 #9–11 |
+| MED functional/perf | **✅ orphaned mark-reads (§4/7/8)** · **✅ foster status sync (§4)** · **✅ donation dates (§5)** · **✅ messaging N+1 (§9)** (queue/`ShouldQueue` deferred — needs a worker, see §9) · **✅ aggregated dashboard pending-counts (§11) + animal stat-strip count endpoint (§3)**; ⬜ code-split (§2/11) | ⏳ in progress | suite **134 green**; Appendix A3 #9–11 |
 | LOW | Remaining dead code (axios, email-verif stub, `staff()` report), debounce, autocomplete, magic numbers, `<Link>` nav | ⬜ pending | Appendix A2/A3 |
 
 > Module scorecards reflect the **as-audited** state; they're not re-scored until a module's fixes
@@ -399,9 +399,11 @@ medical cost/vet exposure; **live browser** screenshot of the public Adoption pa
 - **[LOW] `URLSearchParams` builder copy-pasted 4×** in `animalsApi.js`. → One `toQuery()` helper.
 
 ### D. Performance
-- **[MED] Stat strip fires 4 full list requests** (`Promise.all` of `adminListAnimals` with 4
-  status filters) only to read pagination `total` — plus the main list = **5 requests on mount**.
-  → One lightweight count endpoint. _(`AnimalsAdmin.jsx:990-1009`.)_
+- **[MED] ✅ RESOLVED — stat strip now uses one count endpoint.** New
+  `GET /api/admin/animals/stats` (`AnimalController::adminStats`, one grouped `COUNT(*)` query)
+  replaces the `Promise.all` of 4 full-list requests, so mount is 2 requests (list + stats) instead
+  of 5. Browser-verified the strip is unchanged (58 / 40 / 7 / 0); +1 test. _(`AnimalsAdmin.jsx`,
+  `AnimalController.php`.)_
 - **[MED] Redundant `adminGetAnimal` refetches.** Photos, Medical, and QR each re-fetch the full
   animal; every sub-manager create/delete calls `refresh()`, which refetches the whole list **and**
   re-runs the 4 stat calls. → Cache detail; targeted updates.
@@ -1343,7 +1345,7 @@ panels + Recharts (code-split) [MED-perf], (3) one aggregated pending-counts end
 **MEDIUM (functional / perf)**
 9. ⏳ **✅ Wired the 3 orphaned mark-reads (§4/7/8); ✅ fixed the foster→animal status sync (§4)**; ⬜ apply-to-unavailable guard (§4) still pending.
 10. ⏳ **✅ Fixed blank donation dates (read `donated_at`) (§5)**; ⬜ register response `role:null` (§1) still pending.
-11. ⏳ **✅ Removed the messaging N+1 (§9)** (queue/`ShouldQueue` deferred for deploy-safety — needs a worker) · **✅ aggregated the 8-poll dashboard into one pending-counts endpoint (§11)**; ⬜ replace the 4-call animal stat strip (§3); ⬜ code-split the bundle (§2/11).
+11. ⏳ **✅ Removed the messaging N+1 (§9)** (queue/`ShouldQueue` deferred for deploy-safety — needs a worker) · **✅ aggregated the 8-poll dashboard (§11) + the 4-call animal stat strip (§3) into count endpoints**; ⬜ code-split the bundle (§2/11).
 
 **LOW** — dead-code removal (A2), debounce admin searches, autocomplete/`htmlFor` on forms, magic-number `80220`→single source, timezone-safe booking bounds, `<Link>` instead of `<a>` on internal nav, cap max donation/report rows.
 

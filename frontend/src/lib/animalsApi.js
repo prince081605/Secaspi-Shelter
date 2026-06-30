@@ -48,6 +48,11 @@ export async function adminListAnimals(params = {}) {
   return api.get(`/api/admin/animals${qs ? `?${qs}` : ''}`);
 }
 
+// Status counts for the admin stat strip, in one request (replaces 4 full-list calls).
+export async function adminGetAnimalStats() {
+  return api.get('/api/admin/animals/stats');
+}
+
 export async function adminCreateAnimal(formData) {
   return api.post('/api/animals', formData);
 }
