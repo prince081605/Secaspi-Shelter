@@ -4,8 +4,6 @@ namespace App\Notifications;
 
 use App\Models\Notification as NotificationRecord;
 use App\Models\User;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -15,13 +13,13 @@ use Illuminate\Notifications\Notification;
  * `log` driver per .env — becomes real delivery the moment MAIL_MAILER/credentials are set, no
  * code change needed).
  *
- * Implements ShouldQueue so the email send is pushed to the queue instead of blocking the HTTP
- * response — important once real SMTP is configured and one event fans out to many staff/admins.
- * (With QUEUE_CONNECTION=sync it still runs inline; the in-app bell row is created immediately.)
+ * NOTE: deliberately NOT `implements ShouldQueue`. Notifications run synchronously so email
+ * delivery never depends on a running queue worker — prod uses `QUEUE_CONNECTION=database`
+ * (per .env.example) with no worker, so queued jobs would pile up unsent. Re-enable ShouldQueue
+ * only alongside a worker (or `QUEUE_CONNECTION=sync`). See audit §9.
  */
-abstract class AppNotification extends Notification implements ShouldQueue
+abstract class AppNotification extends Notification
 {
-    use Queueable;
 
     abstract public function type(): string;
 
