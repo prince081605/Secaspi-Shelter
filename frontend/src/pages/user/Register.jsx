@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { auth } from '../../lib/auth';
 import AuthLayout from '../../components/AuthLayout';
 
@@ -45,7 +45,7 @@ export default function Register() {
       <AuthLayout
         title="Account created!"
         subtitle="Your account is ready. Use your email and password to log in."
-        footer={<>Ready to go? <a href="/login">Log in</a></>}
+        footer={<>Ready to go? <Link to="/login">Log in</Link></>}
       >
         <div className="ui-field">
           <label className="ui-label">Your username</label>
@@ -65,13 +65,13 @@ export default function Register() {
     <AuthLayout
       title="Create an account"
       subtitle="Join us to adopt, foster, or support rescued Aspins."
-      footer={<>Already have an account? <a href="/login">Log in</a></>}
+      footer={<>Already have an account? <Link to="/login">Log in</Link></>}
     >
       {error ? <div className="ui-error">{error}</div> : null}
       <form onSubmit={onSubmit}>
         <div className="ui-field">
           <label className="ui-label ui-label-required">Full name</label>
-          <input className="ui-input" value={name} onChange={(e) => setName(e.target.value)} type="text" required />
+          <input className="ui-input" value={name} onChange={(e) => setName(e.target.value)} type="text" autoComplete="name" required />
         </div>
         <div className="ui-field">
           <label className="ui-label">Username (auto-generated)</label>
@@ -82,11 +82,11 @@ export default function Register() {
         </div>
         <div className="ui-field">
           <label className="ui-label ui-label-required">Email</label>
-          <input className="ui-input" value={email} onChange={(e) => setEmail(e.target.value)} type="email" required />
+          <input className="ui-input" value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="email" required />
         </div>
         <div className="ui-field">
           <label className="ui-label ui-label-required">Password</label>
-          <input className="ui-input" value={password} onChange={(e) => setPassword(e.target.value)} type="password" required minLength={8} />
+          <input className="ui-input" value={password} onChange={(e) => setPassword(e.target.value)} type="password" autoComplete="new-password" required minLength={8} />
         </div>
         <button className="ui-btn-primary" style={{ width: '100%' }} disabled={loading}>
           {loading ? 'Creating...' : 'Create Account'}

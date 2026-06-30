@@ -37,7 +37,7 @@ Legend: ✅ done · ⏳ in progress · ⬜ pending.
 | **HIGH functional** | Admin-table pagination via shared `components/Pagination.jsx` across **all** admin tables — §3 Animals + Intakes, §4 Adoption (inbox/ongoing/completed) + Foster, §5 Donations, §6 Rescue, §7 Volunteers + Personnel, §8 Visitations. Adoption inbox excludes decided rows server-side (`exclude_decided`) so it paginates cleanly | ✅ done | suite **119 green** (+3 `AdoptionApplicationTest`); browser-verified Donations 1→2 of 9, Adoption inbox 1→2 of 2 (decided rows excluded) |
 | MED security | **✅ CSV-injection (§11)** · **✅ staff-grant gate (§7)** · **✅ public field exposure (§2/3)** · **✅ AI global cap + trust-proxies (§10)**; ⬜ private-disk uploads (§5/6/7 — prod-risky, deliberate pass) | ⏳ in progress | suite **135 green**; Appendix A3 #4–8 |
 | MED functional/perf | **✅ mark-reads (§4/7/8) · foster status sync (§4) · donation dates (§5) · messaging N+1 (§9) · aggregate endpoints (§3+§11) · route-level code-split (§2/11)**. (queue/`ShouldQueue` deferred for deploy-safety — needs a worker; LandingPage map lazy-load optional) | ✅ done | suite **134 green**; bundle 1043→242 kB; Appendix A3 #9–11 |
-| LOW | Remaining dead code (axios, email-verif stub, `staff()` report), debounce, autocomplete, magic numbers, `<Link>` nav | ⬜ pending | Appendix A2/A3 |
+| LOW | **✅ auth: register `role:null`, `<Link>` nav, `autocomplete` (§1)**; ⬜ remaining: dead code (axios, email-verif stub, `staff()` report), admin-search debounce (§3), magic numbers (§2 `80220`) | ⏳ in progress | suite **135 green** |
 | **Post-audit: admin dashboard responsiveness** | Not in the original report — admin dashboard overflowed horizontally on phones (239px) and stacked a 968px nav above content. Fixed: `min-width:0` on the grid items (so wide tables/charts scroll inside their wrap instead of stretching the page) + a ☰ mobile-nav toggle that collapses the sidebar (968→107px, auto-collapses on selection). Desktop unchanged. | ✅ done | browser-verified at 375 / 1280px: 0 overflow, toggle works; build clean |
 
 > Module scorecards reflect the **as-audited** state; they're not re-scored until a module's fixes
@@ -118,14 +118,10 @@ rapid failed logins; reviewed `AuthTest.php` (12 cases, all relevant ones passin
   generic message (no account enumeration via response body). `Hash` casting on password.
 
 ### A. Functional
-- **[MED] Register API response returns `role: null`.** Reproduced live:
-  `POST /api/register` → `{"user":{...,"role":null}}`, yet the DB row is `role='user'`.
-  The default is applied by the **DB column** (`->default('user')`), not in app code, and the
-  model isn't refreshed after `User::create()`. Harmless in the current UI (Register.jsx only
-  reads `username`), but it's an incorrect contract and fragile (any DB without the column
-  default would persist a null role). → **Fix:** set `'role' => 'user'` explicitly in
-  `create()` (or `$user->refresh()` before responding). _(`AuthController.php:86`,
-  migration `...create_secaspi_tables.php` users block.)_
+- **[MED] ✅ RESOLVED — register response no longer returns `role: null`.** `register()` now calls
+  `$user->refresh()` after `User::create()` so the DB-column default (`role='user'`) is loaded
+  before serializing. Covered by `AuthTest::test_register_creates_a_user_with_the_default_role`
+  (now also asserts `user.role === 'user'` in the response). _(`AuthController.php`.)_
 - **[LOW] Email-verification feature is half-built.** `me()` returns `email_verified`, the
   column + `VerifyEmailRequest` + a migration exist, but `EmailVerificationController` is an
   empty stub and nothing sends or checks a verification link. → Decide: implement or remove the
@@ -136,12 +132,11 @@ rapid failed logins; reviewed `AuthTest.php` (12 cases, all relevant ones passin
   can be removed. _(`lib/auth.js`, `Register.jsx:34`.)_
 
 ### B. UI / UX
-- **[MED] Auth links use raw `<a href>` instead of router `<Link>`** → full page reload
-  (re-downloads the SPA bundle, white flash, lost state). Affects every auth page:
-  Login→register/forgot, Register→login (×2), Forgot→login, Reset→login. → **Fix:** `<Link to>`.
-  _(`Login.jsx:32,69`, `Register.jsx:48,68`, `ForgotPassword.jsx:34`, `ResetPassword.jsx:51`.)_
-- **[LOW] No `autocomplete` attributes** on email/password inputs (`email`, `username`,
-  `current-password`, `new-password`). Hurts password managers and accessibility. _(all 4 pages)_
+- **[MED] ✅ RESOLVED — auth links now use router `<Link>`** instead of raw `<a href>`, so
+  navigating between Login / Register / Forgot / Reset is a client-side transition (no full SPA
+  reload / white flash / lost state). _(all 4 auth pages.)_
+- **[LOW] ✅ RESOLVED — `autocomplete` attributes added** to the auth inputs (`email`, `name`,
+  `current-password`, `new-password`) so password managers and a11y work. _(all 4 auth pages.)_
 - **[LOW] Labels not programmatically associated with inputs** (styled `className` labels, no
   `htmlFor`/`id`). Screen-reader + click-to-focus gap. _(all auth forms)_
 - **[LOW] Password show/hide affordance is an emoji (🙈/👁️)** and exists only on Login, not

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { auth } from '../../lib/auth';
 import AuthLayout from '../../components/AuthLayout';
 
@@ -29,13 +29,13 @@ export default function Login() {
     <AuthLayout
       title="Welcome back"
       subtitle="Log in to manage your adoptions and donations."
-      footer={<>Don't have an account? <a href="/register">Create one</a></>}
+      footer={<>Don't have an account? <Link to="/register">Create one</Link></>}
     >
       {error ? <div className="ui-error">{error}</div> : null}
       <form onSubmit={onSubmit}>
         <div className="ui-field">
           <label className="ui-label ui-label-required">Email</label>
-          <input className="ui-input" value={email} onChange={(e) => setEmail(e.target.value)} type="email" required />
+          <input className="ui-input" value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="email" required />
         </div>
         <div className="ui-field">
           <label className="ui-label ui-label-required">Password</label>
@@ -46,6 +46,7 @@ export default function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
               required
             />
             <button
@@ -66,7 +67,7 @@ export default function Login() {
           {loading ? 'Logging in...' : 'Log In'}
         </button>
         <p style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.9rem' }}>
-          <a href="/forgot-password" style={{ color: 'var(--muted)' }}>Forgot password?</a>
+          <Link to="/forgot-password" style={{ color: 'var(--muted)' }}>Forgot password?</Link>
         </p>
       </form>
     </AuthLayout>

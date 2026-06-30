@@ -89,6 +89,11 @@ class AuthController extends Controller
             'password' => Hash::make($request->input('password')),
         ]);
 
+        // role/status are set by DB-column defaults (they're guarded against mass assignment), so
+        // the freshly-created model doesn't know them yet — reload so the response reports role
+        // 'user' instead of null.
+        $user->refresh();
+
         return response()->json([
             'user' => [
                 'id' => $user->id,

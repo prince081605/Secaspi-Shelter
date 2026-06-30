@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { auth } from '../../lib/auth';
 import AuthLayout from '../../components/AuthLayout';
 
@@ -31,7 +32,7 @@ export default function ForgotPassword() {
     <AuthLayout
       title="Forgot password"
       subtitle="Enter your email and we'll send you a reset link."
-      footer={<a href="/login">Back to login</a>}
+      footer={<Link to="/login">Back to login</Link>}
     >
       {error ? <div className="ui-error">{error}</div> : null}
       {success ? <div className="ui-success-msg">{success}</div> : null}
@@ -39,7 +40,7 @@ export default function ForgotPassword() {
       <form onSubmit={onSubmit}>
         <div className="ui-field">
           <label className="ui-label ui-label-required">Email</label>
-          <input className="ui-input" value={email} onChange={(e) => setEmail(e.target.value)} type="email" required />
+          <input className="ui-input" value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="email" required />
         </div>
         <button className="ui-btn-primary" style={{ width: '100%' }} disabled={loading}>
           {loading ? 'Sending...' : 'Send Reset Link'}

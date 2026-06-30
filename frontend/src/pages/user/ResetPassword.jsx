@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { auth } from '../../lib/auth';
 import AuthLayout from '../../components/AuthLayout';
 
@@ -48,7 +48,7 @@ export default function ResetPassword() {
     <AuthLayout
       title="Reset password"
       subtitle="Choose a new password for your account."
-      footer={<a href="/login">Back to login</a>}
+      footer={<Link to="/login">Back to login</Link>}
     >
       {error ? <div className="ui-error">{error}</div> : null}
       {success ? <div className="ui-success-msg">{success}</div> : null}
@@ -61,6 +61,7 @@ export default function ResetPassword() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
             required
           />
         </div>
@@ -81,6 +82,7 @@ export default function ResetPassword() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            autoComplete="new-password"
             required
             minLength={8}
           />
@@ -92,6 +94,7 @@ export default function ResetPassword() {
             type="password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
+            autoComplete="new-password"
             required
             minLength={8}
           />

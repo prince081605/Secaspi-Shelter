@@ -19,7 +19,8 @@ class AuthTest extends TestCase
             'name' => 'Jane Doe',
             'email' => 'jane@example.com',
             'password' => 'password123',
-        ])->assertCreated();
+        ])->assertCreated()
+            ->assertJsonPath('user.role', 'user'); // response must report the default role, not null
 
         $this->assertDatabaseHas('users', ['email' => 'jane@example.com', 'role' => 'user']);
     }
