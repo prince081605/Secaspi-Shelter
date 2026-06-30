@@ -22,7 +22,7 @@ Legend: ✅ done · ⏳ in progress · ⬜ pending.
 
 > **Progress (as of 2026-06-30, branch `audit/report-and-global-cleanup`):**
 > **Done** — §0.1 cleanup · §0.2 backend · HIGH security (auth + public/AI) · HIGH admin pagination (§§3–8).
-> **In progress** — §0.2 frontend splits (3 done; **`Dashboard` deferred**, `markRead` trait pending) · MED security (CSV-injection, staff-gate, public exposure done; private-disk uploads + AI cost cap pending).
+> **In progress** — §0.2 frontend splits (3 done; **`Dashboard` deferred**, `markRead` trait pending) · MED security (CSV-injection, staff-gate, public exposure, AI global cap + trust-proxies done; only private-disk uploads §5/6/7 left — deferred as prod-risky).
 > **Done (full rows)** — §0.1 · §0.2 backend · all HIGH · **MED functional/perf** (mark-reads, foster sync, donation dates, N+1, aggregate endpoints, route code-split; queue `ShouldQueue` deferred for deploy-safety) · post-audit dashboard responsiveness.
 > **Pending** — remaining MED security · LOW.
 > Suite **134 green**; initial JS bundle 1043 kB → 242 kB.
@@ -35,7 +35,7 @@ Legend: ✅ done · ⏳ in progress · ⬜ pending.
 | **HIGH security (auth)** | `throttle` on login/register/forgot/reset (§1); revoke tokens on password reset + revoke other sessions on change-password (§1) | ✅ done | suite **116 green** (+3 new `AuthTest` cases) |
 | **HIGH security (public/AI)** | `throttle:5,1` on the public rescue write (§6) + `throttle:20,1` on the public AI chat (§10), per IP | ✅ done | suite **121 green** (+2 `PublicRateLimitTest` cases) |
 | **HIGH functional** | Admin-table pagination via shared `components/Pagination.jsx` across **all** admin tables — §3 Animals + Intakes, §4 Adoption (inbox/ongoing/completed) + Foster, §5 Donations, §6 Rescue, §7 Volunteers + Personnel, §8 Visitations. Adoption inbox excludes decided rows server-side (`exclude_decided`) so it paginates cleanly | ✅ done | suite **119 green** (+3 `AdoptionApplicationTest`); browser-verified Donations 1→2 of 9, Adoption inbox 1→2 of 2 (decided rows excluded) |
-| MED security | **✅ CSV-injection (§11)** · **✅ staff-grant gate (§7)** · **✅ public field exposure (§2/3** — settings whitelist, medical cost/vet hidden, generic public errors**)**; ⬜ private-disk uploads (§5/6/7), AI cost cap (§10) | ⏳ in progress | suite **127 green** (+6 tests); Appendix A3 #4–8 |
+| MED security | **✅ CSV-injection (§11)** · **✅ staff-grant gate (§7)** · **✅ public field exposure (§2/3)** · **✅ AI global cap + trust-proxies (§10)**; ⬜ private-disk uploads (§5/6/7 — prod-risky, deliberate pass) | ⏳ in progress | suite **135 green**; Appendix A3 #4–8 |
 | MED functional/perf | **✅ mark-reads (§4/7/8) · foster status sync (§4) · donation dates (§5) · messaging N+1 (§9) · aggregate endpoints (§3+§11) · route-level code-split (§2/11)**. (queue/`ShouldQueue` deferred for deploy-safety — needs a worker; LandingPage map lazy-load optional) | ✅ done | suite **134 green**; bundle 1043→242 kB; Appendix A3 #9–11 |
 | LOW | Remaining dead code (axios, email-verif stub, `staff()` report), debounce, autocomplete, magic numbers, `<Link>` nav | ⬜ pending | Appendix A2/A3 |
 | **Post-audit: admin dashboard responsiveness** | Not in the original report — admin dashboard overflowed horizontally on phones (239px) and stacked a 968px nav above content. Fixed: `min-width:0` on the grid items (so wide tables/charts scroll inside their wrap instead of stretching the page) + a ☰ mobile-nav toggle that collapses the sidebar (968→107px, auto-collapses on selection). Desktop unchanged. | ✅ done | browser-verified at 375 / 1280px: 0 overflow, toggle works; build clean |
@@ -1076,11 +1076,15 @@ unthrottled public chat route.
   (per IP) so the free TF-IDF/DB path can't be hammered as a CPU/DB DoS even when AI is off.
   Covered by `PublicRateLimitTest::test_public_assistant_chat_is_rate_limited`. _(The global daily
   AI spend cap + trust-proxies for the real client IP remain MED items — see §10 E-2 / A3 #8.)_
-- **[MED] AI cost controls are weak against a determined abuser.** The daily cap keys on
-  `$request->ip()` — unreliable behind Render's proxy (shared/proxy IP unless TrustProxies is set;
-  NAT'd networks share one cap; trivially bypassed by IP rotation), and there is **no global daily
-  spend cap** (many IPs → unbounded model spend). → Trust proxies for the real client IP + add a
-  global daily cap. _(`AiAssistantController.php:51`.)_
+- **[MED] ✅ RESOLVED — AI cost controls hardened.** Two fixes: (1) `bootstrap/app.php` now sets
+  `trustProxies(at: '*')`, so `$request->ip()` is the real client IP behind Render's proxy — making
+  the per-visitor AI cap **and** all the per-IP throttles (auth/rescue/AI, §1/6/10) key per client
+  instead of collapsing into one proxy-IP bucket. (2) A shelter-wide `GLOBAL_DAILY_CAP` (500/day,
+  tunable via the optional `ai_daily_global_cap` setting) bounds total paid replies even if many
+  IPs each hit their own cap; past it the assistant falls back to FAQ (`source: limit`) with no API
+  call. Covered by `AiAssistantTest::test_global_daily_cap_stops_paid_calls_even_for_a_fresh_visitor`.
+  _(IP rotation can still spread within the global cap — that ceiling is the backstop.)_
+  _(`AiAssistantController.php`, `bootstrap/app.php`.)_
 - **[LOW] Client-supplied `history` primes the model.** It's injected as conversation turns; roles
   are coerced to user/assistant (never `system`) and content is length-capped, and the context
   holds only public shelter data (no secrets/tools) — so prompt-injection blast radius is low
@@ -1345,7 +1349,7 @@ panels + Recharts (code-split) [MED-perf], (3) one aggregated pending-counts end
 5. ✅ **DONE** — Neutralize **CSV formula injection** in report exports (§11).
 6. ✅ **DONE** — Gate `type=staff` personnel creation behind `admin` (staff can no longer mint staff) (§7).
 7. ✅ **DONE** — Whitelist public settings keys; stop returning `$e->getMessage()` publicly; drop medical cost/vet from the public animal payload (§2, §3).
-8. ⬜ Trust proxies for real client IP + add a **global** AI daily spend cap (§10).
+8. ✅ **DONE** — Trust proxies for real client IP + add a **global** AI daily spend cap (§10).
 
 **MEDIUM (functional / perf)**
 9. ⏳ **✅ Wired the 3 orphaned mark-reads (§4/7/8); ✅ fixed the foster→animal status sync (§4)**; ⬜ apply-to-unavailable guard (§4) still pending.

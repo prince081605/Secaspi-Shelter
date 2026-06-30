@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\FaqEntry;
 use App\Models\Setting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -58,6 +59,27 @@ class AiAssistantTest extends TestCase
             ->assertOk()
             ->assertJsonPath('source', 'ai')
             ->assertJsonPath('reply', 'Buddy would be a great pick for you!');
+    }
+
+    public function test_global_daily_cap_stops_paid_calls_even_for_a_fresh_visitor(): void
+    {
+        config(['services.openai.key' => 'test-key']);
+        Setting::setMany(['ai_assistant_enabled' => '1', 'ai_daily_global_cap' => '2']);
+
+        Http::fake([
+            '*/chat/completions' => Http::response([
+                'choices' => [['message' => ['content' => 'should never be sent']]],
+            ], 200),
+        ]);
+
+        // Shelter-wide counter already at the global cap; this visitor's own counter is 0.
+        Cache::put('ai_count_global:'.now()->toDateString(), 2, now()->endOfDay());
+
+        $this->postJson('/api/assistant/chat', ['message' => 'Tell me about general pet nutrition advice'])
+            ->assertOk()
+            ->assertJsonPath('source', 'limit');
+
+        Http::assertNothingSent();
     }
 
     public function test_it_validates_the_message(): void

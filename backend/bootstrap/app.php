@@ -1,9 +1,13 @@
 <?php
 
+use App\Http\Middleware\EnsureActive;
+use App\Http\Middleware\EnsureAdmin;
+use App\Http\Middleware\EnsureRole;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Middleware\HandleCors;
 use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -14,20 +18,25 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-    $middleware->use([
-        \Illuminate\Http\Middleware\HandleCors::class,
-    ]);
-    $middleware->alias([
-        'admin' => \App\Http\Middleware\EnsureAdmin::class,
-        'active' => \App\Http\Middleware\EnsureActive::class,
-        // Parameterised minimum-role gate, e.g. ->middleware('role:staff').
-        'role' => \App\Http\Middleware\EnsureRole::class,
-    ]);
-    // API-only app with no `login` route. Returning null here stops the auth middleware from
-    // trying to redirect unauthenticated guests to route('login') (which would throw a 500);
-    // with no redirect target the request resolves to a clean 401 JSON instead.
-    $middleware->redirectGuestsTo(fn (Request $request) => $request->is('api/*') ? null : '/login');
-})
+        $middleware->use([
+            HandleCors::class,
+        ]);
+        // Behind a hosting proxy (Render) the app is only reachable via that proxy, so trust it for the
+        // forwarded headers. Without this, $request->ip() is the proxy's IP — collapsing every per-IP
+        // rate limit/throttle and the AI per-visitor cap into one shared bucket — and HTTPS isn't
+        // detected. Trusting all proxies is appropriate when the proxy is the only ingress.
+        $middleware->trustProxies(at: '*');
+        $middleware->alias([
+            'admin' => EnsureAdmin::class,
+            'active' => EnsureActive::class,
+            // Parameterised minimum-role gate, e.g. ->middleware('role:staff').
+            'role' => EnsureRole::class,
+        ]);
+        // API-only app with no `login` route. Returning null here stops the auth middleware from
+        // trying to redirect unauthenticated guests to route('login') (which would throw a 500);
+        // with no redirect target the request resolves to a clean 401 JSON instead.
+        $middleware->redirectGuestsTo(fn (Request $request) => $request->is('api/*') ? null : '/login');
+    })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
