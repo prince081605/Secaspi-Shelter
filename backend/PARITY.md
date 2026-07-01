@@ -39,26 +39,17 @@ feature "work in one environment but not another," and how each is handled.
 
 ## Environment/config parity (so local mirrors prod functionality)
 
-- **Public uploads (animal photos, settings images).** Written to the *default* disk
-  (`FILESYSTEM_DISK`): Cloudflare R2 (`s3`) in prod, `public` locally. Locally you must run
-  `php artisan storage:link` and set `APP_URL` correctly, or image URLs 404. URLs are generated via
-  `Storage::url()`. These are meant to be publicly visible (they render on the public pages).
-- **Sensitive uploads (donation proofs, rescue photos, intake documents).** Written to the dedicated
-  `private` disk (`->store(..., 'private')`) and served only via short-lived signed links —
-  `Storage::disk('private')->temporaryUrl(..., 30 min)` — to already-authorized viewers, so they're
-  never reachable through the public `/storage` symlink (audit §5/6/7). The intake→animal conversion
-  streams the doc cross-disk (`private` → the default/public disk) since the resulting animal photo
-  must stay public.
-  - **Persistence across environments.** The `private` disk's driver is env-driven
-    (`PRIVATE_FILESYSTEM_DRIVER`, see `config/filesystems.php` + `.env.example`):
-    - **dev / tests:** `local` — files in `storage/app/private`, served via the signed `/storage`
-      route (`'serve' => true`). (The built-in `local` disk no longer serves `/storage`; the
-      `private` disk owns that route — two local disks can't share one serve URL.)
-    - **prod:** set `PRIVATE_FILESYSTEM_DRIVER=s3` with a **separate, private** R2/S3 bucket
-      (`PRIVATE_AWS_BUCKET`, no public access). `temporaryUrl()` presigns natively, and — unlike the
-      old `local`-disk approach — the files **survive container redeploys** (same reason public
-      uploads use R2). Do NOT point it at the public `AWS_BUCKET`, or objects would be reachable via
-      the public bucket URL.
+- **Uploaded images (animal photos, settings images, donation proofs, rescue photos, intake docs).**
+  All written to the *default* disk (`FILESYSTEM_DISK`): Cloudflare R2 (`s3`) in prod, `public`
+  locally. Locally you must run `php artisan storage:link` and set `APP_URL` correctly, or image URLs
+  404. URLs are generated via `Storage::url()`.
+  - **Note on sensitive uploads.** Donation proofs / rescue photos / intake docs were briefly moved
+    to a private, signed-URL disk (audit §5/6/7), but that was **reverted** — on Render's free tier
+    the private disk was the ephemeral container filesystem, so those uploads vanished on
+    sleep/redeploy and showed blank in the admin. They're back on the public R2 disk (like animal
+    photos) so they persist and render reliably. Trade-off: a proof is reachable by anyone with the
+    direct URL. To re-harden later, put them on a **separate private R2 bucket** served via
+    `temporaryUrl()` presigned links (needs the bucket + a `serve`-capable private disk).
 - **CORS.** `config/cors.php` reads `FRONTEND_URL`. Local `.env` must set
   `FRONTEND_URL=http://localhost:5173` or the React dev app is CORS-blocked.
 - **APP_ENV.** Keep `APP_ENV=local` locally so dev conveniences work (e.g. the forgot-password

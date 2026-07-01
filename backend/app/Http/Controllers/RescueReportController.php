@@ -32,7 +32,7 @@ class RescueReportController extends Controller
 
         try {
             $photoPath = $request->hasFile('photo')
-                ? $request->file('photo')->store('rescue-reports', 'private')
+                ? $request->file('photo')->store('rescue-reports')
                 : null;
 
             $report = RescueReport::create([
@@ -79,11 +79,11 @@ class RescueReportController extends Controller
 
         $reports = $query->orderByDesc('id')->paginate(12)->withQueryString();
 
-        // Expose photo_url as a short-lived signed URL (in place, just for serialization) —
-        // the photo lives on the private disk, so the raw path is useless without one.
+        // Expose photo_url as an absolute URL (in place, just for serialization) so the
+        // admin triage panel renders it regardless of the configured filesystem disk.
         $reports->getCollection()->transform(function (RescueReport $report) {
             if ($report->photo_url) {
-                $report->photo_url = Storage::disk('private')->temporaryUrl($report->photo_url, now()->addMinutes(30));
+                $report->photo_url = Storage::url($report->photo_url);
             }
 
             return $report;

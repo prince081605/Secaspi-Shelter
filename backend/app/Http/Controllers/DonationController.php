@@ -30,7 +30,7 @@ class DonationController extends Controller
 
         try {
             $proofPath = $request->hasFile('proof_image')
-                ? $request->file('proof_image')->store('donations', 'private')
+                ? $request->file('proof_image')->store('donations')
                 : null;
 
             $donation = Donation::create([
@@ -81,7 +81,7 @@ class DonationController extends Controller
         }
 
         if ($donation->proof_image) {
-            $donation->proof_image = Storage::disk('private')->temporaryUrl($donation->proof_image, now()->addMinutes(30));
+            $donation->proof_image = Storage::url($donation->proof_image);
         }
 
         return response()->json(['donation' => $donation]);
@@ -115,7 +115,7 @@ class DonationController extends Controller
         }
 
         if ($donation->proof_image) {
-            $donation->proof_image = Storage::disk('private')->temporaryUrl($donation->proof_image, now()->addMinutes(30));
+            $donation->proof_image = Storage::url($donation->proof_image);
         }
 
         return response()->json(['donation' => $donation]);
@@ -136,7 +136,7 @@ class DonationController extends Controller
             'reference_no' => $d->reference_no,
             'amount' => $d->amount,
             'payment_method' => $d->payment_method,
-            'proof_image' => $d->proof_image ? Storage::disk('private')->temporaryUrl($d->proof_image, now()->addMinutes(30)) : null,
+            'proof_image' => $d->proof_image ? Storage::url($d->proof_image) : null,
             'status' => $d->status,
             'donated_at' => $d->donated_at,
             'donor' => $d->user ? [
