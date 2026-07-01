@@ -32,7 +32,7 @@ class RescueReportController extends Controller
 
         try {
             $photoPath = $request->hasFile('photo')
-                ? $request->file('photo')->store('rescue-reports', 'local')
+                ? $request->file('photo')->store('rescue-reports', 'private')
                 : null;
 
             $report = RescueReport::create([
@@ -83,7 +83,7 @@ class RescueReportController extends Controller
         // the photo lives on the private disk, so the raw path is useless without one.
         $reports->getCollection()->transform(function (RescueReport $report) {
             if ($report->photo_url) {
-                $report->photo_url = Storage::disk('local')->temporaryUrl($report->photo_url, now()->addMinutes(30));
+                $report->photo_url = Storage::disk('private')->temporaryUrl($report->photo_url, now()->addMinutes(30));
             }
 
             return $report;

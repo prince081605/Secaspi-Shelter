@@ -38,7 +38,7 @@ Legend: ✅ done · ⏳ in progress · ⬜ pending.
 | **HIGH security (auth)** | `throttle` on login/register/forgot/reset (§1); revoke tokens on password reset + revoke other sessions on change-password (§1) | ✅ done | suite **116 green** (+3 new `AuthTest` cases) |
 | **HIGH security (public/AI)** | `throttle:5,1` on the public rescue write (§6) + `throttle:20,1` on the public AI chat (§10), per IP | ✅ done | suite **121 green** (+2 `PublicRateLimitTest` cases) |
 | **HIGH functional** | Admin-table pagination via shared `components/Pagination.jsx` across **all** admin tables — §3 Animals + Intakes, §4 Adoption (inbox/ongoing/completed) + Foster, §5 Donations, §6 Rescue, §7 Volunteers + Personnel, §8 Visitations. Adoption inbox excludes decided rows server-side (`exclude_decided`) so it paginates cleanly | ✅ done | suite **119 green** (+3 `AdoptionApplicationTest`); browser-verified Donations 1→2 of 9, Adoption inbox 1→2 of 2 (decided rows excluded) |
-| MED security | **✅ CSV-injection (§11)** · **✅ staff-grant gate (§7)** · **✅ public field exposure (§2/3)** · **✅ AI global cap + trust-proxies (§10)** · **✅ private-disk uploads (§5/6/7)** — donation proofs, rescue photos, and intake documents now write to the private `local` disk (Laravel's built-in signed-route serving, `'serve' => true`) and are read back only via `Storage::disk('local')->temporaryUrl()` (30-min signed links) to already-authorized viewers; intake→animal photo conversion does a cross-disk stream copy into the `public` disk since animal photos must stay public. Browser/curl-verified: signed URL → 200, unsigned/tampered → 403 | ✅ done | suite **139 green** (+4 `PrivateUploadsTest`); Appendix A3 #4–8 |
+| MED security | **✅ CSV-injection (§11)** · **✅ staff-grant gate (§7)** · **✅ public field exposure (§2/3)** · **✅ AI global cap + trust-proxies (§10)** · **✅ private-disk uploads (§5/6/7)** — donation proofs, rescue photos, and intake documents write to a dedicated env-driven `private` disk (`PRIVATE_FILESYSTEM_DRIVER`: `local` in dev/tests via Laravel's signed-route serving, **`s3` in prod against a separate private R2/S3 bucket so files survive container redeploys**) and are read back only via `Storage::disk('private')->temporaryUrl()` (30-min signed links); intake→animal photo conversion streams cross-disk into the default/public disk (matching `AnimalController`) since animal photos must stay public. Browser/curl-verified: signed URL → 200, unsigned/tampered → 403 | ✅ done | suite **141 green** (+4 `PrivateUploadsTest`); Appendix A3 #4–8 |
 | MED functional/perf | **✅ mark-reads (§4/7/8) · foster status sync (§4) · donation dates (§5) · messaging N+1 (§9) · aggregate endpoints (§3+§11) · route-level code-split (§2/11)**. (queue/`ShouldQueue` deferred for deploy-safety — needs a worker; LandingPage map lazy-load optional) | ✅ done | suite **134 green**; bundle 1043→242 kB; Appendix A3 #9–11 |
 | LOW | **✅ auth: register `role:null`, `<Link>` nav, `autocomplete` (§1)** · **✅ dead code: removed unused `axios` dep, the empty `EmailVerificationController` + `VerifyEmailRequest` stubs, and the dead `auth.register` token branch** · **✅ routed+exposed the `staff` report (§11 A-1)** · **✅ admin animal-search 300ms debounce (§3 B-1)** · **✅ unified the `80220` monthly-goal default into a named `PublicHomeController::DEFAULT_MONTHLY_GOAL` (§2 H-1)** | ✅ done | suite **140 green** (+1 `ReportExportTest` staff-report case); build + lint clean (no new errors) |
 | **Post-audit: admin dashboard responsiveness** | Not in the original report — admin dashboard overflowed horizontally on phones (239px) and stacked a 968px nav above content. Fixed: `min-width:0` on the grid items (so wide tables/charts scroll inside their wrap instead of stretching the page) + a ☰ mobile-nav toggle that collapses the sidebar (968→107px, auto-collapses on selection). Desktop unchanged. | ✅ done | browser-verified at 375 / 1280px: 0 overflow, toggle works; build clean |
@@ -625,11 +625,12 @@ unauthenticated (HTTP 200).
 
 ### E. Security
 - **[MED] ✅ RESOLVED — donation proof screenshots now live on the private disk.**
-  `store()` now writes via `->store('donations', 'local')`; `show`/`verify`/`adminIndex` read it
-  back via `Storage::disk('local')->temporaryUrl(..., 30 min)` instead of `Storage::url()`, so the
+  `store()` now writes via `->store('donations', 'private')`; `show`/`verify`/`adminIndex` read it
+  back via `Storage::disk('private')->temporaryUrl(..., 30 min)` instead of `Storage::url()`, so the
   proof is reachable only through a short-lived signed link handed to an already-authorized viewer
-  (the owning donor or staff/admin) — never through the public `/storage/donations/...` path.
-  Covered by `PrivateUploadsTest::test_donation_proof_is_private_and_served_via_a_signed_url`.
+  (the owning donor or staff/admin) — never through the public `/storage/donations/...` path. The
+  `private` disk is env-driven (`local` in dev, private R2/S3 in prod — see PARITY.md). Covered by
+  `PrivateUploadsTest::test_donation_proof_is_private_and_served_via_a_signed_url`.
   _(`DonationController.php`; same fix applied to rescue photos §6 and intake docs §7.)_
 - **[LOW]** `show()` returns the **full raw model** (all columns) to the owner — minor self-data
   over-exposure and inconsistent with the curated shapes elsewhere.
@@ -729,9 +730,10 @@ NOT NULL [LOW].
   past the cap, blunting triage-queue spam and 5 MB-upload storage abuse. Covered by
   `PublicRateLimitTest::test_public_rescue_submission_is_rate_limited`. _(A complementary
   honeypot/captcha remains a separate hardening step; the `image|max:5120` rule still caps size.)_
-- **[MED] ✅ RESOLVED — rescue photos now live on the private disk** (`rescue-reports/`, `local`
-  disk). `index()` reads them back via `Storage::disk('local')->temporaryUrl(..., 30 min)` for
-  staff-only viewing instead of the public `Storage::url()`. Covered by
+- **[MED] ✅ RESOLVED — rescue photos now live on the private disk** (`rescue-reports/` on the
+  env-driven `private` disk). `index()` reads them back via
+  `Storage::disk('private')->temporaryUrl(..., 30 min)` for staff-only viewing instead of the public
+  `Storage::url()`. Covered by
   `PrivateUploadsTest::test_rescue_report_photo_is_private_and_served_via_a_signed_url`.
   _(Shared fix with donations §5 and intakes §7.)_
 - **[PASS]** Validated input (bounds/enum/image); status server-forced `pending`; admin updates
@@ -827,12 +829,13 @@ never called (orphaned); reviewed the staff-promotion path end-to-end (controlle
   member can't mint more staff (the account-role `forceFill` only runs after the gate). Volunteer
   creation stays open at `role:staff`. Covered by `StaffGrantGateTest` (staff→403, admin→201,
   staff can still add volunteers). _(`VolunteerController.php`.)_
-- **[MED] ✅ RESOLVED — intake documents now live on the private disk** (`intakes/`, `local` disk).
-  `adminStore`/`addDocuments` write there; `toDetail()` reads back via
-  `Storage::disk('local')->temporaryUrl(..., 30 min)` for staff only. The intake→animal conversion
-  (`adminConvert`) now does a cross-disk **stream copy** from `local` into the `public` disk (animal
-  photos must stay public for the adoption pages) rather than the old same-disk `Storage::copy`.
-  Covered by `PrivateUploadsTest::test_intake_document_is_private_and_served_via_a_signed_url` +
+- **[MED] ✅ RESOLVED — intake documents now live on the private disk** (`intakes/` on the env-driven
+  `private` disk). `adminStore`/`addDocuments` write there; `toDetail()` reads back via
+  `Storage::disk('private')->temporaryUrl(..., 30 min)` for staff only. The intake→animal conversion
+  (`adminConvert`) now does a cross-disk **stream copy** from `private` into the default/public disk
+  (matching `AnimalController`, so it's R2/s3 in prod — animal photos must stay public for the
+  adoption pages) rather than the old same-disk `Storage::copy`. Covered by
+  `PrivateUploadsTest::test_intake_document_is_private_and_served_via_a_signed_url` +
   `test_intake_conversion_copies_the_private_document_to_the_public_animal_photo`. _(Shared fix with
   donations §5 and rescue photos §6.)_
 - **[LOW] `adminConvert` isn't transactional** (Animal create → doc copies → intake update); a
@@ -1292,9 +1295,10 @@ panels + Recharts (code-split) [MED-perf], (3) one aggregated pending-counts end
 - **[HIGH] No rate limiting anywhere** — auth (§1), public rescue write (§6), public AI chat (§10),
   messaging. → Global `throttle` + tighter per-route limits on auth / public-write / AI.
 - **[MED] ✅ RESOLVED — sensitive uploads moved off the public disk.** Donation proofs (§5), rescue
-  photos (§6), and intake docs (§7) now write to the private `local` disk and are read back only via
-  30-minute signed `temporaryUrl()` links to already-authorized viewers. Animal photos (`animals/`)
-  deliberately stay on the `public` disk — they're meant to be publicly visible on the adoption
+  photos (§6), and intake docs (§7) now write to a dedicated env-driven `private` disk (`local` in
+  dev, private R2/S3 in prod so they persist across redeploys) and are read back only via 30-minute
+  signed `temporaryUrl()` links to already-authorized viewers. Animal photos (`animals/`)
+  deliberately stay on the default/public disk — they're meant to be publicly visible on the adoption
   pages — including the intake→animal conversion copy, which now streams cross-disk.
 - **[PASS] Strong foundations:** mass-assignment hardening (role/status excluded, with tests),
   XSS-safe React rendering throughout, parameterized queries (no SQLi), constant-time token
@@ -1333,7 +1337,7 @@ panels + Recharts (code-split) [MED-perf], (3) one aggregated pending-counts end
 | **No rate limiting** — ✅ RESOLVED for auth (§1), public rescue (§6), public AI chat (§10) via per-IP `throttle`; messaging (§9) left as low-risk optional | 1, 6, 9, 10 | HIGH | Global `throttle` + tight per-route caps |
 | **Admin tables have no pagination** (read only page 1, cap 12–20) — ✅ RESOLVED across §§3–8 via shared `components/Pagination.jsx` | 3, 4, 5, 6, 7, 8 | HIGH/MED | Reuse the public `Adoption.jsx` pagination pattern |
 | **Orphaned "mark-read on review"** (route+controller+helper built, never called) — ✅ RESOLVED: all 3 wired (§4/7/8) | 4, 7, 8 (wired only in 6) | MED | Wire the 3 helpers, or remove the unused backend capability |
-| **Sensitive uploads on the public disk** (served unauthenticated) — ✅ RESOLVED via the private `local` disk + `temporaryUrl()` signed links (§5/6/7) | 5, 6, 7 | MED | Private disk + signed URLs |
+| **Sensitive uploads on the public disk** (served unauthenticated) — ✅ RESOLVED via a dedicated env-driven `private` disk (`local` in dev, private R2/S3 in prod) + `temporaryUrl()` signed links (§5/6/7) | 5, 6, 7 | MED | Private disk + signed URLs |
 | **No frontend code-splitting** (Leaflet/Recharts/all admin panels eager) | 2, 11 | MED | `React.lazy` per route/panel |
 | **Duplicated helpers & serializers** (`photoSrc`/`peso`/query-builder; `toItem`/`toAdminItem`) | 3–8, 11 | MED | `lib/format.js`/`lib/url.js`; API Resources |
 | **Public endpoints leak internals** (raw `$e->getMessage()`, over-exposed settings, medical cost/vet) — ✅ RESOLVED (§2/§3) | 2, 3 | MED | Whitelist fields; generic error bodies |
@@ -1360,10 +1364,12 @@ panels + Recharts (code-split) [MED-perf], (3) one aggregated pending-counts end
    the Animals list no longer hides 38 of 58 records. Adoption inbox excludes decided rows server-side.
 
 **MEDIUM (security)**
-4. ✅ **DONE** — Moved donation proofs / rescue photos / intake docs to the private `local` disk,
-   served via `Storage::disk('local')->temporaryUrl()` (30-min signed links) instead of the public
-   disk (§5/6/7). Intake→animal photo conversion cross-copies into the `public` disk (animal photos
-   stay public).
+4. ✅ **DONE** — Moved donation proofs / rescue photos / intake docs to a dedicated env-driven
+   `private` disk (`PRIVATE_FILESYSTEM_DRIVER`: `local` in dev/tests, `s3` in prod against a separate
+   private R2/S3 bucket so files persist across redeploys), served via
+   `Storage::disk('private')->temporaryUrl()` (30-min signed links) instead of the public disk
+   (§5/6/7). Intake→animal photo conversion streams cross-disk into the default/public disk (animal
+   photos stay public). See PARITY.md for the prod bucket setup.
 5. ✅ **DONE** — Neutralize **CSV formula injection** in report exports (§11).
 6. ✅ **DONE** — Gate `type=staff` personnel creation behind `admin` (staff can no longer mint staff) (§7).
 7. ✅ **DONE** — Whitelist public settings keys; stop returning `$e->getMessage()` publicly; drop medical cost/vet from the public animal payload (§2, §3).

@@ -13,9 +13,11 @@ use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /**
- * Donation proofs, rescue photos, and intake documents must live on the private 'local' disk
- * (never reachable through the public /storage symlink) and be served only via short-lived
- * signed URLs to already-authorized viewers (audit §5/6/7 E, Appendix A3 #4).
+ * Donation proofs, rescue photos, and intake documents must live on the `private` disk (never the
+ * public/default disk, so they're unreachable through the public /storage URL) and be served only
+ * via short-lived signed URLs to already-authorized viewers (audit §5/6/7 E, Appendix A3 #4).
+ *
+ * `Storage::fake()` (no arg) fakes the default/public disk; `Storage::fake('private')` the private one.
  */
 class PrivateUploadsTest extends TestCase
 {
@@ -23,8 +25,8 @@ class PrivateUploadsTest extends TestCase
 
     public function test_donation_proof_is_private_and_served_via_a_signed_url(): void
     {
-        Storage::fake('local');
-        Storage::fake('public');
+        Storage::fake();
+        Storage::fake('private');
 
         $user = User::factory()->create();
         Sanctum::actingAs($user);
@@ -37,23 +39,23 @@ class PrivateUploadsTest extends TestCase
 
         $donation = Donation::where('user_id', $user->id)->firstOrFail();
 
-        Storage::disk('local')->assertExists($donation->proof_image);
-        Storage::disk('public')->assertMissing($donation->proof_image);
+        Storage::disk('private')->assertExists($donation->proof_image);
+        Storage::assertMissing($donation->proof_image); // not on the public/default disk
 
         $shown = $this->getJson("/api/donations/{$donation->id}")
             ->assertOk()
             ->json('donation.proof_image');
 
         // Storage::fake()'s temporaryUrl() stub appends "?expiration=..." rather than a real
-        // "?signature=..." (that requires the actual signed route) — its presence still proves
-        // temporaryUrl() was called instead of the unsigned Storage::url().
+        // "?signature=..." (that requires the actual signed route / S3 presign) — its presence
+        // still proves temporaryUrl() was called instead of the unsigned Storage::url().
         $this->assertStringContainsString('expiration=', $shown);
     }
 
     public function test_rescue_report_photo_is_private_and_served_via_a_signed_url(): void
     {
-        Storage::fake('local');
-        Storage::fake('public');
+        Storage::fake();
+        Storage::fake('private');
 
         $this->postJson('/api/rescue-reports', [
             'location' => 'Barangay Test',
@@ -63,8 +65,8 @@ class PrivateUploadsTest extends TestCase
 
         $report = \App\Models\RescueReport::firstOrFail();
 
-        Storage::disk('local')->assertExists($report->photo_url);
-        Storage::disk('public')->assertMissing($report->photo_url);
+        Storage::disk('private')->assertExists($report->photo_url);
+        Storage::assertMissing($report->photo_url);
 
         Sanctum::actingAs(User::factory()->staff()->create());
 
@@ -77,8 +79,8 @@ class PrivateUploadsTest extends TestCase
 
     public function test_intake_document_is_private_and_served_via_a_signed_url(): void
     {
-        Storage::fake('local');
-        Storage::fake('public');
+        Storage::fake();
+        Storage::fake('private');
 
         Sanctum::actingAs(User::factory()->staff()->create());
 
@@ -89,8 +91,8 @@ class PrivateUploadsTest extends TestCase
 
         $document = IntakeDocument::firstOrFail();
 
-        Storage::disk('local')->assertExists($document->file_path);
-        Storage::disk('public')->assertMissing($document->file_path);
+        Storage::disk('private')->assertExists($document->file_path);
+        Storage::assertMissing($document->file_path);
 
         $shown = $this->getJson("/api/admin/intakes/{$document->intake_id}")
             ->assertOk()
@@ -101,13 +103,13 @@ class PrivateUploadsTest extends TestCase
 
     public function test_intake_conversion_copies_the_private_document_to_the_public_animal_photo(): void
     {
-        Storage::fake('local');
-        Storage::fake('public');
+        Storage::fake();
+        Storage::fake('private');
 
         Sanctum::actingAs(User::factory()->staff()->create());
 
         $intake = Intake::create(['intake_type' => 'stray', 'animal_name' => 'Rex']);
-        $path = UploadedFile::fake()->create('doc.jpg', 100, 'image/jpeg')->store('intakes', 'local');
+        $path = UploadedFile::fake()->create('doc.jpg', 100, 'image/jpeg')->store('intakes', 'private');
         IntakeDocument::create(['intake_id' => $intake->id, 'file_path' => $path, 'original_name' => 'doc.jpg']);
 
         $response = $this->postJson("/api/admin/intakes/{$intake->id}/convert")->assertOk();
@@ -118,8 +120,7 @@ class PrivateUploadsTest extends TestCase
             : null;
 
         $this->assertNotNull($photoPath, 'the converted animal should have a copied photo');
-        Storage::disk('public')->assertExists($photoPath);
-        // The source document is untouched — it's a copy, not a move.
-        Storage::disk('local')->assertExists($path);
+        Storage::assertExists($photoPath);                 // animal photo on the public/default disk
+        Storage::disk('private')->assertExists($path);     // source doc untouched (copy, not move)
     }
 }
