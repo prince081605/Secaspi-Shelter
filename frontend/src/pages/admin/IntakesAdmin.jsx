@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Camera, Stethoscope, ClipboardList, X } from 'lucide-react';
 import {
   adminListIntakes,
   adminGetIntake,
@@ -217,14 +218,14 @@ function AssessmentPanel({ intake, onChanged }) {
       </div>
       <div style={{ marginTop: 6 }}><strong>Description:</strong> {detail.description || '—'}</div>
 
-      <div className="dashSectionTitle" style={{ fontSize: 13, marginTop: 12 }}>📷 Photos</div>
+      <div className="dashSectionTitle" style={{ fontSize: 13, marginTop: 12 }}><Camera size={15} style={{ verticalAlign: '-3px', marginRight: 6 }} />Photos</div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {detail.documents.map((d) => (
           <div key={d.id} style={{ position: 'relative', border: '1px solid var(--line)', borderRadius: 8, overflow: 'hidden' }}>
             <a href={photoSrc(d.file_path)} target="_blank" rel="noreferrer" title={d.original_name || `Photo #${d.id}`}>
               <img src={photoSrc(d.file_path)} alt={d.original_name || `Photo #${d.id}`} style={{ width: 96, height: 96, objectFit: 'cover', display: 'block' }} />
             </a>
-            <button className="dashBtn dashBtnDanger" style={{ position: 'absolute', top: 2, right: 2, padding: '2px 6px', fontSize: 11 }} aria-label="Delete photo" onClick={() => deleteDoc(d.id)}>✕</button>
+            <button className="dashBtn dashBtnDanger" style={{ position: 'absolute', top: 2, right: 2, padding: '2px 4px' }} aria-label="Delete photo" onClick={() => deleteDoc(d.id)}><X size={12} /></button>
           </div>
         ))}
         {detail.documents.length === 0 && <div className="ui-empty">No photos uploaded.</div>}
@@ -234,7 +235,7 @@ function AssessmentPanel({ intake, onChanged }) {
         <button className="dashBtn" type="button" onClick={uploadDocs}>Upload</button>
       </div>
 
-      <div className="dashSectionTitle" style={{ fontSize: 13, marginTop: 12 }}>🩺 Assessment</div>
+      <div className="dashSectionTitle" style={{ fontSize: 13, marginTop: 12 }}><Stethoscope size={15} style={{ verticalAlign: '-3px', marginRight: 6 }} />Assessment</div>
       <div className="dashFormGrid">
         <div className="ui-field">
           <label className="ui-label">Status</label>
@@ -376,7 +377,7 @@ export default function IntakesAdmin({ onConverted }) {
 
   return (
     <>
-      <div className="dashSectionTitle">📋 Intake Queue</div>
+      <div className="dashSectionTitle"><ClipboardList size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />Intake Queue</div>
       {error && <div className="ui-error">{error}</div>}
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>

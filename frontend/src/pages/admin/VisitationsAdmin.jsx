@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { adminListVisitations, adminUpdateVisitation, adminMarkVisitationRead } from '../../lib/visitationsApi';
+import { Calendar } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import Pagination from '../../components/Pagination';
 
@@ -150,7 +151,7 @@ export default function VisitationsAdmin() {
 
   return (
     <>
-      <h2 className="dashSectionTitle">📅 Visit Requests</h2>
+      <h2 className="dashSectionTitle"><Calendar size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />Visit Requests</h2>
       {error && <div className="ui-error">{error}</div>}
 
       <div className="dashFilterBar">

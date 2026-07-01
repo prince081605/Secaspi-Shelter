@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { MapPin, Siren } from 'lucide-react';
 import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { adminListRescueReports, adminMarkRescueReportRead, adminUpdateRescueReport } from '../../lib/rescueApi';
@@ -46,7 +47,7 @@ function DetailPanel({ report }) {
       )}
 
       <div style={{ marginTop: 10 }}>
-        <strong>📍 Exact location:</strong>
+        <strong><MapPin size={15} style={{ verticalAlign: '-3px' }} /> Exact location:</strong>
         {hasPin ? (
           <div style={{ height: 300, marginTop: 6, borderRadius: 10, overflow: 'hidden' }}>
             <MapContainer center={center} zoom={16} style={{ height: '100%', width: '100%' }} scrollWheelZoom>
@@ -215,7 +216,7 @@ export default function RescueReportsAdmin({ onUnreadChanged }) {
 
   return (
     <>
-      <h2 className="dashSectionTitle">🚨 Rescue Reports</h2>
+      <h2 className="dashSectionTitle"><Siren size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />Rescue Reports</h2>
       {error && <div className="ui-error">{error}</div>}
 
       <div className="dashFilterBar">

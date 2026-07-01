@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { MapContainer, TileLayer, CircleMarker, useMapEvents, useMap } from "react-leaflet";
+import { Home, PawPrint, MapPin, ArrowDown, Check } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 
 // Presentational sections for the public LandingPage, extracted from LandingPage.jsx (audit §0.2)
@@ -24,9 +25,9 @@ function RecenterOnPin({ lat, lng }) {
 }
 
 const pathways = [
-  { key: "adopt", icon: "🏡", title: "Adopt", desc: "Browse profiles of vaccinated, vetted Aspins ready for a forever home.", linkLabel: "View adoptable dogs →", target: "animals" },
-  { key: "donate", icon: "🐾", title: "Donate", desc: "Fund food, vaccines, and medical care for dogs currently in intake. Every peso is tracked and reported.", linkLabel: "Support the shelter →", target: "donate" },
-  { key: "report", icon: "📍", title: "Report a stray", desc: "Spotted an Aspin in need? Submit a rescue report with location and photos so our team can respond quickly.", linkLabel: "File a report →", target: "report" },
+  { key: "adopt", icon: Home, title: "Adopt", desc: "Browse profiles of vaccinated, vetted Aspins ready for a forever home.", linkLabel: "View adoptable dogs →", target: "animals" },
+  { key: "donate", icon: PawPrint, title: "Donate", desc: "Fund food, vaccines, and medical care for dogs currently in intake. Every peso is tracked and reported.", linkLabel: "Support the shelter →", target: "donate" },
+  { key: "report", icon: MapPin, title: "Report a stray", desc: "Spotted an Aspin in need? Submit a rescue report with location and photos so our team can respond quickly.", linkLabel: "File a report →", target: "report" },
 ];
 
 const processSteps = [
@@ -72,7 +73,7 @@ export function Navbar({ shelterName, isLoggedIn, menuOpen, scrolled, onToggleMe
     <header className={`lp-header${scrolled ? " scrolled" : ""}`}>
       <nav className="lp-nav" aria-label="Primary">
         <a href="/" className="lp-logo">
-          <span className="lp-logo-mark" aria-hidden="true">🐾</span>
+          <span className="lp-logo-mark" aria-hidden="true"><PawPrint size={20} /></span>
           {shelterName}
         </a>
         <ul className="lp-nav-links">
@@ -163,7 +164,7 @@ export function Pathways({ onNavigateTo }) {
         <div ref={gridRef} className={`lp-pathways lp-reveal-group${gridIn ? " is-visible" : ""}`}>
           {pathways.map((p) => (
             <div className={`lp-pathway-card lp-reveal-item ${p.key}`} key={p.key}>
-              <div className="lp-pathway-icon" aria-hidden="true">{p.icon}</div>
+              <div className="lp-pathway-icon" aria-hidden="true"><p.icon size={28} /></div>
               <h3>{p.title}</h3>
               <p>{p.desc}</p>
               <button className="link" onClick={() => onNavigateTo(p.target)}>{p.linkLabel}</button>
@@ -286,7 +287,7 @@ export function RescueForm({ form, reportPhoto, reportState, onChange, onPhotoCh
             <label className="ui-label ui-label-required">Location</label>
             <input className="ui-input" name="location" required value={form.location} onChange={onChange} placeholder="Be specific: house no. / street, landmark, barangay, city" />
             <div style={{ fontSize: 12, color: "var(--lp-ink-soft)", marginTop: 6 }}>
-              The more detailed, the faster our team finds the animal. Pin the exact spot on the map below 👇
+              The more detailed, the faster our team finds the animal. Pin the exact spot on the map below <ArrowDown size={15} style={{ verticalAlign: '-3px' }} />
             </div>
 
             <div style={{ display: "flex", gap: 8, alignItems: "center", margin: "8px 0" }}>
@@ -302,10 +303,10 @@ export function RescueForm({ form, reportPhoto, reportState, onChange, onPhotoCh
                   );
                 }}
               >
-                📍 Use my current location
+                <MapPin size={15} style={{ verticalAlign: '-3px' }} /> Use my current location
               </button>
               <span style={{ fontSize: 12, color: form.latitude ? "var(--lp-brand, #c1612e)" : "var(--lp-ink-soft)" }}>
-                {form.latitude ? "Exact spot pinned ✓" : "No pin yet — tap the map"}
+                {form.latitude ? <>Exact spot pinned <Check size={14} style={{ verticalAlign: '-2px' }} /></> : "No pin yet — tap the map"}
               </span>
             </div>
 
@@ -392,7 +393,7 @@ export function SiteFooter({ shelterName, settings, address }) {
       <div className="lp-container">
         <div className="lp-footer-grid">
           <div className="lp-footer-brand">
-            <a href="/" className="lp-logo"><span className="lp-logo-mark" aria-hidden="true">🐾</span>{shelterName}</a>
+            <a href="/" className="lp-logo"><span className="lp-logo-mark" aria-hidden="true"><PawPrint size={20} /></span>{shelterName}</a>
             <p>{settings.about_us_content || "Rescuing and rehoming the Philippines' native Aspin dogs."}</p>
             {(settings.social_facebook || settings.social_instagram || settings.social_twitter) && (
               <div style={{ display: "flex", gap: 14, marginTop: 16 }}>

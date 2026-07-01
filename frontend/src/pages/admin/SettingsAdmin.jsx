@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Settings, Globe, Heart, Bot } from 'lucide-react';
 import {
   adminGetSettings,
   adminUpdateSettings,
@@ -24,7 +25,7 @@ const FIELDS = {
   ai_persona: '',
 };
 
-export default function SettingsAdmin() {
+export default function SettingsAdmin({ onSaved } = {}) {
   const [form, setForm] = useState(FIELDS);
   const [images, setImages] = useState({ logo_path: '', banner_image_path: '', fund_usage_image_path: '' });
   const [loading, setLoading] = useState(true);
@@ -58,6 +59,7 @@ export default function SettingsAdmin() {
     try {
       await adminUpdateSettings(form);
       setSaveState({ status: 'success', error: '' });
+      onSaved?.(form);
     } catch (err) {
       setSaveState({ status: 'error', error: err?.message || 'Failed to save settings.' });
     }
@@ -80,7 +82,7 @@ export default function SettingsAdmin() {
 
   return (
     <>
-      <h2 className="dashSectionTitle">⚙️ General Settings</h2>
+      <h2 className="dashSectionTitle"><Settings size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />General Settings</h2>
       <div className="dashCard" style={{ marginTop: 10 }}>
         {saveState.status === 'success' && <div className="ui-success-msg">Settings saved.</div>}
         {saveState.status === 'error' && <div className="ui-error">{saveState.error}</div>}
@@ -114,7 +116,7 @@ export default function SettingsAdmin() {
             <input className="ui-input" value={form.social_twitter} onChange={handleChange('social_twitter')} placeholder="https://x.com/yourpage" />
           </div>
 
-          <h3 className="dashSubSectionTitle" style={{ marginTop: 20 }}>🌐 Website Settings</h3>
+          <h3 className="dashSubSectionTitle" style={{ marginTop: 20 }}><Globe size={16} style={{ verticalAlign: '-3px', marginRight: 6 }} />Website Settings</h3>
 
           <div className="ui-field">
             <label className="ui-label">Logo</label>
@@ -149,7 +151,7 @@ export default function SettingsAdmin() {
             <textarea className="ui-input" rows={4} value={form.adoption_policies} onChange={handleChange('adoption_policies')} placeholder="Outline your adoption requirements and process..." />
           </div>
 
-          <h3 className="dashSubSectionTitle" style={{ marginTop: 20 }}>💜 Donations / Transparency</h3>
+          <h3 className="dashSubSectionTitle" style={{ marginTop: 20 }}><Heart size={16} style={{ verticalAlign: '-3px', marginRight: 6 }} />Donations / Transparency</h3>
 
           <div className="ui-field">
             <label className="ui-label">Monthly fundraising goal (₱)</label>
@@ -164,7 +166,7 @@ export default function SettingsAdmin() {
             {imageState.key === 'fund_usage_image_path' && imageState.status === 'error' && <div className="ui-error">{imageState.error}</div>}
           </div>
 
-          <h3 className="dashSubSectionTitle" style={{ marginTop: 20 }}>🤖 AI Shelter Assistant</h3>
+          <h3 className="dashSubSectionTitle" style={{ marginTop: 20 }}><Bot size={16} style={{ verticalAlign: '-3px', marginRight: 6 }} />AI Shelter Assistant</h3>
           <p className="ui-muted" style={{ fontSize: '0.85rem', marginTop: -4 }}>
             When on, a chat assistant appears on the public site. Common questions are answered free;
             live AI answers require an OpenAI API key set on the server (otherwise it stays in free FAQ mode).

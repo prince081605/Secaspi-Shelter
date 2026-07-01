@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AlertTriangle } from 'lucide-react';
 
 const REQUIRED_WORD = 'DELETE';
 
@@ -28,7 +29,7 @@ export default function TypeToConfirmButton({
       {step === 'warn' && (
         <div className="confirm-overlay" onClick={reset}>
           <div className="confirm-panel" onClick={(e) => e.stopPropagation()}>
-            <div className="confirm-icon" aria-hidden="true">⚠️</div>
+            <div className="confirm-icon" aria-hidden="true"><AlertTriangle size={22} /></div>
             <h2>Confirm deletion</h2>
             <p>{warningLabel}</p>
             <div className="confirm-actions">
@@ -44,7 +45,7 @@ export default function TypeToConfirmButton({
       {step === 'type' && (
         <div className="confirm-overlay" onClick={reset}>
           <div className="confirm-panel" onClick={(e) => e.stopPropagation()}>
-            <div className="confirm-icon" aria-hidden="true">⚠️</div>
+            <div className="confirm-icon" aria-hidden="true"><AlertTriangle size={22} /></div>
             <h2>Type {REQUIRED_WORD} to confirm</h2>
             <p>This action is permanent. Type <strong>{REQUIRED_WORD}</strong> below to proceed.</p>
             <input

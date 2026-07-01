@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { adminListFaqs, adminCreateFaq, adminUpdateFaq, adminDeleteFaq } from '../../lib/faqApi';
+import { Brain, FlaskConical, Check, X } from 'lucide-react';
 import { sendAssistantMessage } from '../../lib/assistantApi';
 
 const EMPTY = { question: '', answer: '', tags: '', enabled: true };
@@ -39,7 +40,7 @@ export default function FaqTrainingAdmin() {
 
   return (
     <div>
-      <h2 className="dashSectionTitle">🧠 AI Training — FAQ Knowledge Base</h2>
+      <h2 className="dashSectionTitle"><Brain size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />AI Training — FAQ Knowledge Base</h2>
       <p className="ui-muted" style={{ marginTop: -6 }}>
         Add question/answer pairs and the assistant learns to answer them — even when visitors phrase
         the question differently. Use “tags” to add extra keywords that should match.
@@ -65,7 +66,7 @@ export default function FaqTrainingAdmin() {
 
       {/* Test box */}
       <form onSubmit={runTest} className="dashCard" style={{ padding: 14, marginBottom: 14 }}>
-        <h3 className="dashSectionTitle" style={{ fontSize: 14, marginTop: 0 }}>🧪 Test a question</h3>
+        <h3 className="dashSectionTitle" style={{ fontSize: 14, marginTop: 0 }}><FlaskConical size={15} style={{ verticalAlign: '-3px', marginRight: 6 }} />Test a question</h3>
         <div style={{ display: 'flex', gap: 8 }}>
           <input className="ui-input" placeholder="Ask the assistant something…" value={test.q} onChange={(e) => setTest((t) => ({ ...t, q: e.target.value }))} />
           <button className="dashBtn dashBtnPrimary" type="submit" disabled={test.loading}>{test.loading ? '…' : 'Ask'}</button>
@@ -90,11 +91,11 @@ export default function FaqTrainingAdmin() {
                 <td style={{ maxWidth: 200 }}>{f.question}</td>
                 <td style={{ maxWidth: 280, fontSize: '0.82rem' }}>{(f.answer || '').slice(0, 120)}{f.answer?.length > 120 ? '…' : ''}</td>
                 <td style={{ maxWidth: 160, fontSize: '0.75rem', color: 'var(--muted)' }}>{f.tags}</td>
-                <td>{f.enabled ? '✅' : '—'}</td>
+                <td>{f.enabled ? <Check size={16} style={{ verticalAlign: '-3px', color: 'var(--success, #16a34a)' }} /> : '—'}</td>
                 <td>{f.hits}</td>
                 <td style={{ whiteSpace: 'nowrap' }}>
                   <button className="dashBtn" onClick={() => edit(f)}>Edit</button>
-                  <button className="dashBtn dashBtnDanger" style={{ marginLeft: 6 }} onClick={() => remove(f.id)}>✕</button>
+                  <button className="dashBtn dashBtnDanger" style={{ marginLeft: 6 }} aria-label="Delete FAQ" onClick={() => remove(f.id)}><X size={14} /></button>
                 </td>
               </tr>
             ))}

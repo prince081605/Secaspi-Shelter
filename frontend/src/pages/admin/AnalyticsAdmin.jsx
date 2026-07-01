@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { BarChart3 } from 'lucide-react';
 import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, Legend, CartesianGrid,
@@ -51,7 +52,7 @@ export default function AnalyticsAdmin() {
 
   return (
     <div>
-      <h2 className="dashSectionTitle">📊 Insights &amp; Analytics</h2>
+      <h2 className="dashSectionTitle"><BarChart3 size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />Insights &amp; Analytics</h2>
 
       <div className="dashGridCards">
         <Card label="Animals in care" value={s.total_animals} sub={`${s.available} available`} />

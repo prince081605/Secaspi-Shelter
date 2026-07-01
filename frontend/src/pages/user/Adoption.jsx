@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { browseAnimals } from '../../lib/animalsApi';
+import { Sparkles, Dog } from 'lucide-react';
 
 const styles = `
   .adoptGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
@@ -94,7 +95,7 @@ export default function Adoption() {
           Browse dogs in our database and start an adoption or foster request.
         </p>
         <button className="ui-btn-primary" style={{ marginBottom: '2rem' }} onClick={() => navigate('/matchmaker')}>
-          ✨ Not sure who fits? Find your match
+          <Sparkles size={16} style={{ verticalAlign: '-3px' }} /> Not sure who fits? Find your match
         </button>
 
         <div className="adoptControls">
@@ -158,7 +159,7 @@ export default function Adoption() {
                         alt={a.name || 'dog'}
                       />
                     ) : (
-                      '🐶'
+                      <Dog size={40} />
                     )}
                   </div>
 

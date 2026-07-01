@@ -4,12 +4,13 @@ import { getPublicSettings } from '../../lib/settingsApi';
 import Pagination from '../../components/Pagination';
 import FosterRequestsAdmin from './FosterRequestsAdmin';
 import { ApplicationRow, OngoingApprovedRow, CompletedAdoptionRow } from './AdoptionRequestRows';
+import { PawPrint, Home, CheckCircle, Inbox } from 'lucide-react';
 
 const STATUSES = ['pending', 'approved', 'declined', 'completed'];
 const SUB_TABS = [
-  { key: 'ongoing', label: '🏠 Ongoing' },
-  { key: 'completed', label: '✅ Completed' },
-  { key: 'application', label: '📩 Application' },
+  { key: 'ongoing', label: 'Ongoing', icon: Home },
+  { key: 'completed', label: 'Completed', icon: CheckCircle },
+  { key: 'application', label: 'Application', icon: Inbox },
 ];
 
 export default function AdoptionRequestsAdmin({ onUnreadChanged }) {
@@ -122,13 +123,13 @@ export default function AdoptionRequestsAdmin({ onUnreadChanged }) {
           className={mode === 'adoption' ? 'dashBtn dashBtnPrimary' : 'dashBtn'}
           onClick={() => setMode('adoption')}
         >
-          🐾 Adoption
+          <PawPrint size={16} style={{ verticalAlign: '-3px' }} /> Adoption
         </button>
         <button
           className={mode === 'foster' ? 'dashBtn dashBtnPrimary' : 'dashBtn'}
           onClick={() => setMode('foster')}
         >
-          🏡 Foster
+          <Home size={16} style={{ verticalAlign: '-3px' }} /> Foster
         </button>
       </div>
 
@@ -143,14 +144,14 @@ export default function AdoptionRequestsAdmin({ onUnreadChanged }) {
             className={'dashTab ' + (subTab === t.key ? 'dashTabActive' : '')}
             onClick={() => setSubTab(t.key)}
           >
-            {t.label}
+            <t.icon size={15} style={{ verticalAlign: '-3px', marginRight: 4 }} />{t.label}
           </button>
         ))}
       </div>
 
       {subTab === 'ongoing' && (
         <>
-          <h2 className="dashSectionTitle">🏠 Ongoing Approved Adoptions</h2>
+          <h2 className="dashSectionTitle"><Home size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />Ongoing Approved Adoptions</h2>
           {approvedError && <div className="ui-error">{approvedError}</div>}
           {approvedLoading ? (
             <div className="ui-empty">Loading…</div>
@@ -183,7 +184,7 @@ export default function AdoptionRequestsAdmin({ onUnreadChanged }) {
 
       {subTab === 'completed' && (
         <>
-          <h2 className="dashSectionTitle">✅ Completed Adoptions</h2>
+          <h2 className="dashSectionTitle"><CheckCircle size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />Completed Adoptions</h2>
           {completedError && <div className="ui-error">{completedError}</div>}
           {completedLoading ? (
             <div className="ui-empty">Loading…</div>
@@ -215,7 +216,7 @@ export default function AdoptionRequestsAdmin({ onUnreadChanged }) {
 
       {subTab === 'application' && (
         <>
-          <h2 className="dashSectionTitle">📩 Application</h2>
+          <h2 className="dashSectionTitle"><Inbox size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />Application</h2>
           {error && <div className="ui-error">{error}</div>}
 
           <div className="dashFilterBar">

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { findMatches } from '../../lib/matchmakerApi';
+import { PawPrint, Sparkles, Dog, Check, AlertTriangle } from 'lucide-react';
 
 const styles = `
   .mmGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.4rem; }
@@ -58,7 +59,7 @@ export default function Matchmaker() {
 
       <div className="ui-container" style={{ padding: '3rem 6vw' }}>
         <p className="ui-eyebrow" style={{ marginBottom: '1rem' }}>Smart Adoption Matchmaker</p>
-        <h1 className="ui-h1" style={{ marginBottom: '0.6rem' }}>Find your perfect match 🐾</h1>
+        <h1 className="ui-h1" style={{ marginBottom: '0.6rem' }}>Find your perfect match <PawPrint size={22} style={{ verticalAlign: '-3px' }} /></h1>
         <p className="ui-muted" style={{ maxWidth: 640, marginBottom: '2rem' }}>
           Answer a few quick questions about your lifestyle and we'll rank our available animals by
           how well they'd fit your home — and tell you why.
@@ -81,7 +82,7 @@ export default function Matchmaker() {
             ))}
           </div>
           <button className="ui-btn-primary" type="submit" disabled={state.status === 'loading'}>
-            {state.status === 'loading' ? 'Finding matches…' : '✨ Show my matches'}
+            {state.status === 'loading' ? 'Finding matches…' : <><Sparkles size={16} style={{ verticalAlign: '-3px' }} /> Show my matches</>}
           </button>
         </form>
 
@@ -96,7 +97,7 @@ export default function Matchmaker() {
               {matches.map((m) => (
                 <div className="ui-card mmCard" key={m.animal.id}>
                   <div className="mmPhoto">
-                    {m.animal.photo ? <img src={m.animal.photo} alt={m.animal.name} /> : '🐶'}
+                    {m.animal.photo ? <img src={m.animal.photo} alt={m.animal.name} /> : <Dog size={28} />}
                   </div>
                   <div className="mmBody">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
@@ -107,8 +108,8 @@ export default function Matchmaker() {
                     <div className="ui-muted" style={{ fontSize: '0.82rem', marginBottom: '0.6rem' }}>
                       {[m.animal.species, m.animal.breed, m.animal.size].filter(Boolean).join(' · ')}
                     </div>
-                    {m.reasons.map((r, i) => <div className="mmReason" key={`r${i}`}>✅ <span>{r}</span></div>)}
-                    {m.cautions.map((c, i) => <div className="mmReason" key={`c${i}`}>⚠️ <span>{c}</span></div>)}
+                    {m.reasons.map((r, i) => <div className="mmReason" key={`r${i}`}><Check size={15} style={{ verticalAlign: '-2px', color: 'var(--success, #16a34a)' }} /> <span>{r}</span></div>)}
+                    {m.cautions.map((c, i) => <div className="mmReason" key={`c${i}`}><AlertTriangle size={15} style={{ verticalAlign: '-2px', color: 'var(--warning, #d97706)' }} /> <span>{c}</span></div>)}
                     <button
                       className="ui-btn-secondary"
                       style={{ marginTop: '0.7rem' }}

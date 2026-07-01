@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { adminListReminders, adminUpdateReminder } from '../../lib/remindersApi';
+import { Bell, PartyPopper } from 'lucide-react';
 
 export default function RemindersAdmin({ onChanged }) {
   const [reminders, setReminders] = useState([]);
@@ -39,7 +40,7 @@ export default function RemindersAdmin({ onChanged }) {
 
   return (
     <>
-      <h2 className="dashSectionTitle">🔔 Health Reminders</h2>
+      <h2 className="dashSectionTitle"><Bell size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />Health Reminders</h2>
       <p className="ui-muted" style={{ marginTop: -4, marginBottom: 12, fontSize: '0.9rem' }}>
         Vaccination boosters and follow-ups due within 30 days. Overdue items are highlighted.
       </p>
@@ -48,7 +49,7 @@ export default function RemindersAdmin({ onChanged }) {
       {loading ? (
         <div className="ui-empty">Loading…</div>
       ) : reminders.length === 0 ? (
-        <div className="ui-empty">No upcoming reminders. You're all caught up! 🎉</div>
+        <div className="ui-empty">No upcoming reminders. You're all caught up! <PartyPopper size={16} style={{ verticalAlign: '-3px' }} /></div>
       ) : (
         <div className="dashTableWrap">
           <table className="dashTable">

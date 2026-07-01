@@ -4,6 +4,13 @@ import './Dashboard.css';
 import { auth } from '../../lib/auth';
 import { listMyAdoptionApplications, listMyFosterApplications, browseAnimals } from '../../lib/animalsApi';
 import { updateProfile, changePassword } from '../../lib/profileApi';
+import { getPublicSettings } from '../../lib/settingsApi';
+import {
+  Clock, Heart, User, Pencil, Lock, ClipboardList, Dog, Trophy, LayoutDashboard,
+  ArrowLeft, Menu, X, LogOut, MessageSquare, PawPrint, Bell, Inbox, HeartHandshake,
+  Siren, Calendar, Wrench, HandCoins, BarChart3, Users, UsersRound, Brain, Settings,
+  ChevronRight,
+} from 'lucide-react';
 import AnimalsAdmin from '../admin/AnimalsAdmin';
 import AdoptionRequestsAdmin from '../admin/AdoptionRequestsAdmin';
 import RescueReportsAdmin from '../admin/RescueReportsAdmin';
@@ -79,7 +86,7 @@ function OverviewCards({ cards }) {
 function ActivityFeed({ activity }) {
   return (
     <>
-      <h2 className="dashSectionTitle">🕒 Recent activity</h2>
+      <h2 className="dashSectionTitle"><Clock size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />Recent activity</h2>
       {!activity || activity.length === 0 ? (
         <div className="ui-empty">No recent activity.</div>
       ) : (
@@ -108,7 +115,7 @@ function ActivityFeed({ activity }) {
 function UserApplications({ applications, loading }) {
   return (
     <>
-      <h2 className="dashSectionTitle">❤️ My Applications</h2>
+      <h2 className="dashSectionTitle"><Heart size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />My Applications</h2>
       {loading ? (
         <div className="ui-empty">Loading…</div>
       ) : applications.length === 0 ? (
@@ -196,7 +203,7 @@ function UserProfile({ user, onProfileUpdated }) {
 
   return (
     <>
-      <h2 className="dashSectionTitle">📄 Profile</h2>
+      <h2 className="dashSectionTitle"><User size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />Profile</h2>
       <div className="dashTableWrap">
         <table className="dashTable">
           <tbody>
@@ -216,7 +223,7 @@ function UserProfile({ user, onProfileUpdated }) {
         </table>
       </div>
 
-      <h2 className="dashSectionTitle">✏️ Edit profile</h2>
+      <h2 className="dashSectionTitle"><Pencil size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />Edit profile</h2>
       {profileState.status === 'success' && <div className="ui-success-msg">Profile updated.</div>}
       {profileState.status === 'error' && <div className="ui-error">{profileState.error}</div>}
       <form onSubmit={handleProfileSubmit}>
@@ -233,7 +240,7 @@ function UserProfile({ user, onProfileUpdated }) {
         </button>
       </form>
 
-      <h2 className="dashSectionTitle">🔒 Change password</h2>
+      <h2 className="dashSectionTitle"><Lock size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />Change password</h2>
       {passwordState.status === 'success' && <div className="ui-success-msg">Password changed successfully.</div>}
       {passwordState.status === 'error' && <div className="ui-error">{passwordState.error}</div>}
       <form onSubmit={handlePasswordSubmit}>
@@ -294,7 +301,7 @@ function VolunteerTasksPanel() {
   if (!volunteer) {
     return (
       <>
-        <h2 className="dashSectionTitle">📋 My Tasks</h2>
+        <h2 className="dashSectionTitle"><ClipboardList size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />My Tasks</h2>
         <div className="ui-empty">Your volunteer profile isn't set up yet. Please contact the shelter team.</div>
       </>
     );
@@ -302,7 +309,7 @@ function VolunteerTasksPanel() {
 
   return (
     <>
-      <h2 className="dashSectionTitle">📋 My Tasks</h2>
+      <h2 className="dashSectionTitle"><ClipboardList size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />My Tasks</h2>
       {error && <div className="ui-error">{error}</div>}
       <form onSubmit={handleRequestTask} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 16 }}>
         <div className="ui-field" style={{ flex: 1, marginBottom: 0 }}>
@@ -359,7 +366,7 @@ function ReadOnlyAnimals() {
 
   return (
     <>
-      <h2 className="dashSectionTitle">🐶 Animals</h2>
+      <h2 className="dashSectionTitle"><Dog size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />Animals</h2>
       {error && <div className="ui-error">{error}</div>}
       {loading ? (
         <div className="ui-empty">Loading…</div>
@@ -412,6 +419,10 @@ export default function Dashboard() {
   const [pendingVisitationCount, setPendingVisitationCount] = useState(0);
   const [overdueReminderCount, setOverdueReminderCount] = useState(0);
   const [pendingVolunteerCount, setPendingVolunteerCount] = useState(0);
+  // Whether the public AI assistant is switched on. When off, the assistant widget renders nothing
+  // (see AiAssistant.jsx), so the "AI Training" (FAQ KB) nav item + panel are hidden. Default true
+  // so a transient settings-fetch failure doesn't wrongly hide it from an admin.
+  const [aiEnabled, setAiEnabled] = useState(true);
 
   // keep empty when data isn't available
   const isAdminRole = role === 'admin';
@@ -448,6 +459,15 @@ export default function Dashboard() {
     return () => {
       mounted = false;
     };
+  }, []);
+
+  // Read whether the AI assistant is on (mirrors AiAssistant.jsx) to gate the "AI Training" nav.
+  useEffect(() => {
+    let mounted = true;
+    getPublicSettings()
+      .then((s) => { if (mounted) setAiEnabled(String(s?.ai_assistant_enabled) === '1'); })
+      .catch(() => { /* leave default (visible) on a transient failure */ });
+    return () => { mounted = false; };
   }, []);
 
   useEffect(() => {
@@ -547,41 +567,51 @@ export default function Dashboard() {
 
   const navCategories = [
     {
-      key: 'cat_animals', label: 'Animal Care', icon: '🐾',
+      key: 'cat_animals', label: 'Animal Care', icon: PawPrint,
       items: [
-        { key: 'animals', label: 'Animals', icon: '🐶' },
-        { key: 'reminders', label: 'Health Reminders', icon: '🔔', badge: overdueReminderCount },
+        { key: 'animals', label: 'Animals', icon: Dog },
+        { key: 'reminders', label: 'Health Reminders', icon: Bell, badge: overdueReminderCount },
       ],
     },
     {
-      key: 'cat_requests', label: 'Requests', icon: '📨',
+      key: 'cat_requests', label: 'Requests', icon: Inbox,
       items: [
-        { key: 'requests', label: 'Adoption & Foster', icon: '📩', badge: pendingAdoptionCount + pendingFosterCount },
-        { key: 'rescues', label: 'Rescue Reports', icon: '🚨', badge: pendingRescueCount },
-        { key: 'visitations', label: 'Visit Requests', icon: '📅', badge: pendingVisitationCount },
-        { key: 'messages', label: 'Messages', icon: '💬' },
+        { key: 'requests', label: 'Adoption & Foster', icon: HeartHandshake, badge: pendingAdoptionCount + pendingFosterCount },
+        { key: 'rescues', label: 'Rescue Reports', icon: Siren, badge: pendingRescueCount },
+        { key: 'visitations', label: 'Visit Requests', icon: Calendar, badge: pendingVisitationCount },
+        { key: 'messages', label: 'Messages', icon: MessageSquare },
       ],
     },
     {
-      key: 'cat_ops', label: 'Operations', icon: '🛠️',
+      key: 'cat_ops', label: 'Operations', icon: Wrench,
       items: [
-        { key: 'donations', label: 'Donations', icon: '💰', badge: pendingDonationCount },
-        { key: 'reports', label: 'Reports', icon: '📈' },
-        { key: 'users', label: 'Users', icon: '👥' },
-        { key: 'volunteers', label: 'Personnel', icon: '👥', badge: pendingVolunteerCount },
-        { key: 'faqs', label: 'AI Training', icon: '🧠' },
-        { key: 'settings', label: 'Settings', icon: '⚙️' },
+        { key: 'donations', label: 'Donations', icon: HandCoins, badge: pendingDonationCount },
+        { key: 'reports', label: 'Reports', icon: BarChart3 },
+        { key: 'users', label: 'Users', icon: Users },
+        { key: 'volunteers', label: 'Personnel', icon: UsersRound, badge: pendingVolunteerCount },
+        { key: 'faqs', label: 'AI Training', icon: Brain },
+        { key: 'settings', label: 'Settings', icon: Settings },
       ],
     },
   ];
 
   // Hide nav items above the current role (e.g. staff never see Users/Settings), then
-  // drop any category left empty. Admin sees everything.
+  // drop any category left empty. Admin sees everything. "AI Training" (faqs) is also hidden
+  // whenever the AI assistant is switched off — its FAQ KB has no user-facing surface then.
   const visibleNavCategories = navCategories
-    .map((cat) => ({ ...cat, items: cat.items.filter((it) => atLeast(role, ITEM_MIN_ROLE[it.key] || 'admin')) }))
+    .map((cat) => ({
+      ...cat,
+      items: cat.items.filter((it) =>
+        atLeast(role, ITEM_MIN_ROLE[it.key] || 'admin') && !(it.key === 'faqs' && !aiEnabled)),
+    }))
     .filter((cat) => cat.items.length > 0);
 
   const [activeNav, setActiveNav] = useState('dashboard');
+  // If the AI assistant is switched off while the admin is sitting on "AI Training", bounce them
+  // back to the overview so they aren't left on a now-hidden, blank panel.
+  useEffect(() => {
+    if (!aiEnabled && activeNav === 'faqs') setActiveNav('dashboard');
+  }, [aiEnabled, activeNav]);
   // On phones the sidebar collapses behind a ☰ toggle; selecting a nav item closes it (see effect
   // below) so the chosen panel is shown instead of the long nav list.
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -639,14 +669,14 @@ export default function Dashboard() {
                 aria-label="Toggle navigation menu"
                 aria-expanded={mobileNavOpen}
               >
-                {mobileNavOpen ? '✕' : '☰'}
+                {mobileNavOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
             </div>
           </div>
 
           <nav className={'dashNav' + (mobileNavOpen ? ' dashNavMobileOpen' : '')}>
             <button className="dashNavBtn" onClick={() => navigate('/')}>
-              ⬅️ Back to Home
+              <ArrowLeft size={16} style={{ verticalAlign: '-3px' }} /> Back to Home
             </button>
 
             {activeTab !== 'volunteer' && (
@@ -654,7 +684,7 @@ export default function Dashboard() {
                 className={'dashNavBtn ' + (activeNav === 'dashboard' ? 'dashNavBtnActive' : '')}
                 onClick={() => setActiveNav('dashboard')}
               >
-                🏠 Dashboard
+                <LayoutDashboard size={16} style={{ verticalAlign: '-3px' }} /> Dashboard
               </button>
             )}
 
@@ -668,12 +698,14 @@ export default function Dashboard() {
                     onClick={() => toggleCategory(cat.key)}
                     aria-expanded={isOpen}
                   >
-                    <span aria-hidden="true">{cat.icon}</span>
+                    <cat.icon size={16} aria-hidden="true" />
                     <span className="dashNavCategoryLabel">{cat.label}</span>
                     {!isOpen && aggregate > 0 ? (
                       <span className="dashNavBadge">{aggregate > 99 ? '99+' : aggregate}</span>
                     ) : null}
-                    <span className={'dashNavChevron' + (isOpen ? ' isOpen' : '')} aria-hidden="true">▸</span>
+                    <span className={'dashNavChevron' + (isOpen ? ' isOpen' : '')} aria-hidden="true">
+                      <ChevronRight size={14} />
+                    </span>
                   </button>
                   {isOpen && (
                     <div className="dashNavGroup">
@@ -683,7 +715,7 @@ export default function Dashboard() {
                           className={'dashNavBtn ' + (activeNav === item.key ? 'dashNavBtnActive' : '')}
                           onClick={() => setActiveNav(item.key)}
                         >
-                          {item.icon} {item.label}
+                          <item.icon size={16} style={{ verticalAlign: '-3px' }} /> {item.label}
                           {item.badge > 0 ? <span className="dashNavBadge">{item.badge > 99 ? '99+' : item.badge}</span> : null}
                         </button>
                       ))}
@@ -699,13 +731,13 @@ export default function Dashboard() {
                   className={'dashNavBtn ' + (activeNav === 'myanimals' ? '' : 'dashNavBtnActive')}
                   onClick={() => setActiveNav('mytasks')}
                 >
-                  📋 My Tasks
+                  <ClipboardList size={16} style={{ verticalAlign: '-3px' }} /> My Tasks
                 </button>
                 <button
                   className={'dashNavBtn ' + (activeNav === 'myanimals' ? 'dashNavBtnActive' : '')}
                   onClick={() => setActiveNav('myanimals')}
                 >
-                  🐶 Animals
+                  <Dog size={16} style={{ verticalAlign: '-3px' }} /> Animals
                 </button>
               </>
             )}
@@ -716,24 +748,24 @@ export default function Dashboard() {
                   className={'dashNavBtn ' + (activeNav === 'impact' ? 'dashNavBtnActive' : '')}
                   onClick={() => setActiveNav('impact')}
                 >
-                  🏆 My Impact
+                  <Trophy size={16} style={{ verticalAlign: '-3px' }} /> My Impact
                 </button>
                 <button
                   className={'dashNavBtn ' + (activeNav === 'messages' ? 'dashNavBtnActive' : '')}
                   onClick={() => setActiveNav('messages')}
                 >
-                  💬 Messages
+                  <MessageSquare size={16} style={{ verticalAlign: '-3px' }} /> Messages
                 </button>
                 <button
                   className={'dashNavBtn ' + (activeNav === 'profile' ? 'dashNavBtnActive' : '')}
                   onClick={() => setActiveNav('profile')}
                 >
-                  👤 Profile
+                  <User size={16} style={{ verticalAlign: '-3px' }} /> Profile
                 </button>
               </>
             )}
             <button className="dashNavBtn" onClick={handleLogout}>
-              🚪 Logout
+              <LogOut size={16} style={{ verticalAlign: '-3px' }} /> Logout
             </button>
           </nav>
         </aside>
@@ -789,11 +821,11 @@ export default function Dashboard() {
               {activeNav === 'volunteers' ? <VolunteersAdmin /> : null}
               {activeNav === 'reports' ? <ReportsAdmin isAdmin={isAdminRole} /> : null}
               {/* Users & Settings are admin-only — guarded here too so a forced nav can't mount them. */}
-              {isAdminRole && activeNav === 'faqs' ? <FaqTrainingAdmin /> : null}
+              {isAdminRole && aiEnabled && activeNav === 'faqs' ? <FaqTrainingAdmin /> : null}
               {isAdminRole && activeNav === 'users' ? <UsersAdmin currentUserId={user?.id} /> : null}
               {isAdminRole && activeNav === 'settings' ? (
                 <>
-                  <SettingsAdmin />
+                  <SettingsAdmin onSaved={(f) => setAiEnabled(String(f.ai_assistant_enabled) === '1')} />
                   <div style={{ marginTop: 20 }}>
                     <UserProfile key={user?.id} user={user} onProfileUpdated={setUser} />
                   </div>

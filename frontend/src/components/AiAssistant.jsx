@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../lib/api';
 import { sendAssistantMessage } from '../lib/assistantApi';
+import { PawPrint, Send, MessageCircle, X } from 'lucide-react';
 
 const styles = `
   .aiFab { position: fixed; right: 22px; bottom: 22px; z-index: 1000; width: 58px; height: 58px; border-radius: 50%;
@@ -19,7 +20,7 @@ const styles = `
   .aiSend { border: none; background: var(--brand, #c1612e); color: #fff; border-radius: 10px; padding: 0 14px; cursor: pointer; }
 `;
 
-const GREETING = { role: 'assistant', content: "Hi! I'm the shelter assistant. Ask me about adopting, donating, visiting, or which pet might suit you. 🐾" };
+const GREETING = { role: 'assistant', content: "Hi! I'm the shelter assistant. Ask me about adopting, donating, visiting, or which pet might suit you." };
 
 export default function AiAssistant() {
   const [enabled, setEnabled] = useState(false);
@@ -66,7 +67,7 @@ export default function AiAssistant() {
       {open && (
         <div className="aiPanel" role="dialog" aria-label="Shelter assistant">
           <div className="aiHead">
-            <span>🐾 Shelter Assistant</span>
+            <span><PawPrint size={16} style={{ verticalAlign: '-3px', marginRight: 4 }} />Shelter Assistant</span>
             <button onClick={() => setOpen(false)} aria-label="Close" style={{ background: 'none', border: 'none', color: '#fff', fontSize: 20, cursor: 'pointer' }}>×</button>
           </div>
           <div className="aiBody" ref={bodyRef}>
@@ -77,12 +78,12 @@ export default function AiAssistant() {
           </div>
           <form className="aiForm" onSubmit={send}>
             <input className="aiInput" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Type a question…" maxLength={500} />
-            <button className="aiSend" type="submit" disabled={busy}>➤</button>
+            <button className="aiSend" type="submit" disabled={busy} aria-label="Send message"><Send size={16} /></button>
           </form>
         </div>
       )}
       <button className="aiFab" onClick={() => setOpen((o) => !o)} aria-label="Open shelter assistant">
-        {open ? '×' : '💬'}
+        {open ? <X size={22} /> : <MessageCircle size={22} />}
       </button>
     </>
   );

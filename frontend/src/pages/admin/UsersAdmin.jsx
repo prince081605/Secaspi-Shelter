@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { adminListUsers, adminUpdateUser } from '../../lib/usersApi';
+import { Users } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 
 const ROLES = ['admin', 'staff', 'volunteer', 'user'];
@@ -73,7 +74,7 @@ export default function UsersAdmin({ currentUserId }) {
 
   return (
     <>
-      <h2 className="dashSectionTitle">👥 User Management</h2>
+      <h2 className="dashSectionTitle"><Users size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />User Management</h2>
       {error && <div className="ui-error">{error}</div>}
 
       <div className="dashFilterBar">

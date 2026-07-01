@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { adminListDonations, adminGetDonationStats, adminVerifyDonation } from '../../lib/donationsApi';
+import { HandCoins } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import Pagination from '../../components/Pagination';
 
@@ -101,7 +102,7 @@ export default function DonationsAdmin({ isAdmin = false }) {
 
   return (
     <>
-      <h2 className="dashSectionTitle">💰 Donation Management</h2>
+      <h2 className="dashSectionTitle"><HandCoins size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />Donation Management</h2>
       <StatsCards />
       {error && <div className="ui-error">{error}</div>}
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { REPORT_TYPES, getReport, exportReport } from '../../lib/reportsApi';
+import { BarChart3, Download } from 'lucide-react';
 
 const FILTER_CONFIG = {
   adoption: {
@@ -93,7 +94,7 @@ export default function ReportsAdmin({ isAdmin = false }) {
 
   return (
     <>
-      <h2 className="dashSectionTitle">📈 Reports</h2>
+      <h2 className="dashSectionTitle"><BarChart3 size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />Reports</h2>
 
       <div className="dashFilterBar">
         <select className="ui-input" style={{ maxWidth: 220 }} aria-label="Report type" value={type} onChange={(e) => setType(e.target.value)}>
@@ -140,10 +141,10 @@ export default function ReportsAdmin({ isAdmin = false }) {
         )}
 
         <button className="dashBtn dashBtnPrimary" onClick={() => handleExport('csv')} disabled={exporting === 'csv'}>
-          {exporting === 'csv' ? 'Exporting…' : '⬇ Export CSV'}
+          {exporting === 'csv' ? 'Exporting…' : <><Download size={15} style={{ verticalAlign: '-3px' }} /> Export CSV</>}
         </button>
         <button className="dashBtn" onClick={() => handleExport('pdf')} disabled={exporting === 'pdf'}>
-          {exporting === 'pdf' ? 'Exporting…' : '⬇ Export PDF'}
+          {exporting === 'pdf' ? 'Exporting…' : <><Download size={15} style={{ verticalAlign: '-3px' }} /> Export PDF</>}
         </button>
       </div>
 

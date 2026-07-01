@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Users, Handshake, Briefcase, ClipboardList, Inbox, X } from 'lucide-react';
 import {
   adminListVolunteers,
   adminCreateVolunteer,
@@ -182,7 +183,7 @@ function TasksPanel({ volunteer, onChanged }) {
                           Mark {NEXT_TASK_STATUS[t.status]}
                         </button>
                       )}
-                      <button className="dashBtn dashBtnDanger" aria-label={t.status === 'requested' ? 'Decline task' : 'Delete task'} onClick={() => deleteTask(t)}>✕</button>
+                      <button className="dashBtn dashBtnDanger" aria-label={t.status === 'requested' ? 'Decline task' : 'Delete task'} onClick={() => deleteTask(t)}><X size={14} /></button>
                     </span>
                   </td>
                 </tr>
@@ -490,20 +491,20 @@ export default function VolunteersAdmin() {
 
   return (
     <>
-      <h2 className="dashSectionTitle">👥 Personnel Management</h2>
+      <h2 className="dashSectionTitle"><Users size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />Personnel Management</h2>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         <button
           className={mode === 'volunteers' ? 'dashBtn dashBtnPrimary' : 'dashBtn'}
           onClick={() => setMode('volunteers')}
         >
-          🤝 Volunteers
+          <Handshake size={16} style={{ verticalAlign: '-3px' }} /> Volunteers
         </button>
         <button
           className={mode === 'staff' ? 'dashBtn dashBtnPrimary' : 'dashBtn'}
           onClick={() => setMode('staff')}
         >
-          👔 Staff
+          <Briefcase size={16} style={{ verticalAlign: '-3px' }} /> Staff
         </button>
       </div>
 
@@ -514,13 +515,13 @@ export default function VolunteersAdmin() {
               className={subMode === 'roster' ? 'dashBtn dashBtnPrimary' : 'dashBtn'}
               onClick={() => setSubMode('roster')}
             >
-              📋 Volunteers
+              <ClipboardList size={16} style={{ verticalAlign: '-3px' }} /> Volunteers
             </button>
             <button
               className={subMode === 'requests' ? 'dashBtn dashBtnPrimary' : 'dashBtn'}
               onClick={() => setSubMode('requests')}
             >
-              📩 Requests
+              <Inbox size={16} style={{ verticalAlign: '-3px' }} /> Requests
             </button>
           </div>
 

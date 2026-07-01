@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { PawPrint, PartyPopper } from 'lucide-react';
 import {
   submitVolunteerApplication,
   listMyVolunteerApplications,
@@ -105,7 +106,7 @@ export default function VolunteerApply() {
           /* ---- Approved volunteer/staff: task dashboard ---- */
           <>
             <p className="ui-eyebrow" style={{ marginBottom: '1rem' }}>{volunteer.type === 'staff' ? 'Staff Dashboard' : 'Volunteer Dashboard'}</p>
-            <h1 className="ui-h1" style={{ marginBottom: '0.4rem' }}>Welcome back, {volunteer.type === 'staff' ? 'staff member' : 'volunteer'}! 🐾</h1>
+            <h1 className="ui-h1" style={{ marginBottom: '0.4rem' }}>Welcome back, {volunteer.type === 'staff' ? 'staff member' : 'volunteer'}! <PawPrint size={22} style={{ verticalAlign: '-3px' }} /></h1>
             <p className="ui-muted" style={{ marginBottom: '2rem' }}>
               Request a task you'd like to help with — the team will confirm it.
             </p>
@@ -152,7 +153,7 @@ export default function VolunteerApply() {
         ) : done || hasPending ? (
           /* ---- Application submitted / pending ---- */
           <div className="ui-card volSuccess">
-            <h2 className="ui-h2" style={{ marginBottom: '0.6rem' }}>Application received! 🙌</h2>
+            <h2 className="ui-h2" style={{ marginBottom: '0.6rem' }}>Application received! <PartyPopper size={20} style={{ verticalAlign: '-3px' }} /></h2>
             <p className="ui-muted">
               Thanks for offering to help. Our team will review your application and notify you once it's approved.
             </p>

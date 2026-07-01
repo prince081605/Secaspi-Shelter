@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useState } from 'react';
+import { PawPrint, Dog, Syringe, Pill, Search, X } from 'lucide-react';
 import {
   adminListAnimals,
   adminGetAnimalStats,
@@ -209,7 +210,7 @@ function AnimalForm({ initial, onCancel, onSaved }) {
           {showExisting && (
             <div className="dashCard" style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 4 }}>
               <div className="aa-row-photo" aria-hidden="true">
-                {duplicate.photo ? <img src={photoSrc(duplicate.photo)} alt="" /> : '🐾'}
+                {duplicate.photo ? <img src={photoSrc(duplicate.photo)} alt="" /> : <PawPrint size={22} />}
               </div>
               <div style={{ fontSize: 13, lineHeight: 1.5 }}>
                 <div style={{ fontWeight: 600 }}>{duplicate.name}</div>
@@ -358,7 +359,7 @@ function PhotoManager({ animalId, onChanged }) {
               aria-label="Delete photo"
               onClick={() => handleDelete(p.id)}
             >
-              ✕
+              <X size={12} />
             </button>
           </div>
         ))}
@@ -482,7 +483,7 @@ function MedicalManager({ animalId, onChanged }) {
     <div style={{ marginTop: 10 }}>
       {state.status === 'error' && <div className="ui-error">{state.error}</div>}
 
-      <div className="dashSectionTitle" style={{ fontSize: 13, marginTop: 6 }}>💉 Medical records</div>
+      <div className="dashSectionTitle" style={{ fontSize: 13, marginTop: 6 }}><Syringe size={15} style={{ verticalAlign: '-3px', marginRight: 6 }} />Medical records</div>
       {records.length === 0 ? (
         <div className="ui-empty">No medical records yet.</div>
       ) : (
@@ -500,7 +501,7 @@ function MedicalManager({ animalId, onChanged }) {
                   <td>{r.cost ?? '—'}</td>
                   <td>{r.record_date}</td>
                   <td>{r.follow_up_date || '—'}</td>
-                  <td><button className="dashBtn dashBtnDanger" aria-label="Delete medical record" onClick={() => handleDeleteRecord(r.id)}>✕</button></td>
+                  <td><button className="dashBtn dashBtnDanger" aria-label="Delete medical record" onClick={() => handleDeleteRecord(r.id)}><X size={14} /></button></td>
                 </tr>
               ))}
             </tbody>
@@ -519,7 +520,7 @@ function MedicalManager({ animalId, onChanged }) {
         <button className="dashBtn dashBtnPrimary" type="submit" disabled={state.status === 'loading'}>+ Add</button>
       </form>
 
-      <div className="dashSectionTitle" style={{ fontSize: 13, marginTop: 14 }}>💊 Vaccinations</div>
+      <div className="dashSectionTitle" style={{ fontSize: 13, marginTop: 14 }}><Pill size={15} style={{ verticalAlign: '-3px', marginRight: 6 }} />Vaccinations</div>
       {vaccinations.length === 0 ? (
         <div className="ui-empty">No vaccinations recorded yet.</div>
       ) : (
@@ -534,7 +535,7 @@ function MedicalManager({ animalId, onChanged }) {
                   <td>{v.vaccine_name}</td>
                   <td>{v.date_given}</td>
                   <td>{v.next_due || '—'}</td>
-                  <td><button className="dashBtn dashBtnDanger" aria-label="Delete vaccination record" onClick={() => handleDeleteVaccination(v.id)}>✕</button></td>
+                  <td><button className="dashBtn dashBtnDanger" aria-label="Delete vaccination record" onClick={() => handleDeleteVaccination(v.id)}><X size={14} /></button></td>
                 </tr>
               ))}
             </tbody>
@@ -710,7 +711,7 @@ export default function AnimalsAdmin() {
       <div className="aa-toolbar">
         <div className="aa-toolbar-left">
           <div className="aa-search">
-            <span aria-hidden="true">🔍</span>
+            <span aria-hidden="true" style={{ display: 'inline-flex', verticalAlign: '-3px' }}><Search size={16} /></span>
             <input
               type="text"
               placeholder="Search name/species/breed"
@@ -775,7 +776,7 @@ export default function AnimalsAdmin() {
                     <td>
                       <div className="aa-row-name">
                         <div className="aa-row-photo" aria-hidden="true">
-                          {a.photo ? <img src={photoSrc(a.photo)} alt="" /> : '🐕'}
+                          {a.photo ? <img src={photoSrc(a.photo)} alt="" /> : <Dog size={22} />}
                         </div>
                         <div>
                           <div className="name">{a.name}</div>

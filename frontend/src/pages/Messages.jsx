@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { MessageSquare } from 'lucide-react';
 import {
   listConversations, listAdminConversations, startConversation,
   getConversation, replyConversation,
@@ -90,7 +91,7 @@ export default function Messages({ staff = false }) {
     <div>
       <style>{styles}</style>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 className="dashSectionTitle">💬 {staff ? 'Messages — Inbox' : 'Messages'}</h2>
+        <h2 className="dashSectionTitle"><MessageSquare size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />{staff ? 'Messages — Inbox' : 'Messages'}</h2>
         {!staff && (
           <button className="dashBtn dashBtnPrimary" onClick={() => { setComposing(true); setActiveId(null); setThread(null); }}>
             ＋ New message

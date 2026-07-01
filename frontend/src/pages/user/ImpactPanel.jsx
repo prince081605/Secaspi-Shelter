@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getMyImpact, getLeaderboard } from '../../lib/impactApi';
+import { Trophy, Utensils, Heart, Handshake } from 'lucide-react';
 
 const styles = `
   .impBadges { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
@@ -39,11 +40,11 @@ export default function ImpactPanel() {
   return (
     <div>
       <style>{styles}</style>
-      <h2 className="dashSectionTitle">🏆 Your Impact</h2>
+      <h2 className="dashSectionTitle"><Trophy size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />Your Impact</h2>
 
       <div className="dashGridCards">
         <StatCard label="Donated" value={peso(impact.donated_total)} sub={`${impact.donation_count} donation${impact.donation_count === 1 ? '' : 's'}`} />
-        <StatCard label="Meals funded" value={`🍽️ ${impact.meals_funded}`} sub="From your donations" />
+        <StatCard label="Meals funded" value={<><Utensils size={16} style={{ verticalAlign: '-2px' }} /> {impact.meals_funded}</>} sub="From your donations" />
         <StatCard label="Volunteer hours" value={impact.volunteer_hours} sub="Hours rendered" />
         <StatCard label="Badges earned" value={impact.badges.filter((b) => b.earned).length + ' / ' + impact.badges.length} />
       </div>
@@ -64,7 +65,7 @@ export default function ImpactPanel() {
           <h3 className="dashSectionTitle" style={{ fontSize: 15, marginTop: 18 }}>Community leaderboard</h3>
           <div className="impLb">
             <div className="dashCard">
-              <strong>💛 Top donors</strong>
+              <strong><Heart size={15} style={{ verticalAlign: '-3px', marginRight: 4 }} />Top donors</strong>
               {board.top_donors.length === 0 ? <div className="ui-empty">No donors yet.</div> : board.top_donors.map((d, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
                   <span>{i + 1}. {d.name}</span><span>{peso(d.total)}</span>
@@ -72,7 +73,7 @@ export default function ImpactPanel() {
               ))}
             </div>
             <div className="dashCard">
-              <strong>🤝 Top volunteers</strong>
+              <strong><Handshake size={15} style={{ verticalAlign: '-3px', marginRight: 4 }} />Top volunteers</strong>
               {board.top_volunteers.length === 0 ? <div className="ui-empty">No volunteer hours yet.</div> : board.top_volunteers.map((v, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
                   <span>{i + 1}. {v.name}</span><span>{v.hours} hrs</span>

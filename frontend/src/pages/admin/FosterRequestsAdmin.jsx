@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { adminListFosterApplications, adminUpdateFosterApplication } from '../../lib/animalsApi';
+import { Home } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import Pagination from '../../components/Pagination';
 
@@ -170,7 +171,7 @@ export default function FosterRequestsAdmin() {
 
   return (
     <>
-      <h2 className="dashSectionTitle">🏡 Foster Requests</h2>
+      <h2 className="dashSectionTitle"><Home size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />Foster Requests</h2>
       {error && <div className="ui-error">{error}</div>}
 
       <div className="dashFilterBar">

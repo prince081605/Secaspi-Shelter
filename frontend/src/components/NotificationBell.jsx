@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { listNotifications, markAllNotificationsRead, markNotificationRead } from '../lib/notificationsApi';
+import { Bell } from 'lucide-react';
 
 const POLL_MS = 30000;
 
@@ -73,7 +74,7 @@ export default function NotificationBell() {
   return (
     <div className="notifBell" ref={containerRef}>
       <button type="button" className="notifBellBtn" onClick={toggleOpen} aria-label="Notifications">
-        🔔
+        <Bell size={20} />
         {unreadCount > 0 ? <span className="notifBadge">{unreadCount > 9 ? '9+' : unreadCount}</span> : null}
       </button>
 

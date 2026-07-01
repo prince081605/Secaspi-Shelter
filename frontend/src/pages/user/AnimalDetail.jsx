@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getAnimal } from '../../lib/animalsApi';
+import { Dog } from 'lucide-react';
 
 const styles = `
   .detBody { padding: 3rem 6vw; display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; }
@@ -98,7 +99,7 @@ export default function AnimalDetail() {
               {animal.photos?.length ? (
                 <img src={photoUrl(animal.photos[activePhoto])} alt={animal.name} />
               ) : (
-                '🐶'
+                <Dog size={64} />
               )}
             </div>
             {animal.photos?.length > 1 && (
