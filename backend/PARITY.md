@@ -39,9 +39,23 @@ feature "work in one environment but not another," and how each is handled.
 
 ## Environment/config parity (so local mirrors prod functionality)
 
-- **Uploaded images.** Prod uses Cloudflare R2 (`FILESYSTEM_DISK=s3`); local uses the `public`
-  disk. Locally you must run `php artisan storage:link` and set `APP_URL` correctly, or image
-  URLs 404. All URLs are generated via `Storage::url()`.
+- **Public uploads (animal photos, settings images).** Written to the *default* disk
+  (`FILESYSTEM_DISK`): Cloudflare R2 (`s3`) in prod, `public` locally. Locally you must run
+  `php artisan storage:link` and set `APP_URL` correctly, or image URLs 404. URLs are generated via
+  `Storage::url()`. These are meant to be publicly visible (they render on the public pages).
+- **Sensitive uploads (donation proofs, rescue photos, intake documents).** Written to the private
+  `local` disk (`->store(..., 'local')`, root `storage/app/private`) and served only via short-lived
+  signed links — `Storage::disk('local')->temporaryUrl(..., 30 min)` — to already-authorized
+  viewers, so they're never reachable through the public `/storage` symlink (audit §5/6/7). The
+  intake→animal conversion streams the doc cross-disk (`local` → public default disk) since the
+  resulting animal photo must stay public.
+  - **⚠️ KNOWN PROD RISK — not yet resolved.** The `local` disk is the container's own filesystem,
+    which is **ephemeral on Render** (that's the whole reason public uploads use R2 — "so uploads
+    survive container redeploys"). So today, sensitive uploads on the `local` disk would be **lost
+    on every redeploy** in prod. Before relying on this in production, either (a) mount a Render
+    **persistent disk** at `storage/app/private`, or (b) move these to a **private R2/S3 disk**
+    (s3 driver, private bucket, no public URL) and keep serving via `temporaryUrl()`. Tracked as a
+    follow-up.
 - **CORS.** `config/cors.php` reads `FRONTEND_URL`. Local `.env` must set
   `FRONTEND_URL=http://localhost:5173` or the React dev app is CORS-blocked.
 - **APP_ENV.** Keep `APP_ENV=local` locally so dev conveniences work (e.g. the forgot-password
