@@ -72,7 +72,7 @@ class IntakeController extends Controller
         if ($documents) {
             foreach ($documents as $file) {
                 $intake->documents()->create([
-                    'file_path' => $file->store('intakes'),
+                    'file_path' => $file->store('intakes', 'local'),
                     'original_name' => $file->getClientOriginalName(),
                 ]);
             }
@@ -132,14 +132,20 @@ class IntakeController extends Controller
         // Copy (not reference) the files into the animals/ folder so deleting the intake — which
         // cascades + Storage::delete()s its documents — never removes the animal's photos. The
         // first photo becomes the main one, matching AnimalController's upload convention.
+        // Documents live on the private 'local' disk; animal photos are public (shown on the
+        // public adoption pages), so this is a cross-disk copy rather than a same-disk Storage::copy().
         $intake->load('documents');
         foreach ($intake->documents as $i => $doc) {
-            if (!$doc->file_path || !Storage::exists($doc->file_path)) {
+            if (!$doc->file_path || !Storage::disk('local')->exists($doc->file_path)) {
                 continue;
             }
             $ext = pathinfo($doc->file_path, PATHINFO_EXTENSION);
             $newPath = 'animals/' . Str::random(40) . ($ext ? '.' . $ext : '');
-            Storage::copy($doc->file_path, $newPath);
+            $stream = Storage::disk('local')->readStream($doc->file_path);
+            Storage::disk('public')->writeStream($newPath, $stream);
+            if (is_resource($stream)) {
+                fclose($stream);
+            }
             $animal->photos()->create([
                 'photo_url' => $newPath,
                 'is_main' => $i === 0,
@@ -157,7 +163,7 @@ class IntakeController extends Controller
     public function adminDestroy(Intake $intake)
     {
         foreach ($intake->documents as $doc) {
-            Storage::delete($doc->file_path);
+            Storage::disk('local')->delete($doc->file_path);
         }
         $intake->delete();
 
@@ -178,7 +184,7 @@ class IntakeController extends Controller
         $created = [];
         foreach ($request->file('documents') as $file) {
             $created[] = $intake->documents()->create([
-                'file_path' => $file->store('intakes'),
+                'file_path' => $file->store('intakes', 'local'),
                 'original_name' => $file->getClientOriginalName(),
             ]);
         }
@@ -192,7 +198,7 @@ class IntakeController extends Controller
             return response()->json(['message' => 'Document not found for this intake'], 404);
         }
 
-        Storage::delete($document->file_path);
+        Storage::disk('local')->delete($document->file_path);
         $document->delete();
 
         return response()->json(['message' => 'Document deleted']);
@@ -236,7 +242,7 @@ class IntakeController extends Controller
             'created_at' => $i->created_at,
             'documents' => $i->documents->map(fn ($d) => [
                 'id' => $d->id,
-                'file_path' => $d->file_path ? Storage::url($d->file_path) : null,
+                'file_path' => $d->file_path ? Storage::disk('local')->temporaryUrl($d->file_path, now()->addMinutes(30)) : null,
                 'original_name' => $d->original_name,
             ])->values(),
         ];
