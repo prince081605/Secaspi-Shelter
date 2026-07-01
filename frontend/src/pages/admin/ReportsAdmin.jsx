@@ -20,6 +20,7 @@ const FILTER_CONFIG = {
     paymentMethod: ['gcash', 'cash', 'bank'],
   },
   volunteers: {},
+  staff: {},
   rescue: {
     dateRange: true,
     status: ['pending', 'assigned', 'in_progress', 'resolved'],

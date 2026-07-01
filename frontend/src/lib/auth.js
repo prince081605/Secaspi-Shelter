@@ -7,9 +7,9 @@ export const auth = {
     return data;
   },
   async register(name, email, password) {
-    const data = await api.post('/api/register', { name, email, password });
-    if (data?.token) setAuthToken(data.token);
-    return data;
+    // Register intentionally does not auto-login — it returns a success card, then the user
+    // continues to login. (No token is returned, so there's nothing to store here.)
+    return api.post('/api/register', { name, email, password });
   },
   async suggestUsername(name) {
     const data = await api.post('/api/username/suggest', { name });

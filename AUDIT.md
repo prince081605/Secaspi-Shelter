@@ -4,7 +4,7 @@
 now being changed in separate, approved passes (see the **Fix progress tracker** below).
 **Dates:** audited 2026-06-29 · fixes ongoing (last updated 2026-06-30)
 **Method:** static code tracing + live app run (Laravel :8001 + Vite :5173, admin session + public
-pages) + live API probes + full PHPUnit suite (**111 green** as audited → **119 green** after the fix
+pages) + live API probes + full PHPUnit suite (**111 green** as audited → **139 green** after the fix
 passes to date). **Project average ≈ 79/100** as-audited (see Appendix A4; modules not yet re-scored).
 
 Severity legend: **[CRIT]** critical · **[HIGH]** high · **[MED]** medium · **[LOW]** low ·
@@ -20,12 +20,15 @@ tracked below.
 
 Legend: ✅ done · ⏳ in progress · ⬜ pending.
 
-> **Progress (as of 2026-06-30, branch `audit/report-and-global-cleanup`):**
-> **Done** — §0.1 cleanup · §0.2 backend · HIGH security (auth + public/AI) · HIGH admin pagination (§§3–8).
-> **In progress** — §0.2 frontend (3 splits + `MarksAdminRead` trait done; only the deferred `Dashboard` hub split left) · MED security (CSV-injection, staff-gate, public exposure, AI global cap + trust-proxies done; only private-disk uploads §5/6/7 left — deferred as prod-risky).
-> **Done (full rows)** — §0.1 · §0.2 backend · all HIGH · **MED functional/perf** (mark-reads, foster sync, donation dates, N+1, aggregate endpoints, route code-split; queue `ShouldQueue` deferred for deploy-safety) · post-audit dashboard responsiveness.
-> **Pending** — remaining MED security · LOW.
-> Suite **134 green**; initial JS bundle 1043 kB → 242 kB.
+> **Progress (as of 2026-07-01, branch `audit/report-and-global-cleanup`):**
+> **Done** — §0.1 cleanup · §0.2 backend · HIGH security (auth + public/AI) · HIGH admin pagination (§§3–8) · **all MED security, incl. private-disk uploads (§5/6/7)**.
+> **In progress** — §0.2 frontend (3 splits + `MarksAdminRead` trait done; only the deferred `Dashboard` hub split left).
+> **Done (full rows)** — §0.1 · §0.2 backend · all HIGH · **all MED security** · **MED functional/perf** (mark-reads, foster sync, donation dates, N+1, aggregate endpoints, route code-split; queue `ShouldQueue` deferred for deploy-safety) · post-audit dashboard responsiveness.
+> **Done** — LOW cleanups: dead code (axios, email-verif stubs, register token branch), `staff`
+> report routed+exposed, admin-search debounce, `80220` magic-number unified.
+> **Pending** — nothing tracked; remaining audit items are the deliberately-deferred `Dashboard`
+> hub split and the deploy-safety `ShouldQueue` (needs a worker).
+> Suite **140 green**; initial JS bundle 1043 kB → 242 kB.
 
 | Pass | Scope | Status | Where |
 |---|---|---|---|
@@ -35,9 +38,9 @@ Legend: ✅ done · ⏳ in progress · ⬜ pending.
 | **HIGH security (auth)** | `throttle` on login/register/forgot/reset (§1); revoke tokens on password reset + revoke other sessions on change-password (§1) | ✅ done | suite **116 green** (+3 new `AuthTest` cases) |
 | **HIGH security (public/AI)** | `throttle:5,1` on the public rescue write (§6) + `throttle:20,1` on the public AI chat (§10), per IP | ✅ done | suite **121 green** (+2 `PublicRateLimitTest` cases) |
 | **HIGH functional** | Admin-table pagination via shared `components/Pagination.jsx` across **all** admin tables — §3 Animals + Intakes, §4 Adoption (inbox/ongoing/completed) + Foster, §5 Donations, §6 Rescue, §7 Volunteers + Personnel, §8 Visitations. Adoption inbox excludes decided rows server-side (`exclude_decided`) so it paginates cleanly | ✅ done | suite **119 green** (+3 `AdoptionApplicationTest`); browser-verified Donations 1→2 of 9, Adoption inbox 1→2 of 2 (decided rows excluded) |
-| MED security | **✅ CSV-injection (§11)** · **✅ staff-grant gate (§7)** · **✅ public field exposure (§2/3)** · **✅ AI global cap + trust-proxies (§10)**; ⬜ private-disk uploads (§5/6/7 — prod-risky, deliberate pass) | ⏳ in progress | suite **135 green**; Appendix A3 #4–8 |
+| MED security | **✅ CSV-injection (§11)** · **✅ staff-grant gate (§7)** · **✅ public field exposure (§2/3)** · **✅ AI global cap + trust-proxies (§10)** · **✅ private-disk uploads (§5/6/7)** — donation proofs, rescue photos, and intake documents now write to the private `local` disk (Laravel's built-in signed-route serving, `'serve' => true`) and are read back only via `Storage::disk('local')->temporaryUrl()` (30-min signed links) to already-authorized viewers; intake→animal photo conversion does a cross-disk stream copy into the `public` disk since animal photos must stay public. Browser/curl-verified: signed URL → 200, unsigned/tampered → 403 | ✅ done | suite **139 green** (+4 `PrivateUploadsTest`); Appendix A3 #4–8 |
 | MED functional/perf | **✅ mark-reads (§4/7/8) · foster status sync (§4) · donation dates (§5) · messaging N+1 (§9) · aggregate endpoints (§3+§11) · route-level code-split (§2/11)**. (queue/`ShouldQueue` deferred for deploy-safety — needs a worker; LandingPage map lazy-load optional) | ✅ done | suite **134 green**; bundle 1043→242 kB; Appendix A3 #9–11 |
-| LOW | **✅ auth: register `role:null`, `<Link>` nav, `autocomplete` (§1)**; ⬜ remaining: dead code (axios, email-verif stub, `staff()` report), admin-search debounce (§3), magic numbers (§2 `80220`) | ⏳ in progress | suite **135 green** |
+| LOW | **✅ auth: register `role:null`, `<Link>` nav, `autocomplete` (§1)** · **✅ dead code: removed unused `axios` dep, the empty `EmailVerificationController` + `VerifyEmailRequest` stubs, and the dead `auth.register` token branch** · **✅ routed+exposed the `staff` report (§11 A-1)** · **✅ admin animal-search 300ms debounce (§3 B-1)** · **✅ unified the `80220` monthly-goal default into a named `PublicHomeController::DEFAULT_MONTHLY_GOAL` (§2 H-1)** | ✅ done | suite **140 green** (+1 `ReportExportTest` staff-report case); build + lint clean (no new errors) |
 | **Post-audit: admin dashboard responsiveness** | Not in the original report — admin dashboard overflowed horizontally on phones (239px) and stacked a 968px nav above content. Fixed: `min-width:0` on the grid items (so wide tables/charts scroll inside their wrap instead of stretching the page) + a ☰ mobile-nav toggle that collapses the sidebar (968→107px, auto-collapses on selection). Desktop unchanged. | ✅ done | browser-verified at 375 / 1280px: 0 overflow, toggle works; build clean |
 
 > Module scorecards reflect the **as-audited** state; they're not re-scored until a module's fixes
@@ -122,14 +125,14 @@ rapid failed logins; reviewed `AuthTest.php` (12 cases, all relevant ones passin
   `$user->refresh()` after `User::create()` so the DB-column default (`role='user'`) is loaded
   before serializing. Covered by `AuthTest::test_register_creates_a_user_with_the_default_role`
   (now also asserts `user.role === 'user'` in the response). _(`AuthController.php`.)_
-- **[LOW] Email-verification feature is half-built.** `me()` returns `email_verified`, the
-  column + `VerifyEmailRequest` + a migration exist, but `EmailVerificationController` is an
-  empty stub and nothing sends or checks a verification link. → Decide: implement or remove the
-  scaffolding. _(`Auth/EmailVerificationController.php`, `Requests/VerifyEmailRequest.php`.)_
-- **[INFO] Register deliberately does not auto-login** (shows a success card → "Continue to
-  login"); the `if (data?.token)` branch in `auth.register` is dead defensive code (register
-  never returns a token). Not a bug — flagged so it isn't "fixed" by accident; the dead branch
-  can be removed. _(`lib/auth.js`, `Register.jsx:34`.)_
+- **[LOW] ✅ RESOLVED — removed the half-built email-verification scaffolding.** Deleted the empty
+  `Auth/EmailVerificationController` and the unused `VerifyEmailRequest` (both were stubs wired to no
+  route). The `email_verified` column is left in place (harmless; a separate F-2 note). _(files
+  removed.)_
+- **[INFO] ✅ RESOLVED — removed the dead `auth.register` token branch.** Register deliberately does
+  not auto-login (success card → "Continue to login") and never returns a token, so the
+  `if (data?.token) setAuthToken(...)` branch was dead; `register()` now just returns the response.
+  _(`lib/auth.js`.)_
 
 ### B. UI / UX
 - **[MED] ✅ RESOLVED — auth links now use router `<Link>`** instead of raw `<a href>`, so
@@ -146,7 +149,8 @@ rapid failed logins; reviewed `AuthTest.php` (12 cases, all relevant ones passin
 - **[NIT] Register has no confirm-password field**, while Reset does — inconsistent.
 
 ### C. Code
-- **[MED] Dead code:** empty `EmailVerificationController`; unused `auth.register` token branch.
+- **[MED] ✅ RESOLVED — dead code removed:** empty `EmailVerificationController` + unused
+  `auth.register` token branch (see A-2 / INFO above).
 - **[LOW] User payload is hand-built 4 different ways** (login: no phone/verified; `me`:
   +phone +verified; register: role=null; profile.update: no username/verified). → Extract one
   `userPayload(User)` helper or an Eloquent API Resource for a single consistent shape.
@@ -318,9 +322,11 @@ endpoints are consumed by `ImpactPanel` (not dead).
   while `stats`/`impact` don't catch at all (uncaught → framework 500). → Standardize.
 
 ### H. Edge cases
-- **[LOW] Magic-number drift for the monthly goal:** the `home/transparency` closure defaults to
-  `80220` while the seeded/admin value is `80000` — two different "defaults". → Single source.
-  _(`api_public.php:138`.)_
+- **[LOW] ✅ RESOLVED — monthly-goal default is now a single named constant.** The
+  `transparency` fallback for an unset `donation_monthly_goal` is now
+  `PublicHomeController::DEFAULT_MONTHLY_GOAL` (80220), and the `SettingsAdmin` input already shows
+  the same 80220 as its placeholder — one documented source instead of a bare magic number.
+  _(`PublicHomeController.php`.)_
 - **[PASS]** Division-by-zero guarded (`Math.max(1, …)` on charts; `min/round` guards in PHP);
   zero-available-animals matchmaker → "No available animals…"; empty donor name → "Anonymous".
 
@@ -377,9 +383,9 @@ medical cost/vet exposure; **live browser** screenshot of the public Adoption pa
   no page controls) — confirmed in Module 7.
 
 ### B. UI / UX
-- **[MED] Admin search has no debounce.** `filters.q` is an effect dependency, so every keystroke
-  fires a list request (typing "golden" = 6 requests). The public page debounces 300ms; admin
-  should too. _(`AnimalsAdmin.jsx:986,1109`.)_
+- **[MED] ✅ RESOLVED — admin search now debounces (300ms).** The list effect wraps its request in a
+  300ms `setTimeout` (cleared on the next change), matching the public `Adoption.jsx` pattern, so
+  typing "golden" fires one request instead of six. _(`AnimalsAdmin.jsx`.)_
 - **[LOW] Heavy inline styles** throughout `AnimalsAdmin` mixed with CSS classes — inconsistent,
   harder to theme.
 - **[LOW] Emoji-as-semantic-heading** (💉 Medical, 💊 Vaccinations, 📋 Intake Queue …) — meaning
@@ -409,7 +415,7 @@ medical cost/vet exposure; **live browser** screenshot of the public Adoption pa
 - **[MED] Redundant `adminGetAnimal` refetches.** Photos, Medical, and QR each re-fetch the full
   animal; every sub-manager create/delete calls `refresh()`, which refetches the whole list **and**
   re-runs the 4 stat calls. → Cache detail; targeted updates.
-- **[MED] No admin search debounce** (perf + UX; see B-1).
+- **[MED] ✅ RESOLVED — admin search debounce added** (perf + UX; see B-1).
 - **[LOW] QR generated inside GET requests** — first `show`/`adminGetAnimal` does `Storage::put` +
   DB `update` (side-effect on read; concurrent first-views can double-generate). _(see E-3.)_
 
@@ -618,13 +624,13 @@ unauthenticated (HTTP 200).
   `adminIndex` eager-loads `user` (no N+1); user list paginates (12).
 
 ### E. Security
-- **[MED] Donation proof screenshots are served from the public disk with no auth.**
-  `FILESYSTEM_DISK=public` + `->store('donations')` → `/storage/donations/xxx`. Confirmed the
-  public disk serves uploads unauthenticated (a sample upload returned HTTP 200). GCash proofs
-  contain names, phone numbers, reference numbers, and balances — sensitive PII reachable by anyone
-  who obtains/guesses the URL, with no access control. → Store proofs on a **private** disk and
-  serve via an authorized signed route. _(`DonationController.php:33`; same risk for intake docs —
-  Module 7.)_
+- **[MED] ✅ RESOLVED — donation proof screenshots now live on the private disk.**
+  `store()` now writes via `->store('donations', 'local')`; `show`/`verify`/`adminIndex` read it
+  back via `Storage::disk('local')->temporaryUrl(..., 30 min)` instead of `Storage::url()`, so the
+  proof is reachable only through a short-lived signed link handed to an already-authorized viewer
+  (the owning donor or staff/admin) — never through the public `/storage/donations/...` path.
+  Covered by `PrivateUploadsTest::test_donation_proof_is_private_and_served_via_a_signed_url`.
+  _(`DonationController.php`; same fix applied to rescue photos §6 and intake docs §7.)_
 - **[LOW]** `show()` returns the **full raw model** (all columns) to the owner — minor self-data
   over-exposure and inconsistent with the curated shapes elsewhere.
 - **[LOW]** No max `amount` (`min:1` only) — a ₱999,999,999 donation is accepted and would skew
@@ -723,9 +729,11 @@ NOT NULL [LOW].
   past the cap, blunting triage-queue spam and 5 MB-upload storage abuse. Covered by
   `PublicRateLimitTest::test_public_rescue_submission_is_rate_limited`. _(A complementary
   honeypot/captcha remains a separate hardening step; the `image|max:5120` rule still caps size.)_
-- **[MED] Rescue photos stored on the public disk** (`rescue-reports/`) → served unauthenticated
-  (same mechanism proven in §5). Lower sensitivity than financial proofs but still uncontrolled.
-  → Private disk + signed URLs (shared fix with donations/intakes).
+- **[MED] ✅ RESOLVED — rescue photos now live on the private disk** (`rescue-reports/`, `local`
+  disk). `index()` reads them back via `Storage::disk('local')->temporaryUrl(..., 30 min)` for
+  staff-only viewing instead of the public `Storage::url()`. Covered by
+  `PrivateUploadsTest::test_rescue_report_photo_is_private_and_served_via_a_signed_url`.
+  _(Shared fix with donations §5 and intakes §7.)_
 - **[PASS]** Validated input (bounds/enum/image); status server-forced `pending`; admin updates
   `role:staff`-gated and use `validated()` (no mass-assignment).
 
@@ -819,9 +827,14 @@ never called (orphaned); reviewed the staff-promotion path end-to-end (controlle
   member can't mint more staff (the account-role `forceFill` only runs after the gate). Volunteer
   creation stays open at `role:staff`. Covered by `StaffGrantGateTest` (staff→403, admin→201,
   staff can still add volunteers). _(`VolunteerController.php`.)_
-- **[MED] Intake documents stored on the public disk** (`intakes/`) → served unauthenticated (same
-  systemic issue as §5/§6). Docs can include animal photos + reporter PII. → Private disk + signed
-  URLs.
+- **[MED] ✅ RESOLVED — intake documents now live on the private disk** (`intakes/`, `local` disk).
+  `adminStore`/`addDocuments` write there; `toDetail()` reads back via
+  `Storage::disk('local')->temporaryUrl(..., 30 min)` for staff only. The intake→animal conversion
+  (`adminConvert`) now does a cross-disk **stream copy** from `local` into the `public` disk (animal
+  photos must stay public for the adoption pages) rather than the old same-disk `Storage::copy`.
+  Covered by `PrivateUploadsTest::test_intake_document_is_private_and_served_via_a_signed_url` +
+  `test_intake_conversion_copies_the_private_document_to_the_public_animal_photo`. _(Shared fix with
+  donations §5 and rescue photos §6.)_
 - **[LOW] `adminConvert` isn't transactional** (Animal create → doc copies → intake update); a
   mid-way failure leaves a created animal but an unconverted intake.
 - **[PASS]** role not mass-assignable (forceFill only); unique/validation guards; document/photo
@@ -1142,9 +1155,12 @@ nav categories, 6 chart surfaces, no console errors (token revoked + localStorag
   `DonationController::index` lacks — see §5 A-1).
 
 ### A. Functional
-- **[LOW] Dead `staff` report path.** Backend `staff()`/`staffData()` + `TYPES` include `staff`, but
-  there's **no route** and **no UI option** (`REPORT_TYPES`/`FILTER_CONFIG` omit it) — reachable
-  only via an export `type=staff` the UI never sends. → Route+expose, or remove.
+- **[LOW] ✅ RESOLVED — `staff` report is now routed and exposed.** It was complete, working data
+  (`staffData()` filters `type='staff'`, distinct from the all-volunteers report) that was simply
+  unrouted. Added `GET /admin/reports/staff` (`role:staff`), a `{ key: 'staff', label: 'Staff' }`
+  entry in `REPORT_TYPES`, and a `staff: {}` `FILTER_CONFIG` entry. Covered by
+  `ReportExportTest::test_staff_report_is_reachable_and_returns_only_staff_personnel`. _(`routes/auth.php`,
+  `lib/reportsApi.js`, `ReportsAdmin.jsx`.)_
 - **[LOW] Analytics "adopted this year" / length-of-stay key off application `created_at`** (no
   completion timestamp exists) — reflects application date, not completion (acknowledged in code).
 
@@ -1199,7 +1215,7 @@ nav categories, 6 chart surfaces, no console errors (token revoked + localStorag
 - **[LOW]** No caching for analytics/overview (recomputed per request).
 
 ### G. API
-- **[LOW]** `staff()` unrouted (dead); report preview endpoints unbounded.
+- **[LOW] ✅ RESOLVED — `staff()` is now routed** (see A-1); report preview endpoints still unbounded.
 - **[PASS]** `streamDownload` CSV + DomPDF download; consistent `{summary, columns, rows}` contract.
 
 ### H. Edge cases
@@ -1248,12 +1264,12 @@ panels + Recharts (code-split) [MED-perf], (3) one aggregated pending-counts end
   gitignored.
 
 ### A. Dead code & hygiene
-- **[LOW] Confirmed dead code (from §0):** `frontend/src/App.jsx` (returns null, unimported),
-  `lib/dashboardMockData.js` (82 lines, unreferenced), `Middleware/dummy.php`, empty
-  `Auth/EmailVerificationController` + unused `VerifyEmailRequest`, the orphaned rescue `map()` +
-  route + `RescueMapTest`. → Remove all.
-- **[LOW] Unused dependency:** `axios` (`frontend/package.json`) is imported nowhere — `api.js` uses
-  `fetch`. → Remove.
+- **[LOW] ✅ RESOLVED — confirmed dead code removed.** `frontend/src/App.jsx`,
+  `lib/dashboardMockData.js`, `Middleware/dummy.php`, the orphaned rescue `map()` + route +
+  `RescueMapTest` (all in the §0.1 cleanup), and now the empty `Auth/EmailVerificationController` +
+  unused `VerifyEmailRequest` (§1).
+- **[LOW] ✅ RESOLVED — removed the unused `axios` dependency** from `frontend/package.json`
+  (`api.js` uses `fetch`); `npm uninstall axios` pruned it + 24 transitive deps, 0 vulnerabilities.
 - **[LOW] Backend web root** (`GET /`) serves Laravel's default `welcome` view on an API-only
   backend. → Replace with a redirect/health note or remove.
 
@@ -1275,9 +1291,11 @@ panels + Recharts (code-split) [MED-perf], (3) one aggregated pending-counts end
 ### C. Security (systemic)
 - **[HIGH] No rate limiting anywhere** — auth (§1), public rescue write (§6), public AI chat (§10),
   messaging. → Global `throttle` + tighter per-route limits on auth / public-write / AI.
-- **[MED] All uploads on the public disk** (`FILESYSTEM_DISK=public`) served unauthenticated —
-  donation proofs (§5), rescue photos (§6), intake docs (§7) are sensitive. → Private disk + signed
-  URLs for sensitive uploads.
+- **[MED] ✅ RESOLVED — sensitive uploads moved off the public disk.** Donation proofs (§5), rescue
+  photos (§6), and intake docs (§7) now write to the private `local` disk and are read back only via
+  30-minute signed `temporaryUrl()` links to already-authorized viewers. Animal photos (`animals/`)
+  deliberately stay on the `public` disk — they're meant to be publicly visible on the adoption
+  pages — including the intake→animal conversion copy, which now streams cross-disk.
 - **[PASS] Strong foundations:** mass-assignment hardening (role/status excluded, with tests),
   XSS-safe React rendering throughout, parameterized queries (no SQLi), constant-time token
   compares, 401-JSON exception handling, no client-stored secrets beyond the localStorage token.
@@ -1315,21 +1333,21 @@ panels + Recharts (code-split) [MED-perf], (3) one aggregated pending-counts end
 | **No rate limiting** — ✅ RESOLVED for auth (§1), public rescue (§6), public AI chat (§10) via per-IP `throttle`; messaging (§9) left as low-risk optional | 1, 6, 9, 10 | HIGH | Global `throttle` + tight per-route caps |
 | **Admin tables have no pagination** (read only page 1, cap 12–20) — ✅ RESOLVED across §§3–8 via shared `components/Pagination.jsx` | 3, 4, 5, 6, 7, 8 | HIGH/MED | Reuse the public `Adoption.jsx` pagination pattern |
 | **Orphaned "mark-read on review"** (route+controller+helper built, never called) — ✅ RESOLVED: all 3 wired (§4/7/8) | 4, 7, 8 (wired only in 6) | MED | Wire the 3 helpers, or remove the unused backend capability |
-| **Sensitive uploads on the public disk** (served unauthenticated) | 5, 6, 7 | MED | Private disk + signed URLs |
+| **Sensitive uploads on the public disk** (served unauthenticated) — ✅ RESOLVED via the private `local` disk + `temporaryUrl()` signed links (§5/6/7) | 5, 6, 7 | MED | Private disk + signed URLs |
 | **No frontend code-splitting** (Leaflet/Recharts/all admin panels eager) | 2, 11 | MED | `React.lazy` per route/panel |
 | **Duplicated helpers & serializers** (`photoSrc`/`peso`/query-builder; `toItem`/`toAdminItem`) | 3–8, 11 | MED | `lib/format.js`/`lib/url.js`; API Resources |
 | **Public endpoints leak internals** (raw `$e->getMessage()`, over-exposed settings, medical cost/vet) — ✅ RESOLVED (§2/§3) | 2, 3 | MED | Whitelist fields; generic error bodies |
-| **Half-wired / dead features** (rescue `map()`, email verification, `staff` report, `App.jsx`, axios) | 0, 1, 6, 11, 12 | LOW | Remove or finish |
+| **Half-wired / dead features** — ✅ RESOLVED: rescue `map()` + `App.jsx` (§0.1), email-verification stubs + register token branch (§1), `axios` dep (§12) all removed; `staff` report routed+exposed (§11) | 0, 1, 6, 11, 12 | LOW | Remove or finish |
 
-## A2. Files / code to remove (verified)
-- `frontend/src/App.jsx` · `frontend/src/lib/dashboardMockData.js`
-- `backend/app/Http/Middleware/dummy.php`
-- `backend/app/Http/Controllers/Auth/EmailVerificationController.php` (empty) + `Requests/VerifyEmailRequest.php` (unused) — or implement verification
-- `RescueReportController@map` + `GET /rescue-reports/map` + `tests/Feature/RescueMapTest.php`
-- `axios` from `frontend/package.json`
-- Root planning docs (`AI_PLAN.md`, `RESCUE_MAP_PLAN.md`, `TODO_PHASE1.md`) + `mock datas/` → move to `/docs` or delete
-- `ReportController::staff()` (unrouted) — route+expose or remove
-- Dead `auth.register` token branch; inline `Home.jsx` pass-through
+## A2. Files / code to remove (verified) — ✅ mostly done
+- ✅ `frontend/src/App.jsx` · `frontend/src/lib/dashboardMockData.js` (§0.1)
+- ✅ `backend/app/Http/Middleware/dummy.php` (§0.1)
+- ✅ `backend/app/Http/Controllers/Auth/EmailVerificationController.php` (empty) + `Requests/VerifyEmailRequest.php` (unused) — removed (§1)
+- ✅ `RescueReportController@map` + `GET /rescue-reports/map` + `tests/Feature/RescueMapTest.php` (§0.1)
+- ✅ `axios` from `frontend/package.json` (§12)
+- ✅ Root planning docs (`AI_PLAN.md`, `RESCUE_MAP_PLAN.md`, `TODO_PHASE1.md`) → `/docs` (§0.1)
+- ✅ `ReportController::staff()` — **routed+exposed** instead of removed (working, non-redundant feature) (§11)
+- ✅ Dead `auth.register` token branch (§1); ⬜ inline `Home.jsx` pass-through still present (optional)
 
 ## A3. Fix backlog by severity
 
@@ -1342,7 +1360,10 @@ panels + Recharts (code-split) [MED-perf], (3) one aggregated pending-counts end
    the Animals list no longer hides 38 of 58 records. Adoption inbox excludes decided rows server-side.
 
 **MEDIUM (security)**
-4. ⬜ Move donation proofs / rescue photos / intake docs to a **private** disk + signed URLs (§5/6/7).
+4. ✅ **DONE** — Moved donation proofs / rescue photos / intake docs to the private `local` disk,
+   served via `Storage::disk('local')->temporaryUrl()` (30-min signed links) instead of the public
+   disk (§5/6/7). Intake→animal photo conversion cross-copies into the `public` disk (animal photos
+   stay public).
 5. ✅ **DONE** — Neutralize **CSV formula injection** in report exports (§11).
 6. ✅ **DONE** — Gate `type=staff` personnel creation behind `admin` (staff can no longer mint staff) (§7).
 7. ✅ **DONE** — Whitelist public settings keys; stop returning `$e->getMessage()` publicly; drop medical cost/vet from the public animal payload (§2, §3).
@@ -1353,7 +1374,10 @@ panels + Recharts (code-split) [MED-perf], (3) one aggregated pending-counts end
 10. ⏳ **✅ Fixed blank donation dates (read `donated_at`) (§5)**; ⬜ register response `role:null` (§1) still pending.
 11. ⏳ **✅ Removed the messaging N+1 (§9)** (queue/`ShouldQueue` deferred for deploy-safety — needs a worker) · **✅ aggregated the 8-poll dashboard (§11) + the 4-call animal stat strip (§3) into count endpoints** · **✅ route-level code-split (§2/11)** — initial bundle 1043→242 kB.
 
-**LOW** — dead-code removal (A2), debounce admin searches, autocomplete/`htmlFor` on forms, magic-number `80220`→single source, timezone-safe booking bounds, `<Link>` instead of `<a>` on internal nav, cap max donation/report rows.
+**LOW** — ✅ **DONE:** dead-code removal (A2), debounce admin searches (§3), magic-number
+`80220`→single source (§2), `<Link>` internal nav + register cleanups (§1), `staff` report routed
+(§11). ⬜ **remaining (optional, not yet scheduled):** autocomplete/`htmlFor` on the remaining forms,
+timezone-safe booking bounds (§8 H), cap max donation/report rows, inline `Home.jsx` pass-through.
 
 ## A4. Overall project scorecard
 

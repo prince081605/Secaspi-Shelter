@@ -18,6 +18,13 @@ use Illuminate\Support\Facades\Storage;
  */
 class PublicHomeController extends Controller
 {
+    /**
+     * Fallback monthly donation goal (pesos) used when the `donation_monthly_goal` setting is
+     * unset. Single source of truth — the SettingsAdmin input shows this same value as its
+     * placeholder (audit §2 H-1).
+     */
+    public const DEFAULT_MONTHLY_GOAL = 80220;
+
     /** Hero "by the numbers" strip. */
     public function stats()
     {
@@ -93,7 +100,7 @@ class PublicHomeController extends Controller
             $donorCount = (int) $verified()->distinct()->count('user_id');
             $thisMonthRaised = (float) $verified()->where('donated_at', '>=', $monthStart)->sum('amount');
 
-            $monthlyGoal = (float) (DB::table('settings')->where('key', 'donation_monthly_goal')->value('value') ?: 80220);
+            $monthlyGoal = (float) (DB::table('settings')->where('key', 'donation_monthly_goal')->value('value') ?: self::DEFAULT_MONTHLY_GOAL);
             $progressPct = $monthlyGoal > 0 ? (int) min(100, round(($thisMonthRaised / $monthlyGoal) * 100)) : 0;
 
             $byMethod = $verified()

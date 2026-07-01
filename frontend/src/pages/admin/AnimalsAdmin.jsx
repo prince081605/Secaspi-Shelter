@@ -575,22 +575,26 @@ export default function AnimalsAdmin() {
 
   useEffect(() => {
     let mounted = true;
-    setLoading(true);
-    adminListAnimals({ ...filters, page })
-      .then((data) => {
-        if (!mounted) return;
-        setAnimals(data?.data || []);
-        setMeta({ current_page: data?.current_page || 1, last_page: data?.last_page || 1 });
-        setError('');
-      })
-      .catch((err) => {
-        if (!mounted) return;
-        setError(err?.message || 'Failed to load animals.');
-      })
-      .finally(() => {
-        if (mounted) setLoading(false);
-      });
-    return () => { mounted = false; };
+    // Debounce the list request (300ms) so typing in the search box fires one call, not one per
+    // keystroke — matching the public Adoption page (audit §3 B-1).
+    const timer = setTimeout(() => {
+      setLoading(true);
+      adminListAnimals({ ...filters, page })
+        .then((data) => {
+          if (!mounted) return;
+          setAnimals(data?.data || []);
+          setMeta({ current_page: data?.current_page || 1, last_page: data?.last_page || 1 });
+          setError('');
+        })
+        .catch((err) => {
+          if (!mounted) return;
+          setError(err?.message || 'Failed to load animals.');
+        })
+        .finally(() => {
+          if (mounted) setLoading(false);
+        });
+    }, 300);
+    return () => { mounted = false; clearTimeout(timer); };
   }, [filters, refreshKey, page]);
 
   // Stat strip reflects true totals across all animals (not just the current filtered page),

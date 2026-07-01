@@ -6,6 +6,7 @@ export const REPORT_TYPES = [
   { key: 'medical', label: 'Medical & Vaccinations' },
   { key: 'donations', label: 'Donations' },
   { key: 'volunteers', label: 'Volunteers' },
+  { key: 'staff', label: 'Staff' },
   { key: 'rescue', label: 'Rescue Reports' },
 ];
 

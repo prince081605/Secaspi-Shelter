@@ -174,6 +174,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('/admin/reports/medical', [ReportController::class, 'medical'])->middleware('role:staff');
     Route::get('/admin/reports/donations', [ReportController::class, 'donations'])->middleware('admin');
     Route::get('/admin/reports/volunteers', [ReportController::class, 'volunteers'])->middleware('role:staff');
+    Route::get('/admin/reports/staff', [ReportController::class, 'staff'])->middleware('role:staff');
     Route::get('/admin/reports/rescue', [ReportController::class, 'rescue'])->middleware('role:staff');
     Route::get('/admin/reports/export/csv', [ReportController::class, 'exportCsv'])->middleware('role:staff');
     Route::get('/admin/reports/export/pdf', [ReportController::class, 'exportPdf'])->middleware('role:staff');
