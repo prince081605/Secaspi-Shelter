@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { auth } from '../../lib/auth';
 import AuthLayout from '../../components/AuthLayout';
+import PasswordInput from '../../components/PasswordInput';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -86,7 +87,13 @@ export default function Register() {
         </div>
         <div className="ui-field">
           <label className="ui-label ui-label-required">Password</label>
-          <input className="ui-input" value={password} onChange={(e) => setPassword(e.target.value)} type="password" autoComplete="new-password" required minLength={8} />
+          <PasswordInput
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="new-password"
+            required
+            minLength={8}
+          />
         </div>
         <button className="ui-btn-primary" style={{ width: '100%' }} disabled={loading}>
           {loading ? 'Creating...' : 'Create Account'}
