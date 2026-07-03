@@ -9,6 +9,11 @@ const styles = `
   .receiptRow:last-child { border-bottom: none; }
   .receiptLabel { color: var(--muted); font-size: 0.9rem; }
   .receiptValue { font-weight: 600; color: var(--ink); }
+  @media (max-width: 560px) {
+    .receiptBody { padding: 2rem 1rem; }
+    .receiptCard { padding: 1.5rem 1.25rem; }
+    .receiptRow { flex-wrap: wrap; gap: 0.15rem 0.75rem; }
+  }
   @media print {
     .ui-nav, .receiptActions { display: none; }
   }

@@ -20,6 +20,10 @@ const styles = `
   .donateUsage { margin-top: 2.4rem; }
   .donateUsageImg { width: 100%; border-radius: 12px; border: 1px solid var(--line); display: block; }
   .donateUsageLink { display: inline-block; margin-top: 0.7rem; color: var(--brand-2); font-size: 0.9rem; font-weight: 600; }
+  @media (max-width: 560px) {
+    .donateBody { padding: 2rem 1rem; }
+    .donateSuccess { padding: 1.5rem 1.25rem; }
+  }
 `;
 
 const PRESET_AMOUNTS = [100, 300, 500, 1000, 2500];

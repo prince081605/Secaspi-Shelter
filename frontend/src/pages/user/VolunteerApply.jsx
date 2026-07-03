@@ -19,6 +19,11 @@ const styles = `
   .volTag-rejected { background: #ffe0e0; color: #b42318; }
   .volTag-completed { background: var(--line); color: var(--ink-soft); }
   .volSuccess { padding: 2.5rem; text-align: center; }
+  @media (max-width: 560px) {
+    .volBody { padding: 2rem 1rem; }
+    .volSuccess { padding: 1.5rem 1.25rem; }
+    .volItem { flex-wrap: wrap; }
+  }
 `;
 
 export default function VolunteerApply() {

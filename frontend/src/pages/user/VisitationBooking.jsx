@@ -15,6 +15,11 @@ const styles = `
   .visitTag-rejected { background: #ffe0e0; color: #b42318; }
   .visitTag-completed { background: var(--line); color: var(--ink-soft); }
   .visitSuccess { padding: 2.5rem; text-align: center; }
+  @media (max-width: 560px) {
+    .visitBody { padding: 2rem 1rem; }
+    .visitSuccess { padding: 1.5rem 1.25rem; }
+    .visitItem { flex-wrap: wrap; }
+  }
 `;
 
 const SLOTS = [

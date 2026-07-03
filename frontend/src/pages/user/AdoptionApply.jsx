@@ -5,6 +5,10 @@ import { applyForAdoption } from '../../lib/animalsApi';
 const styles = `
   .applyBody { max-width: 640px; margin: 0 auto; padding: 3rem 1.5rem; }
   .applySuccess { padding: 2.5rem; text-align: center; }
+  @media (max-width: 560px) {
+    .applyBody { padding: 2rem 1rem; }
+    .applySuccess { padding: 1.5rem 1.25rem; }
+  }
 `;
 
 export default function AdoptionApply() {
