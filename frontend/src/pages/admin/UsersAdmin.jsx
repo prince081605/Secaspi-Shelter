@@ -2,11 +2,14 @@ import { useEffect, useState } from 'react';
 import { adminListUsers, adminUpdateUser } from '../../lib/usersApi';
 import { Users } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
+import DashCard from '../../components/DashCard';
+import useIsMobile from '../../lib/useIsMobile';
 
 const ROLES = ['admin', 'staff', 'volunteer', 'user'];
 const STATUSES = ['active', 'suspended', 'pending'];
 
 export default function UsersAdmin({ currentUserId }) {
+  const isMobile = useIsMobile();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -93,6 +96,53 @@ export default function UsersAdmin({ currentUserId }) {
         <div className="ui-empty">Loading…</div>
       ) : users.length === 0 ? (
         <div className="ui-empty">No users match these filters.</div>
+      ) : isMobile ? (
+        <div className="dashCardList">
+          {users.map((u) => {
+            const isSelf = u.id === currentUserId;
+            const roleSelect = (
+              <select
+                className="ui-input"
+                value={u.role}
+                disabled={isSelf}
+                aria-label={`Change role for ${u.full_name}`}
+                onChange={(e) => handleRoleChange(u, e.target.value)}
+              >
+                {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+              </select>
+            );
+            const statusVal = (
+              <>
+                <StatusBadge status={u.status} />
+                {u.status === 'suspended' && u.suspension_reason && (
+                  <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }} title={u.suspension_reason}>
+                    Reason: {u.suspension_reason}
+                  </div>
+                )}
+              </>
+            );
+            return (
+              <DashCard
+                key={u.id}
+                title={<>{u.full_name}{u.username && <span style={{ fontSize: 12, color: 'var(--muted)' }}> · @{u.username}</span>}</>}
+                subtitle={u.email}
+                fields={[
+                  { label: 'Phone', value: u.phone || '—' },
+                  { label: 'Role', value: roleSelect },
+                  { label: 'Status', value: statusVal },
+                ]}
+                actions={
+                  <>
+                    <button className="dashBtn" disabled={isSelf} onClick={() => handleToggleStatus(u)}>
+                      {u.status === 'suspended' ? 'Reactivate' : 'Suspend'}
+                    </button>
+                    {isSelf && <span style={{ alignSelf: 'center', fontSize: 12, color: 'var(--muted)' }}>(you)</span>}
+                  </>
+                }
+              />
+            );
+          })}
+        </div>
       ) : (
         <div className="dashTableWrap">
           <table className="dashTable">
@@ -116,8 +166,8 @@ export default function UsersAdmin({ currentUserId }) {
                       <br />
                       <span style={{ fontSize: 12, color: 'var(--muted)' }}>{u.email}</span>
                     </td>
-                    <td data-label="Phone">{u.phone || '—'}</td>
-                    <td data-label="Role">
+                    <td>{u.phone || '—'}</td>
+                    <td>
                       <select
                         className="ui-input"
                         style={{ maxWidth: 130 }}
@@ -129,7 +179,7 @@ export default function UsersAdmin({ currentUserId }) {
                         {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
                       </select>
                     </td>
-                    <td data-label="Status">
+                    <td>
                       <StatusBadge status={u.status} />
                       {u.status === 'suspended' && u.suspension_reason && (
                         <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4, maxWidth: 220 }} title={u.suspension_reason}>

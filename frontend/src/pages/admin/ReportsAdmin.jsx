@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { REPORT_TYPES, getReport, exportReport } from '../../lib/reportsApi';
 import { BarChart3, Download } from 'lucide-react';
+import DashCard from '../../components/DashCard';
+import useIsMobile from '../../lib/useIsMobile';
 
 const FILTER_CONFIG = {
   adoption: {
@@ -43,6 +45,7 @@ function saveBlob(blob, filename) {
 }
 
 export default function ReportsAdmin({ isAdmin = false }) {
+  const isMobile = useIsMobile();
   // The donations (financial) report is admin-only; staff see operational types only.
   const reportTypes = isAdmin ? REPORT_TYPES : REPORT_TYPES.filter((t) => t.key !== 'donations');
   const [type, setType] = useState('adoption');
@@ -165,6 +168,16 @@ export default function ReportsAdmin({ isAdmin = false }) {
 
           {data.rows.length === 0 ? (
             <div className="ui-empty">No records match this filter.</div>
+          ) : isMobile ? (
+            <div className="dashCardList">
+              {data.rows.map((row, i) => (
+                <DashCard
+                  key={i}
+                  title={row[data.columns[0].key] ?? '—'}
+                  fields={data.columns.slice(1).map((c) => ({ label: c.label, value: row[c.key] ?? '—' }))}
+                />
+              ))}
+            </div>
           ) : (
             <div className="dashTableWrap">
               <table className="dashTable">
@@ -176,7 +189,7 @@ export default function ReportsAdmin({ isAdmin = false }) {
                 <tbody>
                   {data.rows.map((row, i) => (
                     <tr key={i}>
-                      {data.columns.map((c) => <td key={c.key} data-label={c.label}>{row[c.key] ?? '—'}</td>)}
+                      {data.columns.map((c) => <td key={c.key}>{row[c.key] ?? '—'}</td>)}
                     </tr>
                   ))}
                 </tbody>

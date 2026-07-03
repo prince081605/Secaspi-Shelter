@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { adminListReminders, adminUpdateReminder } from '../../lib/remindersApi';
 import { Bell, PartyPopper } from 'lucide-react';
+import DashCard from '../../components/DashCard';
+import useIsMobile from '../../lib/useIsMobile';
 
 export default function RemindersAdmin({ onChanged }) {
+  const isMobile = useIsMobile();
   const [reminders, setReminders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -50,6 +53,22 @@ export default function RemindersAdmin({ onChanged }) {
         <div className="ui-empty">Loading…</div>
       ) : reminders.length === 0 ? (
         <div className="ui-empty">No upcoming reminders. You're all caught up! <PartyPopper size={16} style={{ verticalAlign: '-3px' }} /></div>
+      ) : isMobile ? (
+        <div className="dashCardList">
+          {reminders.map((r) => (
+            <DashCard
+              key={r.id}
+              accent={r.is_overdue ? 'overdue' : undefined}
+              title={r.title}
+              fields={[
+                { label: 'Animal', value: r.animal?.name || '—' },
+                { label: 'Due date', value: <>{r.reminder_date}{r.is_overdue && <span className="badge badgeOrange" style={{ marginLeft: 8 }}>overdue</span>}</> },
+                { label: 'Status', value: <span className="badge badgeSky">{r.status}</span> },
+              ]}
+              actions={<button className="dashBtn dashBtnPrimary" onClick={() => markDone(r.id)}>Mark done</button>}
+            />
+          ))}
+        </div>
       ) : (
         <div className="dashTableWrap">
           <table className="dashTable">
@@ -65,13 +84,13 @@ export default function RemindersAdmin({ onChanged }) {
             <tbody>
               {reminders.map((r) => (
                 <tr key={r.id} style={r.is_overdue ? { background: 'rgba(180, 35, 24, 0.06)' } : undefined}>
-                  <td data-label="Reminder">{r.title}</td>
-                  <td data-label="Animal">{r.animal?.name || '—'}</td>
-                  <td data-label="Due date">
+                  <td>{r.title}</td>
+                  <td>{r.animal?.name || '—'}</td>
+                  <td>
                     {r.reminder_date}
                     {r.is_overdue && <span className="badge badgeOrange" style={{ marginLeft: 8 }}>overdue</span>}
                   </td>
-                  <td data-label="Status"><span className="badge badgeSky">{r.status}</span></td>
+                  <td><span className="badge badgeSky">{r.status}</span></td>
                   <td className="dashActionsCell">
                     <span className="dashActionsRow">
                       <button className="dashBtn dashBtnPrimary" onClick={() => markDone(r.id)}>Mark done</button>

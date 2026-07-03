@@ -16,10 +16,13 @@ import { adminListUsers } from '../../lib/usersApi';
 import StatusBadge from '../../components/StatusBadge';
 import ConfirmButton from '../../components/ConfirmButton';
 import Pagination from '../../components/Pagination';
+import DashCard from '../../components/DashCard';
+import useIsMobile from '../../lib/useIsMobile';
 
 const NEXT_TASK_STATUS = { assigned: 'ongoing', ongoing: 'completed' };
 
 function AddPersonForm({ type, onCancel, onAdded }) {
+  const isMobile = useIsMobile();
   const [q, setQ] = useState('');
   const [results, setResults] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -74,21 +77,35 @@ function AddPersonForm({ type, onCancel, onAdded }) {
             <button className="dashBtn" type="button" onClick={onCancel}>Cancel</button>
           </form>
           {results.length > 0 && (
-            <div className="dashTableWrap" style={{ marginTop: 10 }}>
-              <table className="dashTable">
-                <thead><tr><th>Name</th><th>Email</th><th>Role</th><th></th></tr></thead>
-                <tbody>
-                  {results.map((u) => (
-                    <tr key={u.id}>
-                      <td data-label="Name">{u.full_name}</td>
-                      <td data-label="Email">{u.email}</td>
-                      <td data-label="Role">{u.role}</td>
-                      <td><button className="dashBtn dashBtnPrimary" onClick={() => setSelected(u)}>Select</button></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            isMobile ? (
+              <div className="dashCardList" style={{ marginTop: 10 }}>
+                {results.map((u) => (
+                  <DashCard
+                    key={u.id}
+                    title={u.full_name}
+                    subtitle={u.email}
+                    fields={[{ label: 'Role', value: u.role }]}
+                    actions={<button className="dashBtn dashBtnPrimary" onClick={() => setSelected(u)}>Select</button>}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="dashTableWrap" style={{ marginTop: 10 }}>
+                <table className="dashTable">
+                  <thead><tr><th>Name</th><th>Email</th><th>Role</th><th></th></tr></thead>
+                  <tbody>
+                    {results.map((u) => (
+                      <tr key={u.id}>
+                        <td>{u.full_name}</td>
+                        <td>{u.email}</td>
+                        <td>{u.role}</td>
+                        <td><button className="dashBtn dashBtnPrimary" onClick={() => setSelected(u)}>Select</button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
           )}
         </>
       ) : (
@@ -115,6 +132,7 @@ function AddPersonForm({ type, onCancel, onAdded }) {
 }
 
 function TasksPanel({ volunteer, onChanged }) {
+  const isMobile = useIsMobile();
   const [taskName, setTaskName] = useState('');
   const [assignedDate, setAssignedDate] = useState('');
   const [error, setError] = useState('');
@@ -161,6 +179,30 @@ function TasksPanel({ volunteer, onChanged }) {
       {error && <div className="ui-error">{error}</div>}
       {volunteer.tasks.length === 0 ? (
         <div className="ui-empty">No tasks assigned yet.</div>
+      ) : isMobile ? (
+        <div className="dashCardList">
+          {volunteer.tasks.map((t) => (
+            <DashCard
+              key={t.id}
+              title={t.task_name}
+              fields={[
+                { label: 'Status', value: <StatusBadge status={t.status} /> },
+                { label: 'Date', value: t.assigned_date || '—' },
+              ]}
+              actions={
+                <>
+                  {t.status === 'requested' && (
+                    <button className="dashBtn dashBtnPrimary" onClick={() => setStatus(t, 'assigned')}>Confirm</button>
+                  )}
+                  {NEXT_TASK_STATUS[t.status] && (
+                    <button className="dashBtn dashBtnPrimary" onClick={() => advanceTask(t)}>Mark {NEXT_TASK_STATUS[t.status]}</button>
+                  )}
+                  <button className="dashBtn dashBtnDanger" aria-label={t.status === 'requested' ? 'Decline task' : 'Delete task'} onClick={() => deleteTask(t)}><X size={14} /></button>
+                </>
+              }
+            />
+          ))}
+        </div>
       ) : (
         <div className="dashTableWrap">
           <table className="dashTable">
@@ -168,9 +210,9 @@ function TasksPanel({ volunteer, onChanged }) {
             <tbody>
               {volunteer.tasks.map((t) => (
                 <tr key={t.id}>
-                  <td data-label="Task">{t.task_name}</td>
-                  <td data-label="Status"><StatusBadge status={t.status} /></td>
-                  <td data-label="Date">{t.assigned_date || '—'}</td>
+                  <td>{t.task_name}</td>
+                  <td><StatusBadge status={t.status} /></td>
+                  <td>{t.assigned_date || '—'}</td>
                   <td className="dashActionsCell">
                     <span className="dashActionsRow">
                       {t.status === 'requested' && (
@@ -202,6 +244,7 @@ function TasksPanel({ volunteer, onChanged }) {
 }
 
 function PersonnelRow({ personnel, onChanged }) {
+  const isMobile = useIsMobile();
   const [expanded, setExpanded] = useState(false);
   const [hours, setHours] = useState(personnel.hours_rendered);
   const [error, setError] = useState('');
@@ -226,23 +269,53 @@ function PersonnelRow({ personnel, onChanged }) {
     }
   };
 
+  const hoursControl = (
+    <span className="dashActionsRow">
+      <input className="ui-input" type="number" min="0" style={{ width: 80 }} value={hours} onChange={(e) => setHours(e.target.value)} />
+      <button className="dashBtn" onClick={saveHours}>Save</button>
+    </span>
+  );
+  const actions = (
+    <>
+      <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Tasks'}</button>
+      <ConfirmButton confirmLabel={`Remove ${personnel.user?.full_name}?`} onConfirm={remove}>Remove</ConfirmButton>
+    </>
+  );
+  const panel = (
+    <>
+      {personnel.performance_notes && <div><strong>Notes:</strong> {personnel.performance_notes}</div>}
+      <TasksPanel volunteer={personnel} onChanged={onChanged} />
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <>
+        <DashCard
+          title={personnel.user?.full_name}
+          subtitle={personnel.user?.email}
+          fields={[
+            { label: 'Availability', value: personnel.availability || '—' },
+            { label: 'Hours rendered', value: hoursControl },
+            { label: 'Tasks', value: personnel.tasks.length },
+          ]}
+          actions={actions}
+        />
+        {error && <div className="ui-error" style={{ marginTop: 8 }}>{error}</div>}
+        {expanded && <div className="dashCardExpand">{panel}</div>}
+      </>
+    );
+  }
+
   return (
     <>
       <tr>
         <td>{personnel.user?.full_name}<br /><span style={{ fontSize: 12, color: 'var(--muted)' }}>{personnel.user?.email}</span></td>
-        <td data-label="Availability">{personnel.availability || '—'}</td>
-        <td data-label="Hours rendered" className="dashActionsCell">
-          <span className="dashActionsRow">
-            <input className="ui-input" type="number" min="0" style={{ width: 80 }} value={hours} onChange={(e) => setHours(e.target.value)} />
-            <button className="dashBtn" onClick={saveHours}>Save</button>
-          </span>
-        </td>
-        <td data-label="Tasks">{personnel.tasks.length}</td>
+        <td>{personnel.availability || '—'}</td>
+        <td className="dashActionsCell">{hoursControl}</td>
+        <td>{personnel.tasks.length}</td>
         <td className="dashActionsCell">
-          <span className="dashActionsRow">
-            <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Tasks'}</button>
-            <ConfirmButton confirmLabel={`Remove ${personnel.user?.full_name}?`} onConfirm={remove}>Remove</ConfirmButton>
-          </span>
+          <span className="dashActionsRow">{actions}</span>
         </td>
       </tr>
       {error && (
@@ -250,10 +323,7 @@ function PersonnelRow({ personnel, onChanged }) {
       )}
       {expanded && (
         <tr>
-          <td colSpan={5} className="dashExpandPanel">
-            {personnel.performance_notes && <div><strong>Notes:</strong> {personnel.performance_notes}</div>}
-            <TasksPanel volunteer={personnel} onChanged={onChanged} />
-          </td>
+          <td colSpan={5} className="dashExpandPanel">{panel}</td>
         </tr>
       )}
     </>
@@ -261,6 +331,7 @@ function PersonnelRow({ personnel, onChanged }) {
 }
 
 function RequestRow({ application, onChanged }) {
+  const isMobile = useIsMobile();
   const [expanded, setExpanded] = useState(false);
   const [notes, setNotes] = useState(application.admin_notes || '');
   const [error, setError] = useState('');
@@ -290,39 +361,65 @@ function RequestRow({ application, onChanged }) {
     }
   };
 
+  const actions = (
+    <>
+      {application.status === 'pending' && (
+        <>
+          <button className="dashBtn dashBtnPrimary" onClick={() => decide('approved')}>Approve</button>
+          <button className="dashBtn dashBtnDanger" onClick={() => decide('rejected')}>Reject</button>
+        </>
+      )}
+      <button className="dashBtn" onClick={toggleDetails}>{expanded ? 'Hide' : 'Details'}</button>
+    </>
+  );
+  const panel = (
+    <>
+      {error && <div className="ui-error">{error}</div>}
+      <dl className="dashInfoList">
+        <div><dt>Phone</dt><dd>{application.applicant?.phone || '—'}</dd></div>
+        <div className="dashInfoFull"><dt>Experience</dt><dd>{application.experience || '—'}</dd></div>
+        <div className="dashInfoFull"><dt>Why volunteer?</dt><dd>{application.reason || '—'}</dd></div>
+      </dl>
+      <div className="ui-field" style={{ marginTop: 8 }}>
+        <label className="ui-label">Admin notes (shared with the applicant on decision)</label>
+        <textarea className="ui-input" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+      </div>
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <>
+        <DashCard
+          accent={isUnread ? 'unread' : undefined}
+          title={application.applicant?.full_name || '—'}
+          subtitle={application.applicant?.email}
+          fields={[
+            { label: 'Availability', value: application.availability || '—' },
+            { label: 'Status', value: <StatusBadge status={application.status} /> },
+            { label: 'Submitted', value: (application.created_at || '').slice(0, 10) },
+          ]}
+          actions={actions}
+        />
+        {expanded && <div className="dashCardExpand">{panel}</div>}
+      </>
+    );
+  }
+
   return (
     <>
       <tr className={isUnread ? 'dashRowUnread' : ''}>
         <td>{application.applicant?.full_name || '—'}<br /><span style={{ fontSize: 12, color: 'var(--muted)' }}>{application.applicant?.email}</span></td>
-        <td data-label="Availability">{application.availability || '—'}</td>
-        <td data-label="Status"><StatusBadge status={application.status} /></td>
-        <td data-label="Submitted">{(application.created_at || '').slice(0, 10)}</td>
+        <td>{application.availability || '—'}</td>
+        <td><StatusBadge status={application.status} /></td>
+        <td>{(application.created_at || '').slice(0, 10)}</td>
         <td className="dashActionsCell">
-          <span className="dashActionsRow">
-            {application.status === 'pending' && (
-              <>
-                <button className="dashBtn dashBtnPrimary" onClick={() => decide('approved')}>Approve</button>
-                <button className="dashBtn dashBtnDanger" onClick={() => decide('rejected')}>Reject</button>
-              </>
-            )}
-            <button className="dashBtn" onClick={toggleDetails}>{expanded ? 'Hide' : 'Details'}</button>
-          </span>
+          <span className="dashActionsRow">{actions}</span>
         </td>
       </tr>
       {expanded && (
         <tr>
-          <td colSpan={5} className="dashExpandPanel">
-            {error && <div className="ui-error">{error}</div>}
-            <dl className="dashInfoList">
-              <div><dt>Phone</dt><dd>{application.applicant?.phone || '—'}</dd></div>
-              <div className="dashInfoFull"><dt>Experience</dt><dd>{application.experience || '—'}</dd></div>
-              <div className="dashInfoFull"><dt>Why volunteer?</dt><dd>{application.reason || '—'}</dd></div>
-            </dl>
-            <div className="ui-field" style={{ marginTop: 8 }}>
-              <label className="ui-label">Admin notes (shared with the applicant on decision)</label>
-              <textarea className="ui-input" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
-            </div>
-          </td>
+          <td colSpan={5} className="dashExpandPanel">{panel}</td>
         </tr>
       )}
     </>
@@ -330,6 +427,7 @@ function RequestRow({ application, onChanged }) {
 }
 
 function VolunteerRequests() {
+  const isMobile = useIsMobile();
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -381,6 +479,12 @@ function VolunteerRequests() {
         <div className="ui-empty">Loading…</div>
       ) : applications.length === 0 ? (
         <div className="ui-empty">No volunteer requests match this filter.</div>
+      ) : isMobile ? (
+        <div className="dashCardList">
+          {applications.map((a) => (
+            <RequestRow key={a.id} application={a} onChanged={refresh} />
+          ))}
+        </div>
       ) : (
         <div className="dashTableWrap">
           <table className="dashTable">
@@ -408,6 +512,7 @@ function VolunteerRequests() {
 }
 
 function PersonnelRoster({ type, onChanged }) {
+  const isMobile = useIsMobile();
   const [personnel, setPersonnel] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -459,6 +564,12 @@ function PersonnelRoster({ type, onChanged }) {
         <div className="ui-empty">Loading…</div>
       ) : personnel.length === 0 ? (
         <div className="ui-empty">No {typeLabel} yet.</div>
+      ) : isMobile ? (
+        <div className="dashCardList" style={{ marginTop: 10 }}>
+          {personnel.map((p) => (
+            <PersonnelRow key={p.id} personnel={p} onChanged={refresh} />
+          ))}
+        </div>
       ) : (
         <div className="dashTableWrap" style={{ marginTop: 10 }}>
           <table className="dashTable">

@@ -18,6 +18,8 @@ import {
 import StatusBadge from '../../components/StatusBadge';
 import TypeToConfirmButton from '../../components/TypeToConfirmButton';
 import Pagination from '../../components/Pagination';
+import DashCard from '../../components/DashCard';
+import useIsMobile from '../../lib/useIsMobile';
 import IntakesAdmin from './IntakesAdmin';
 import './AnimalsAdmin.css';
 
@@ -407,6 +409,7 @@ const emptyRecordForm = { type: 'checkup', description: '', vet_name: '', cost: 
 const emptyVaccinationForm = { vaccine_name: '', date_given: '', next_due: '' };
 
 function MedicalManager({ animalId, onChanged }) {
+  const isMobile = useIsMobile();
   const [records, setRecords] = useState([]);
   const [vaccinations, setVaccinations] = useState([]);
   const [state, setState] = useState({ status: 'loading', error: '' });
@@ -486,6 +489,23 @@ function MedicalManager({ animalId, onChanged }) {
       <div className="dashSectionTitle" style={{ fontSize: 13, marginTop: 6 }}><Syringe size={15} style={{ verticalAlign: '-3px', marginRight: 6 }} />Medical records</div>
       {records.length === 0 ? (
         <div className="ui-empty">No medical records yet.</div>
+      ) : isMobile ? (
+        <div className="dashCardList">
+          {records.map((r) => (
+            <DashCard
+              key={r.id}
+              title={r.type}
+              subtitle={r.record_date}
+              fields={[
+                { label: 'Description', value: r.description || '—' },
+                { label: 'Vet', value: r.vet_name || '—' },
+                { label: 'Cost', value: r.cost ?? '—' },
+                { label: 'Follow-up', value: r.follow_up_date || '—' },
+              ]}
+              actions={<button className="dashBtn dashBtnDanger" aria-label="Delete medical record" onClick={() => handleDeleteRecord(r.id)}><X size={14} /> Delete</button>}
+            />
+          ))}
+        </div>
       ) : (
         <div className="dashTableWrap">
           <table className="dashTable">
@@ -495,12 +515,12 @@ function MedicalManager({ animalId, onChanged }) {
             <tbody>
               {records.map((r) => (
                 <tr key={r.id}>
-                  <td data-label="Type">{r.type}</td>
-                  <td data-label="Description">{r.description || '—'}</td>
-                  <td data-label="Vet">{r.vet_name || '—'}</td>
-                  <td data-label="Cost">{r.cost ?? '—'}</td>
-                  <td data-label="Date">{r.record_date}</td>
-                  <td data-label="Follow-up">{r.follow_up_date || '—'}</td>
+                  <td>{r.type}</td>
+                  <td>{r.description || '—'}</td>
+                  <td>{r.vet_name || '—'}</td>
+                  <td>{r.cost ?? '—'}</td>
+                  <td>{r.record_date}</td>
+                  <td>{r.follow_up_date || '—'}</td>
                   <td><button className="dashBtn dashBtnDanger" aria-label="Delete medical record" onClick={() => handleDeleteRecord(r.id)}><X size={14} /></button></td>
                 </tr>
               ))}
@@ -523,6 +543,20 @@ function MedicalManager({ animalId, onChanged }) {
       <div className="dashSectionTitle" style={{ fontSize: 13, marginTop: 14 }}><Pill size={15} style={{ verticalAlign: '-3px', marginRight: 6 }} />Vaccinations</div>
       {vaccinations.length === 0 ? (
         <div className="ui-empty">No vaccinations recorded yet.</div>
+      ) : isMobile ? (
+        <div className="dashCardList">
+          {vaccinations.map((v) => (
+            <DashCard
+              key={v.id}
+              title={v.vaccine_name}
+              fields={[
+                { label: 'Date given', value: v.date_given },
+                { label: 'Next due', value: v.next_due || '—' },
+              ]}
+              actions={<button className="dashBtn dashBtnDanger" aria-label="Delete vaccination record" onClick={() => handleDeleteVaccination(v.id)}><X size={14} /> Delete</button>}
+            />
+          ))}
+        </div>
       ) : (
         <div className="dashTableWrap">
           <table className="dashTable">
@@ -532,9 +566,9 @@ function MedicalManager({ animalId, onChanged }) {
             <tbody>
               {vaccinations.map((v) => (
                 <tr key={v.id}>
-                  <td data-label="Vaccine">{v.vaccine_name}</td>
-                  <td data-label="Date given">{v.date_given}</td>
-                  <td data-label="Next due">{v.next_due || '—'}</td>
+                  <td>{v.vaccine_name}</td>
+                  <td>{v.date_given}</td>
+                  <td>{v.next_due || '—'}</td>
                   <td><button className="dashBtn dashBtnDanger" aria-label="Delete vaccination record" onClick={() => handleDeleteVaccination(v.id)}><X size={14} /></button></td>
                 </tr>
               ))}
@@ -553,6 +587,7 @@ function MedicalManager({ animalId, onChanged }) {
 }
 
 export default function AnimalsAdmin() {
+  const isMobile = useIsMobile();
   const [animals, setAnimals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -756,6 +791,26 @@ export default function AnimalsAdmin() {
         <div className="ui-empty">Loading…</div>
       ) : animals.length === 0 ? (
         <div className="ui-empty">No animals match these filters.</div>
+      ) : viewMode === 'table' && isMobile ? (
+        <div className="dashCardList">
+          {animals.map((a) => (
+            <Fragment key={a.id}>
+              <DashCard
+                media={<div className="aa-row-photo" aria-hidden="true">{a.photo ? <img src={photoSrc(a.photo)} alt="" /> : <Dog size={22} />}</div>}
+                title={a.name}
+                subtitle={`${a.species}${a.breed ? ` • ${a.breed}` : ''}`}
+                fields={[
+                  { label: 'Age', value: a.age ? `${a.age} yrs` : '—' },
+                  { label: 'Sex', value: a.gender || '—' },
+                  { label: 'Size', value: a.size || '—' },
+                  { label: 'Status', value: <StatusBadge status={a.status} /> },
+                ]}
+                actions={renderActions(a)}
+              />
+              {hasExpanded(a) && <div className="dashCardExpand">{renderExpanded(a)}</div>}
+            </Fragment>
+          ))}
+        </div>
       ) : viewMode === 'table' ? (
         <div className="dashTableWrap">
           <table className="dashTable">
@@ -784,10 +839,10 @@ export default function AnimalsAdmin() {
                         </div>
                       </div>
                     </td>
-                    <td data-label="Age">{a.age ? `${a.age} yrs` : '—'}</td>
-                    <td data-label="Sex">{a.gender || '—'}</td>
-                    <td data-label="Size">{a.size || '—'}</td>
-                    <td data-label="Status"><StatusBadge status={a.status} /></td>
+                    <td>{a.age ? `${a.age} yrs` : '—'}</td>
+                    <td>{a.gender || '—'}</td>
+                    <td>{a.size || '—'}</td>
+                    <td><StatusBadge status={a.status} /></td>
                     <td><div className="aa-row-actions">{renderActions(a)}</div></td>
                   </tr>
                   {hasExpanded(a) && (

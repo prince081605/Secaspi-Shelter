@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react';
 import { adminListFaqs, adminCreateFaq, adminUpdateFaq, adminDeleteFaq } from '../../lib/faqApi';
 import { Brain, FlaskConical, Check, X } from 'lucide-react';
 import { sendAssistantMessage } from '../../lib/assistantApi';
+import DashCard from '../../components/DashCard';
+import useIsMobile from '../../lib/useIsMobile';
 
 const EMPTY = { question: '', answer: '', tags: '', enabled: true };
 
 export default function FaqTrainingAdmin() {
+  const isMobile = useIsMobile();
   const [faqs, setFaqs] = useState([]);
   const [form, setForm] = useState(EMPTY);
   const [editingId, setEditingId] = useState(null);
@@ -80,28 +83,56 @@ export default function FaqTrainingAdmin() {
       </form>
 
       {/* Knowledge base list */}
-      <div className="dashTableWrap">
-        <table className="dashTable">
-          <thead>
-            <tr><th>Question</th><th>Answer</th><th>Tags</th><th>On</th><th>Hits</th><th></th></tr>
-          </thead>
-          <tbody>
-            {faqs.length === 0 ? <tr><td colSpan={6}><div className="ui-empty">No entries yet.</div></td></tr> : faqs.map((f) => (
-              <tr key={f.id} style={{ opacity: f.enabled ? 1 : 0.5 }}>
-                <td data-label="Question" style={{ maxWidth: 200 }}>{f.question}</td>
-                <td data-label="Answer" style={{ maxWidth: 280, fontSize: '0.82rem' }}>{(f.answer || '').slice(0, 120)}{f.answer?.length > 120 ? '…' : ''}</td>
-                <td data-label="Tags" style={{ maxWidth: 160, fontSize: '0.75rem', color: 'var(--muted)' }}>{f.tags}</td>
-                <td data-label="Enabled">{f.enabled ? <Check size={16} style={{ verticalAlign: '-3px', color: 'var(--success, #16a34a)' }} /> : '—'}</td>
-                <td data-label="Hits">{f.hits}</td>
-                <td style={{ whiteSpace: 'nowrap' }}>
-                  <button className="dashBtn" onClick={() => edit(f)}>Edit</button>
-                  <button className="dashBtn dashBtnDanger" style={{ marginLeft: 6 }} aria-label="Delete FAQ" onClick={() => remove(f.id)}><X size={14} /></button>
-                </td>
-              </tr>
+      {isMobile ? (
+        faqs.length === 0 ? (
+          <div className="ui-empty">No entries yet.</div>
+        ) : (
+          <div className="dashCardList">
+            {faqs.map((f) => (
+              <DashCard
+                key={f.id}
+                className={f.enabled ? '' : 'dashCardItem--dim'}
+                title={f.question}
+                fields={[
+                  { label: 'Answer', value: `${(f.answer || '').slice(0, 120)}${f.answer?.length > 120 ? '…' : ''}` },
+                  f.tags && { label: 'Tags', value: f.tags },
+                  { label: 'Enabled', value: f.enabled ? <Check size={16} style={{ verticalAlign: '-3px', color: 'var(--success, #16a34a)' }} /> : '—' },
+                  { label: 'Hits', value: f.hits },
+                ]}
+                actions={
+                  <>
+                    <button className="dashBtn" onClick={() => edit(f)}>Edit</button>
+                    <button className="dashBtn dashBtnDanger" aria-label="Delete FAQ" onClick={() => remove(f.id)}><X size={14} /></button>
+                  </>
+                }
+              />
             ))}
-          </tbody>
-        </table>
-      </div>
+          </div>
+        )
+      ) : (
+        <div className="dashTableWrap">
+          <table className="dashTable">
+            <thead>
+              <tr><th>Question</th><th>Answer</th><th>Tags</th><th>On</th><th>Hits</th><th></th></tr>
+            </thead>
+            <tbody>
+              {faqs.length === 0 ? <tr><td colSpan={6}><div className="ui-empty">No entries yet.</div></td></tr> : faqs.map((f) => (
+                <tr key={f.id} style={{ opacity: f.enabled ? 1 : 0.5 }}>
+                  <td style={{ maxWidth: 200 }}>{f.question}</td>
+                  <td style={{ maxWidth: 280, fontSize: '0.82rem' }}>{(f.answer || '').slice(0, 120)}{f.answer?.length > 120 ? '…' : ''}</td>
+                  <td style={{ maxWidth: 160, fontSize: '0.75rem', color: 'var(--muted)' }}>{f.tags}</td>
+                  <td>{f.enabled ? <Check size={16} style={{ verticalAlign: '-3px', color: 'var(--success, #16a34a)' }} /> : '—'}</td>
+                  <td>{f.hits}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>
+                    <button className="dashBtn" onClick={() => edit(f)}>Edit</button>
+                    <button className="dashBtn dashBtnDanger" style={{ marginLeft: 6 }} aria-label="Delete FAQ" onClick={() => remove(f.id)}><X size={14} /></button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
