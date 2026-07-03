@@ -29,6 +29,8 @@ import VisitationsAdmin from '../admin/VisitationsAdmin';
 import RemindersAdmin from '../admin/RemindersAdmin';
 import StatusBadge from '../../components/StatusBadge';
 import NotificationBell from '../../components/NotificationBell';
+import DashCard from '../../components/DashCard';
+import useIsMobile from '../../lib/useIsMobile';
 
 const fallbackRole = 'user';
 
@@ -84,11 +86,25 @@ function OverviewCards({ cards }) {
 
 
 function ActivityFeed({ activity }) {
+  const isMobile = useIsMobile();
   return (
     <>
       <h2 className="dashSectionTitle"><Clock size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />Recent activity</h2>
       {!activity || activity.length === 0 ? (
         <div className="ui-empty">No recent activity.</div>
+      ) : isMobile ? (
+        <div className="dashCardList">
+          {activity.map((a, idx) => (
+            <DashCard
+              key={idx}
+              title={a.label}
+              fields={[
+                { label: 'Status', value: <StatusBadge status={a.status} /> },
+                { label: 'When', value: (a.created_at || '').toString().slice(0, 16) },
+              ]}
+            />
+          ))}
+        </div>
       ) : (
         <div className="dashTableWrap">
           <table className="dashTable">
@@ -98,9 +114,9 @@ function ActivityFeed({ activity }) {
             <tbody>
               {activity.map((a, idx) => (
                 <tr key={idx}>
-                  <td data-label="Event">{a.label}</td>
-                  <td data-label="Status"><StatusBadge status={a.status} /></td>
-                  <td data-label="When">{(a.created_at || '').toString().slice(0, 16)}</td>
+                  <td>{a.label}</td>
+                  <td><StatusBadge status={a.status} /></td>
+                  <td>{(a.created_at || '').toString().slice(0, 16)}</td>
                 </tr>
               ))}
             </tbody>
@@ -113,6 +129,14 @@ function ActivityFeed({ activity }) {
 
 
 function UserApplications({ applications, loading }) {
+  const isMobile = useIsMobile();
+  const photo = (r) => (r.animal?.photo ? (
+    <img
+      src={r.animal.photo.startsWith('http') ? r.animal.photo : `${import.meta.env.VITE_API_BASE_URL}/storage/${r.animal.photo}`}
+      alt=""
+      className="dashThumbSm"
+    />
+  ) : null);
   return (
     <>
       <h2 className="dashSectionTitle"><Heart size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />My Applications</h2>
@@ -120,6 +144,21 @@ function UserApplications({ applications, loading }) {
         <div className="ui-empty">Loading…</div>
       ) : applications.length === 0 ? (
         <div className="ui-empty">You haven't submitted any adoption or foster applications yet.</div>
+      ) : isMobile ? (
+        <div className="dashCardList">
+          {applications.map((r) => (
+            <DashCard
+              key={`${r.type}-${r.id}`}
+              media={photo(r)}
+              title={r.animal?.name || 'Unknown animal'}
+              subtitle={r.type}
+              fields={[
+                { label: 'Status', value: <StatusBadge status={r.status} /> },
+                { label: 'Submitted', value: (r.created_at || '').slice(0, 10) || '—' },
+              ]}
+            />
+          ))}
+        </div>
       ) : (
         <div className="dashTableWrap">
           <table className="dashTable">
@@ -134,8 +173,8 @@ function UserApplications({ applications, loading }) {
             <tbody>
               {applications.map((r) => (
                 <tr key={`${r.type}-${r.id}`}>
-                  <td data-label="Type">{r.type}</td>
-                  <td data-label="Animal">
+                  <td>{r.type}</td>
+                  <td>
                     <div className="dashFlexRow">
                       {r.animal?.photo ? (
                         <img
@@ -147,10 +186,10 @@ function UserApplications({ applications, loading }) {
                       {r.animal?.name || 'Unknown animal'}
                     </div>
                   </td>
-                  <td data-label="Status">
+                  <td>
                     <StatusBadge status={r.status} />
                   </td>
-                  <td data-label="Submitted">{(r.created_at || '').slice(0, 10) || '—'}</td>
+                  <td>{(r.created_at || '').slice(0, 10) || '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -162,6 +201,7 @@ function UserApplications({ applications, loading }) {
 }
 
 function UserProfile({ user, onProfileUpdated }) {
+  const isMobile = useIsMobile();
   const [fullName, setFullName] = useState(user?.full_name || '');
   const [phone, setPhone] = useState(user?.phone || '');
   const [profileState, setProfileState] = useState({ status: 'idle', error: '' });
@@ -204,24 +244,34 @@ function UserProfile({ user, onProfileUpdated }) {
   return (
     <>
       <h2 className="dashSectionTitle"><User size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />Profile</h2>
-      <div className="dashTableWrap">
-        <table className="dashTable">
-          <tbody>
-            <tr>
-              <th style={{ width: 160 }}>Name</th>
-              <td>{user?.full_name || '—'}</td>
-            </tr>
-            <tr>
-              <th>Email</th>
-              <td>{user?.email || '—'}</td>
-            </tr>
-            <tr>
-              <th>Contact</th>
-              <td>{user?.phone || '—'}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      {isMobile ? (
+        <DashCard
+          fields={[
+            { label: 'Name', value: user?.full_name || '—' },
+            { label: 'Email', value: user?.email || '—' },
+            { label: 'Contact', value: user?.phone || '—' },
+          ]}
+        />
+      ) : (
+        <div className="dashTableWrap">
+          <table className="dashTable">
+            <tbody>
+              <tr>
+                <th style={{ width: 160 }}>Name</th>
+                <td>{user?.full_name || '—'}</td>
+              </tr>
+              <tr>
+                <th>Email</th>
+                <td>{user?.email || '—'}</td>
+              </tr>
+              <tr>
+                <th>Contact</th>
+                <td>{user?.phone || '—'}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <h2 className="dashSectionTitle"><Pencil size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />Edit profile</h2>
       {profileState.status === 'success' && <div className="ui-success-msg">Profile updated.</div>}
@@ -267,6 +317,7 @@ function UserProfile({ user, onProfileUpdated }) {
 // Volunteer's own task hub: their assigned tasks + a request-a-task form. Reuses the
 // same endpoints as the public VolunteerApply page (GET /volunteer/me, POST /volunteer/tasks).
 function VolunteerTasksPanel() {
+  const isMobile = useIsMobile();
   const [loading, setLoading] = useState(true);
   const [volunteer, setVolunteer] = useState(null);
   const [taskName, setTaskName] = useState('');
@@ -328,6 +379,19 @@ function VolunteerTasksPanel() {
       </form>
       {(!volunteer.tasks || volunteer.tasks.length === 0) ? (
         <div className="ui-empty">No tasks yet. Request one above to get started!</div>
+      ) : isMobile ? (
+        <div className="dashCardList">
+          {volunteer.tasks.map((t) => (
+            <DashCard
+              key={t.id}
+              title={t.task_name}
+              fields={[
+                { label: 'Status', value: <StatusBadge status={t.status} /> },
+                { label: 'When', value: t.status === 'requested' ? 'Awaiting confirmation' : (t.assigned_date || '—') },
+              ]}
+            />
+          ))}
+        </div>
       ) : (
         <div className="dashTableWrap">
           <table className="dashTable">
@@ -335,9 +399,9 @@ function VolunteerTasksPanel() {
             <tbody>
               {volunteer.tasks.map((t) => (
                 <tr key={t.id}>
-                  <td data-label="Task">{t.task_name}</td>
-                  <td data-label="Status"><StatusBadge status={t.status} /></td>
-                  <td data-label="When">{t.status === 'requested' ? 'Awaiting confirmation' : (t.assigned_date || '—')}</td>
+                  <td>{t.task_name}</td>
+                  <td><StatusBadge status={t.status} /></td>
+                  <td>{t.status === 'requested' ? 'Awaiting confirmation' : (t.assigned_date || '—')}</td>
                 </tr>
               ))}
             </tbody>
@@ -351,6 +415,7 @@ function VolunteerTasksPanel() {
 // Read-only animal roster for volunteers — uses the public browse endpoint (no admin
 // fields, no write controls), so it works without any staff-level permission.
 function ReadOnlyAnimals() {
+  const isMobile = useIsMobile();
   const [animals, setAnimals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -372,6 +437,27 @@ function ReadOnlyAnimals() {
         <div className="ui-empty">Loading…</div>
       ) : animals.length === 0 ? (
         <div className="ui-empty">No animals to show.</div>
+      ) : isMobile ? (
+        <div className="dashCardList">
+          {animals.map((a) => (
+            <DashCard
+              key={a.id}
+              media={a.photo ? (
+                <img
+                  src={a.photo.startsWith('http') ? a.photo : `${import.meta.env.VITE_API_BASE_URL}/storage/${a.photo}`}
+                  alt=""
+                  className="dashThumbSm"
+                />
+              ) : null}
+              title={a.name || 'Unnamed'}
+              fields={[
+                { label: 'Species', value: a.species || '—' },
+                { label: 'Breed', value: a.breed || '—' },
+                { label: 'Status', value: <StatusBadge status={a.status} /> },
+              ]}
+            />
+          ))}
+        </div>
       ) : (
         <div className="dashTableWrap">
           <table className="dashTable">
@@ -379,7 +465,7 @@ function ReadOnlyAnimals() {
             <tbody>
               {animals.map((a) => (
                 <tr key={a.id}>
-                  <td data-label="Name">
+                  <td>
                     <div className="dashFlexRow">
                       {a.photo ? (
                         <img
@@ -391,9 +477,9 @@ function ReadOnlyAnimals() {
                       {a.name || 'Unnamed'}
                     </div>
                   </td>
-                  <td data-label="Species">{a.species || '—'}</td>
-                  <td data-label="Breed">{a.breed || '—'}</td>
-                  <td data-label="Status"><StatusBadge status={a.status} /></td>
+                  <td>{a.species || '—'}</td>
+                  <td>{a.breed || '—'}</td>
+                  <td><StatusBadge status={a.status} /></td>
                 </tr>
               ))}
             </tbody>
