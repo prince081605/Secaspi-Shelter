@@ -5,6 +5,8 @@ import 'leaflet/dist/leaflet.css';
 import { adminListRescueReports, adminMarkRescueReportRead, adminUpdateRescueReport } from '../../lib/rescueApi';
 import StatusBadge from '../../components/StatusBadge';
 import Pagination from '../../components/Pagination';
+import DashCard from '../../components/DashCard';
+import useIsMobile from '../../lib/useIsMobile';
 
 const STATUSES = ['pending', 'assigned', 'in_progress', 'resolved'];
 const NEXT_STATUS = { pending: 'assigned', assigned: 'in_progress', in_progress: 'resolved' };
@@ -126,7 +128,7 @@ function TriagePanel({ report, onSaved }) {
   );
 }
 
-function ReportRow({ report, onChanged, onUnreadChanged }) {
+function ReportRow({ report, onChanged, onUnreadChanged, isMobile }) {
   const [mode, setMode] = useState(''); // '' | 'triage' | 'detail'
   const isUnread = !report.read_at;
 
@@ -148,15 +150,45 @@ function ReportRow({ report, onChanged, onUnreadChanged }) {
     }
   };
 
+  const actions = (
+    <>
+      <button className="dashBtn" onClick={() => open('detail')}>{mode === 'detail' ? 'Hide' : 'Detail'}</button>
+      <button className="dashBtn" onClick={() => open('triage')}>{mode === 'triage' ? 'Hide' : 'Triage'}</button>
+    </>
+  );
+  const panel = mode === 'detail'
+    ? <DetailPanel report={report} />
+    : <TriagePanel report={report} onSaved={handleInteracted} />;
+
+  if (isMobile) {
+    return (
+      <>
+        <DashCard
+          accent={isUnread ? 'unread' : undefined}
+          title={report.reporter_name || 'Anonymous'}
+          subtitle={report.location}
+          fields={[
+            { label: 'Urgency', value: <UrgencyBadge urgency={report.urgency} /> },
+            { label: 'Status', value: <StatusBadge status={report.status} /> },
+            { label: 'Assigned to', value: report.assigned_to || '—' },
+            { label: 'Submitted', value: (report.created_at || '').slice(0, 10) },
+          ]}
+          actions={actions}
+        />
+        {mode && <div className="dashCardExpand">{panel}</div>}
+      </>
+    );
+  }
+
   return (
     <>
       <tr className={isUnread ? 'dashRowUnread' : ''}>
-        <td data-label="Reporter">{report.reporter_name || 'Anonymous'}</td>
-        <td data-label="Location">{report.location}</td>
-        <td data-label="Urgency"><UrgencyBadge urgency={report.urgency} /></td>
-        <td data-label="Status"><StatusBadge status={report.status} /></td>
-        <td data-label="Assigned to">{report.assigned_to || '—'}</td>
-        <td data-label="Submitted">{(report.created_at || '').slice(0, 10)}</td>
+        <td>{report.reporter_name || 'Anonymous'}</td>
+        <td>{report.location}</td>
+        <td><UrgencyBadge urgency={report.urgency} /></td>
+        <td><StatusBadge status={report.status} /></td>
+        <td>{report.assigned_to || '—'}</td>
+        <td>{(report.created_at || '').slice(0, 10)}</td>
         <td style={{ whiteSpace: 'nowrap' }}>
           <button className="dashBtn" onClick={() => open('detail')}>{mode === 'detail' ? 'Hide' : 'Detail'}</button>
           <button className="dashBtn" style={{ marginLeft: 6 }} onClick={() => open('triage')}>{mode === 'triage' ? 'Hide' : 'Triage'}</button>
@@ -164,11 +196,7 @@ function ReportRow({ report, onChanged, onUnreadChanged }) {
       </tr>
       {mode && (
         <tr>
-          <td colSpan={7} className="dashExpandPanel">
-            {mode === 'detail'
-              ? <DetailPanel report={report} />
-              : <TriagePanel report={report} onSaved={handleInteracted} />}
-          </td>
+          <td colSpan={7} className="dashExpandPanel">{panel}</td>
         </tr>
       )}
     </>
@@ -176,6 +204,7 @@ function ReportRow({ report, onChanged, onUnreadChanged }) {
 }
 
 export default function RescueReportsAdmin({ onUnreadChanged }) {
+  const isMobile = useIsMobile();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -230,6 +259,12 @@ export default function RescueReportsAdmin({ onUnreadChanged }) {
         <div className="ui-empty">Loading…</div>
       ) : reports.length === 0 ? (
         <div className="ui-empty">No rescue reports match this filter.</div>
+      ) : isMobile ? (
+        <div className="dashCardList">
+          {reports.map((r) => (
+            <ReportRow key={r.id} report={r} onChanged={refresh} onUnreadChanged={onUnreadChanged} isMobile />
+          ))}
+        </div>
       ) : (
         <div className="dashTableWrap">
           <table className="dashTable">

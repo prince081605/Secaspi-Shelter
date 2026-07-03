@@ -77,29 +77,9 @@
   .dashTab { flex: 1; text-align: center; }
   .dashTable th,
   .dashTable td { padding: 9px 10px; }
-  /* Stacked rows: below 560px admin tables reflow into label/value blocks instead of
-     scrolling sideways. Labels come from each cell's data-label attribute; cells without
-     one (actions, empty states, expanded detail panels) just render full-width. */
-  /* table.dashTable outranks the base .dashTable { min-width: 560px } rule, which appears
-     later in this file and would otherwise win the source-order tie. */
+  /* Backstop: if any table isn't converted to cards, let it shrink + scroll instead of
+     overflowing the page. table.dashTable outranks the later base min-width:560px rule. */
   table.dashTable { min-width: 0; }
-  .dashTable thead { display: none; }
-  .dashTable tbody { display: block; }
-  .dashTable tbody tr { display: block; padding: 8px 0; }
-  .dashTable tbody tr + tr { border-top: 1px solid var(--line); }
-  .dashTable tbody td { display: block; border-bottom: none; padding: 5px 12px; }
-  /* Row-header tables (e.g. the profile card) stack their th above the value. */
-  .dashTable tbody th { display: block; border-bottom: none; background: transparent; padding: 5px 12px 0; }
-  .dashTable tbody td[data-label]::before {
-    content: attr(data-label);
-    display: block;
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 1px;
-  }
   .dashTitle { font-size: 1.35rem; }
   /* The full-width tabs wrap the bell onto its own row at the LEFT edge, so the
      right-anchored dropdown would open off-screen — anchor it left instead. */
@@ -557,6 +537,93 @@
   background: var(--bg-soft);
   padding: 14px 16px;
 }
+
+/* ---- Mobile card lists (DashCard) ----
+   On phones the admin tables are replaced with these cards (rendered via useIsMobile), so each
+   record stacks into a readable card that fits the screen instead of a squeezed/scrolling row. */
+.dashCardList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.dashCardItem {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: var(--shadow-sm);
+  padding: 14px 16px;
+}
+
+.dashCardItem--unread { border-left: 4px solid var(--danger); }
+.dashCardItem--overdue { border-left: 4px solid var(--amber); }
+
+.dashCardHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dashCardHeadText { min-width: 0; }
+
+.dashCardTitle {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.dashCardSub {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 1px;
+  overflow-wrap: anywhere;
+}
+
+.dashCardFields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(120px, 100%), 1fr));
+  gap: 8px 14px;
+  margin: 12px 0 0;
+}
+
+/* Header present → separate the fields from it with a hairline. */
+.dashCardHead + .dashCardFields {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.dashCardFields > div { min-width: 0; }
+
+.dashCardFields dt {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+
+.dashCardFields dd {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+
+.dashCardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+/* Expanded detail (rescue Detail/Triage, adoption Review, intake Assessment, …) moves out of a
+   table cell into a sibling of the card. */
+.dashCardExpand { margin-top: 10px; }
 
 /* Card-style detail view used inside a dashExpandPanel for richer review content
    (currently the adoption application "Review" panel) — separates it from the flat
