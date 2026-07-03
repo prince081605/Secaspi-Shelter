@@ -4,6 +4,7 @@ import { getPublicSettings } from '../../lib/settingsApi';
 import Pagination from '../../components/Pagination';
 import FosterRequestsAdmin from './FosterRequestsAdmin';
 import { ApplicationRow, OngoingApprovedRow, CompletedAdoptionRow } from './AdoptionRequestRows';
+import useIsMobile from '../../lib/useIsMobile';
 import { PawPrint, Home, CheckCircle, Inbox } from 'lucide-react';
 
 const STATUSES = ['pending', 'approved', 'declined', 'completed'];
@@ -14,6 +15,7 @@ const SUB_TABS = [
 ];
 
 export default function AdoptionRequestsAdmin({ onUnreadChanged }) {
+  const isMobile = useIsMobile();
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -157,6 +159,12 @@ export default function AdoptionRequestsAdmin({ onUnreadChanged }) {
             <div className="ui-empty">Loading…</div>
           ) : approvedApplications.length === 0 ? (
             <div className="ui-empty">No approved adoptions awaiting a home visit or completion.</div>
+          ) : isMobile ? (
+            <div className="dashCardList">
+              {approvedApplications.map((a) => (
+                <OngoingApprovedRow key={a.id} application={a} onChanged={refresh} />
+              ))}
+            </div>
           ) : (
             <div className="dashTableWrap">
               <table className="dashTable">
@@ -190,6 +198,12 @@ export default function AdoptionRequestsAdmin({ onUnreadChanged }) {
             <div className="ui-empty">Loading…</div>
           ) : completedApplications.length === 0 ? (
             <div className="ui-empty">No completed adoptions yet.</div>
+          ) : isMobile ? (
+            <div className="dashCardList">
+              {completedApplications.map((a) => (
+                <CompletedAdoptionRow key={a.id} application={a} settings={siteSettings} />
+              ))}
+            </div>
           ) : (
             <div className="dashTableWrap">
               <table className="dashTable">
@@ -230,6 +244,12 @@ export default function AdoptionRequestsAdmin({ onUnreadChanged }) {
             <div className="ui-empty">Loading…</div>
           ) : applications.length === 0 ? (
             <div className="ui-empty">No adoption applications match this filter.</div>
+          ) : isMobile ? (
+            <div className="dashCardList">
+              {applications.map((a) => (
+                <ApplicationRow key={a.id} application={a} onChanged={refresh} onUnreadChanged={onUnreadChanged} />
+              ))}
+            </div>
           ) : (
             <div className="dashTableWrap">
               <table className="dashTable">

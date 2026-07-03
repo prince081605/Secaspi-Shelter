@@ -3,6 +3,8 @@ import { adminListFosterApplications, adminUpdateFosterApplication } from '../..
 import { Home } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import Pagination from '../../components/Pagination';
+import DashCard from '../../components/DashCard';
+import useIsMobile from '../../lib/useIsMobile';
 
 const STATUSES = ['pending', 'approved', 'active', 'completed', 'declined'];
 
@@ -57,6 +59,7 @@ function MonitoringPanel({ application, onSaved }) {
 }
 
 function ApplicationRow({ application, onChanged }) {
+  const isMobile = useIsMobile();
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState('');
 
@@ -70,10 +73,66 @@ function ApplicationRow({ application, onChanged }) {
     }
   };
 
+  const actions = (
+    <>
+      {application.status === 'pending' && (
+        <button className="dashBtn dashBtnPrimary" onClick={() => setStatus('approved')}>Approve</button>
+      )}
+      {application.status === 'approved' && (
+        <button className="dashBtn dashBtnPrimary" onClick={() => setStatus('active')}>Start fostering</button>
+      )}
+      {application.status === 'active' && (
+        <button className="dashBtn" onClick={() => setStatus('completed')}>Mark completed</button>
+      )}
+      {application.status !== 'declined' && application.status !== 'completed' && (
+        <button className="dashBtn dashBtnDanger" onClick={() => setStatus('declined')}>Decline</button>
+      )}
+      <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Monitor'}</button>
+    </>
+  );
+  const panel = (
+    <>
+      {error && <div className="ui-error">{error}</div>}
+      <div className="dashReviewSection">
+        <div className="dashReviewSectionTitle">Applicant Details</div>
+        <dl className="dashInfoList">
+          <div><dt>Full name</dt><dd>{application.full_name || application.applicant?.full_name || '—'}</dd></div>
+          <div><dt>Address</dt><dd>{application.address || '—'}</dd></div>
+          <div><dt>Occupation</dt><dd>{application.occupation || '—'}</dd></div>
+          <div><dt>Housing type</dt><dd>{application.housing_type || '—'}</dd></div>
+          <div><dt>Email</dt><dd>{application.applicant?.email || '—'}</dd></div>
+          <div><dt>Phone</dt><dd>{application.applicant?.phone || '—'}</dd></div>
+          <div className="dashInfoFull"><dt>Pet experience</dt><dd>{application.pet_experience || '—'}</dd></div>
+          <div className="dashInfoFull"><dt>Why foster?</dt><dd>{application.reason || '—'}</dd></div>
+        </dl>
+      </div>
+      <MonitoringPanel application={application} onSaved={onChanged} />
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <>
+        <DashCard
+          media={application.animal?.photo ? <img src={photoSrc(application.animal.photo)} alt="" className="dashThumbSm" /> : null}
+          title={application.animal?.name || 'Unknown'}
+          subtitle={application.applicant?.full_name || '—'}
+          fields={[
+            { label: 'Status', value: <StatusBadge status={application.status} /> },
+            { label: 'Foster period', value: `${application.start_date || '—'} → ${application.end_date || '—'}` },
+            { label: 'Submitted', value: (application.created_at || '').slice(0, 10) },
+          ]}
+          actions={actions}
+        />
+        {expanded && <div className="dashCardExpand">{panel}</div>}
+      </>
+    );
+  }
+
   return (
     <>
       <tr>
-        <td data-label="Animal">
+        <td>
           <div className="dashFlexRow">
             {application.animal?.photo ? (
               <img src={photoSrc(application.animal.photo)} alt="" className="dashThumbSm" />
@@ -81,49 +140,17 @@ function ApplicationRow({ application, onChanged }) {
             {application.animal?.name || 'Unknown'}
           </div>
         </td>
-        <td data-label="Applicant">{application.applicant?.full_name || '—'}</td>
-        <td data-label="Status"><StatusBadge status={application.status} /></td>
-        <td data-label="Foster period">{application.start_date || '—'} → {application.end_date || '—'}</td>
-        <td data-label="Submitted">{(application.created_at || '').slice(0, 10)}</td>
+        <td>{application.applicant?.full_name || '—'}</td>
+        <td><StatusBadge status={application.status} /></td>
+        <td>{application.start_date || '—'} → {application.end_date || '—'}</td>
+        <td>{(application.created_at || '').slice(0, 10)}</td>
         <td className="dashActionsCell">
-          <span className="dashActionsRow">
-            {application.status === 'pending' && (
-              <button className="dashBtn dashBtnPrimary" onClick={() => setStatus('approved')}>Approve</button>
-            )}
-            {application.status === 'approved' && (
-              <button className="dashBtn dashBtnPrimary" onClick={() => setStatus('active')}>Start fostering</button>
-            )}
-            {application.status === 'active' && (
-              <button className="dashBtn" onClick={() => setStatus('completed')}>Mark completed</button>
-            )}
-            {application.status !== 'declined' && application.status !== 'completed' && (
-              <button className="dashBtn dashBtnDanger" onClick={() => setStatus('declined')}>Decline</button>
-            )}
-            <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Monitor'}</button>
-          </span>
+          <span className="dashActionsRow">{actions}</span>
         </td>
       </tr>
       {expanded && (
         <tr>
-          <td colSpan={6} className="dashExpandPanel">
-            {error && <div className="ui-error">{error}</div>}
-
-            <div className="dashReviewSection">
-              <div className="dashReviewSectionTitle">Applicant Details</div>
-              <dl className="dashInfoList">
-                <div><dt>Full name</dt><dd>{application.full_name || application.applicant?.full_name || '—'}</dd></div>
-                <div><dt>Address</dt><dd>{application.address || '—'}</dd></div>
-                <div><dt>Occupation</dt><dd>{application.occupation || '—'}</dd></div>
-                <div><dt>Housing type</dt><dd>{application.housing_type || '—'}</dd></div>
-                <div><dt>Email</dt><dd>{application.applicant?.email || '—'}</dd></div>
-                <div><dt>Phone</dt><dd>{application.applicant?.phone || '—'}</dd></div>
-                <div className="dashInfoFull"><dt>Pet experience</dt><dd>{application.pet_experience || '—'}</dd></div>
-                <div className="dashInfoFull"><dt>Why foster?</dt><dd>{application.reason || '—'}</dd></div>
-              </dl>
-            </div>
-
-            <MonitoringPanel application={application} onSaved={onChanged} />
-          </td>
+          <td colSpan={6} className="dashExpandPanel">{panel}</td>
         </tr>
       )}
     </>
@@ -131,6 +158,7 @@ function ApplicationRow({ application, onChanged }) {
 }
 
 export default function FosterRequestsAdmin() {
+  const isMobile = useIsMobile();
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -185,6 +213,12 @@ export default function FosterRequestsAdmin() {
         <div className="ui-empty">Loading…</div>
       ) : applications.length === 0 ? (
         <div className="ui-empty">No foster applications match this filter.</div>
+      ) : isMobile ? (
+        <div className="dashCardList">
+          {applications.map((a) => (
+            <ApplicationRow key={a.id} application={a} onChanged={refresh} />
+          ))}
+        </div>
       ) : (
         <div className="dashTableWrap">
           <table className="dashTable">

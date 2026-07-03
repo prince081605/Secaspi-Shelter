@@ -13,6 +13,8 @@ import {
 import StatusBadge from '../../components/StatusBadge';
 import ConfirmButton from '../../components/ConfirmButton';
 import Pagination from '../../components/Pagination';
+import DashCard from '../../components/DashCard';
+import useIsMobile from '../../lib/useIsMobile';
 
 // The intake queue (rescue/surrender/stray triage → "Add to Animals" conversion) was extracted
 // from AnimalsAdmin.jsx (audit §0.2 / §3 C-1 / §7 C) — a distinct domain that bloated that file
@@ -276,6 +278,7 @@ function AssessmentPanel({ intake, onChanged }) {
 }
 
 function IntakeRow({ intake, onChanged }) {
+  const isMobile = useIsMobile();
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState('');
 
@@ -299,25 +302,48 @@ function IntakeRow({ intake, onChanged }) {
     }
   };
 
+  const actions = (
+    <>
+      <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Details'}</button>
+      {intake.status === 'converted' ? (
+        <span style={{ color: 'var(--muted)', fontSize: 12, alignSelf: 'center' }}>
+          → Animal #{intake.converted_animal_id}
+        </span>
+      ) : (
+        <ConfirmButton confirmLabel="Add this intake to Animals?" onConfirm={addToAnimals}>Add to Animals</ConfirmButton>
+      )}
+      <ConfirmButton confirmLabel="Delete intake?" onConfirm={remove}>Delete</ConfirmButton>
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <>
+        <DashCard
+          title={`${intake.animal_name || '—'}${intake.species ? ` (${intake.species})` : ''}`}
+          subtitle={intake.intake_type.replace('_', ' ')}
+          fields={[
+            { label: 'Reporter', value: intake.reporter_name || '—' },
+            { label: 'Status', value: <StatusBadge status={intake.status} /> },
+            { label: 'Submitted', value: (intake.created_at || '').slice(0, 10) },
+          ]}
+          actions={actions}
+        />
+        {error && <div className="ui-error" style={{ marginTop: 8 }}>{error}</div>}
+        {expanded && <div className="dashCardExpand"><AssessmentPanel intake={intake} onChanged={onChanged} /></div>}
+      </>
+    );
+  }
+
   return (
     <>
       <tr>
-        <td data-label="Type">{intake.intake_type.replace('_', ' ')}</td>
-        <td data-label="Animal">{intake.animal_name || '—'} {intake.species ? `(${intake.species})` : ''}</td>
-        <td data-label="Reporter">{intake.reporter_name || '—'}</td>
-        <td data-label="Status"><StatusBadge status={intake.status} /></td>
-        <td data-label="Submitted">{(intake.created_at || '').slice(0, 10)}</td>
-        <td style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Details'}</button>
-          {intake.status === 'converted' ? (
-            <span style={{ color: 'var(--muted)', fontSize: 12, alignSelf: 'center' }}>
-              → Animal #{intake.converted_animal_id}
-            </span>
-          ) : (
-            <ConfirmButton confirmLabel="Add this intake to Animals?" onConfirm={addToAnimals}>Add to Animals</ConfirmButton>
-          )}
-          <ConfirmButton confirmLabel="Delete intake?" onConfirm={remove}>Delete</ConfirmButton>
-        </td>
+        <td>{intake.intake_type.replace('_', ' ')}</td>
+        <td>{intake.animal_name || '—'} {intake.species ? `(${intake.species})` : ''}</td>
+        <td>{intake.reporter_name || '—'}</td>
+        <td><StatusBadge status={intake.status} /></td>
+        <td>{(intake.created_at || '').slice(0, 10)}</td>
+        <td style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>{actions}</td>
       </tr>
       {error && (
         <tr><td colSpan={6}><div className="ui-error">{error}</div></td></tr>
@@ -334,6 +360,7 @@ function IntakeRow({ intake, onChanged }) {
 }
 
 export default function IntakesAdmin({ onConverted }) {
+  const isMobile = useIsMobile();
   const [intakes, setIntakes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -400,6 +427,12 @@ export default function IntakesAdmin({ onConverted }) {
         <div className="ui-empty">Loading…</div>
       ) : intakes.length === 0 ? (
         <div className="ui-empty">No intakes match this filter.</div>
+      ) : isMobile ? (
+        <div className="dashCardList">
+          {intakes.map((i) => (
+            <IntakeRow key={i.id} intake={i} onChanged={refresh} />
+          ))}
+        </div>
       ) : (
         <div className="dashTableWrap" style={{ marginTop: 10 }}>
           <table className="dashTable">

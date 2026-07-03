@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { adminUpdateAdoptionApplication, adminMarkAdoptionApplicationRead } from '../../lib/animalsApi';
 import { settingImageUrl } from '../../lib/settingsApi';
 import StatusBadge from '../../components/StatusBadge';
+import DashCard from '../../components/DashCard';
+import useIsMobile from '../../lib/useIsMobile';
 
 // Row + panel components for the adoption requests admin tables, extracted from
 // AdoptionRequestsAdmin.jsx (audit §0.2 / §4 C) so that file holds only the tab orchestration.
@@ -12,6 +14,13 @@ const HOME_VISIT_STATUSES = ['not_scheduled', 'scheduled', 'completed'];
 function photoSrc(path) {
   if (!path) return '';
   return path.startsWith('http') ? path : `${import.meta.env.VITE_API_BASE_URL}/storage/${path}`;
+}
+
+// Animal thumbnail used as the DashCard media on mobile.
+function animalMedia(application) {
+  return application.animal?.photo
+    ? <img src={photoSrc(application.animal.photo)} alt="" className="dashThumbSm" />
+    : null;
 }
 
 function escapeHtml(value) {
@@ -184,6 +193,7 @@ function HomeVisitPanel({ application, onSaved }) {
 }
 
 export function ApplicationRow({ application, onChanged, onUnreadChanged }) {
+  const isMobile = useIsMobile();
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState('');
   const isUnread = !application.read_at;
@@ -218,11 +228,69 @@ export function ApplicationRow({ application, onChanged, onUnreadChanged }) {
     }
   };
 
+  const reviewPanel = (
+    <div className="dashReviewCard">
+      {error && <div className="ui-error">{error}</div>}
+
+      <div className="dashReviewSection">
+        <div className="dashReviewSectionTitle">Contact Info</div>
+        <dl className="dashInfoList">
+          <div><dt>Address</dt><dd>{application.address || '—'}</dd></div>
+          <div><dt>Occupation</dt><dd>{application.occupation || '—'}</dd></div>
+          <div><dt>Housing type</dt><dd>{application.housing_type || '—'}</dd></div>
+          <div><dt>Email</dt><dd>{application.applicant?.email || '—'}</dd></div>
+          <div><dt>Contact number</dt><dd>{application.contact_number || application.applicant?.phone || '—'}</dd></div>
+        </dl>
+      </div>
+
+      <div className="dashReviewSection">
+        <div className="dashReviewSectionTitle">Application Details</div>
+        <dl className="dashInfoList">
+          <div className="dashInfoFull"><dt>Pet experience</dt><dd>{application.pet_experience || '—'}</dd></div>
+          <div className="dashInfoFull"><dt>Reason</dt><dd>{application.reason || '—'}</dd></div>
+        </dl>
+      </div>
+
+      <div className="dashActionRow">
+        {application.status === 'approved' && (
+          <button className="dashBtn" onClick={() => setStatus('completed')}>Mark completed</button>
+        )}
+        {application.status !== 'declined' && (
+          <button className="dashBtn dashBtnDanger" onClick={() => setStatus('declined')}>Reject</button>
+        )}
+        {application.status !== 'approved' && (
+          <button className="dashBtn dashBtnPrimary" onClick={() => setStatus('approved')}>Approve</button>
+        )}
+      </div>
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <>
+        <DashCard
+          accent={isUnread ? 'unread' : undefined}
+          media={animalMedia(application)}
+          title={application.animal?.name || 'Unknown'}
+          subtitle={application.reference_no}
+          fields={[
+            { label: 'Applicant', value: application.full_name || application.applicant?.full_name },
+            { label: 'Status', value: <StatusBadge status={application.status} /> },
+            { label: 'Home visit', value: <StatusBadge status={application.home_visit_status} /> },
+            { label: 'Submitted', value: (application.created_at || '').slice(0, 10) },
+          ]}
+          actions={<button className="dashBtn" onClick={toggleReview}>{expanded ? 'Hide' : 'Review'}</button>}
+        />
+        {expanded && <div className="dashCardExpand">{reviewPanel}</div>}
+      </>
+    );
+  }
+
   return (
     <>
       <tr className={isUnread ? 'dashRowUnread' : ''}>
-        <td data-label="Reference">{application.reference_no}</td>
-        <td data-label="Animal">
+        <td>{application.reference_no}</td>
+        <td>
           <div className="dashFlexRow">
             {application.animal?.photo ? (
               <img src={photoSrc(application.animal.photo)} alt="" className="dashThumbSm" />
@@ -230,10 +298,10 @@ export function ApplicationRow({ application, onChanged, onUnreadChanged }) {
             {application.animal?.name || 'Unknown'}
           </div>
         </td>
-        <td data-label="Applicant">{application.full_name || application.applicant?.full_name}</td>
-        <td data-label="Status"><StatusBadge status={application.status} /></td>
-        <td data-label="Home visit"><StatusBadge status={application.home_visit_status} /></td>
-        <td data-label="Submitted">{(application.created_at || '').slice(0, 10)}</td>
+        <td>{application.full_name || application.applicant?.full_name}</td>
+        <td><StatusBadge status={application.status} /></td>
+        <td><StatusBadge status={application.home_visit_status} /></td>
+        <td>{(application.created_at || '').slice(0, 10)}</td>
         <td className="dashActionsCell">
           <span className="dashActionsRow">
             <button className="dashBtn" onClick={toggleReview}>{expanded ? 'Hide' : 'Review'}</button>
@@ -242,42 +310,7 @@ export function ApplicationRow({ application, onChanged, onUnreadChanged }) {
       </tr>
       {expanded && (
         <tr>
-          <td colSpan={7} className="dashExpandPanel">
-            <div className="dashReviewCard">
-              {error && <div className="ui-error">{error}</div>}
-
-              <div className="dashReviewSection">
-                <div className="dashReviewSectionTitle">Contact Info</div>
-                <dl className="dashInfoList">
-                  <div><dt>Address</dt><dd>{application.address || '—'}</dd></div>
-                  <div><dt>Occupation</dt><dd>{application.occupation || '—'}</dd></div>
-                  <div><dt>Housing type</dt><dd>{application.housing_type || '—'}</dd></div>
-                  <div><dt>Email</dt><dd>{application.applicant?.email || '—'}</dd></div>
-                  <div><dt>Contact number</dt><dd>{application.contact_number || application.applicant?.phone || '—'}</dd></div>
-                </dl>
-              </div>
-
-              <div className="dashReviewSection">
-                <div className="dashReviewSectionTitle">Application Details</div>
-                <dl className="dashInfoList">
-                  <div className="dashInfoFull"><dt>Pet experience</dt><dd>{application.pet_experience || '—'}</dd></div>
-                  <div className="dashInfoFull"><dt>Reason</dt><dd>{application.reason || '—'}</dd></div>
-                </dl>
-              </div>
-
-              <div className="dashActionRow">
-                {application.status === 'approved' && (
-                  <button className="dashBtn" onClick={() => setStatus('completed')}>Mark completed</button>
-                )}
-                {application.status !== 'declined' && (
-                  <button className="dashBtn dashBtnDanger" onClick={() => setStatus('declined')}>Reject</button>
-                )}
-                {application.status !== 'approved' && (
-                  <button className="dashBtn dashBtnPrimary" onClick={() => setStatus('approved')}>Approve</button>
-                )}
-              </div>
-            </div>
-          </td>
+          <td colSpan={7} className="dashExpandPanel">{reviewPanel}</td>
         </tr>
       )}
     </>
@@ -285,6 +318,7 @@ export function ApplicationRow({ application, onChanged, onUnreadChanged }) {
 }
 
 export function OngoingApprovedRow({ application, onChanged }) {
+  const isMobile = useIsMobile();
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState('');
 
@@ -298,11 +332,43 @@ export function OngoingApprovedRow({ application, onChanged }) {
     }
   };
 
+  const actions = (
+    <>
+      <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Track'}</button>
+      <button className="dashBtn dashBtnPrimary" onClick={markDone}>Mark as done</button>
+    </>
+  );
+  const panel = (
+    <>
+      {error && <div className="ui-error">{error}</div>}
+      <HomeVisitPanel application={application} onSaved={onChanged} />
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <>
+        <DashCard
+          media={animalMedia(application)}
+          title={application.animal?.name || 'Unknown'}
+          subtitle={application.reference_no}
+          fields={[
+            { label: 'Applicant', value: application.full_name || application.applicant?.full_name },
+            { label: 'Home visit', value: <StatusBadge status={application.home_visit_status} /> },
+            { label: 'Visit date', value: application.home_visit_date || '—' },
+          ]}
+          actions={actions}
+        />
+        {expanded && <div className="dashCardExpand">{panel}</div>}
+      </>
+    );
+  }
+
   return (
     <>
       <tr>
-        <td data-label="Reference">{application.reference_no}</td>
-        <td data-label="Animal">
+        <td>{application.reference_no}</td>
+        <td>
           <div className="dashFlexRow">
             {application.animal?.photo ? (
               <img src={photoSrc(application.animal.photo)} alt="" className="dashThumbSm" />
@@ -310,22 +376,16 @@ export function OngoingApprovedRow({ application, onChanged }) {
             {application.animal?.name || 'Unknown'}
           </div>
         </td>
-        <td data-label="Applicant">{application.full_name || application.applicant?.full_name}</td>
-        <td data-label="Home visit"><StatusBadge status={application.home_visit_status} /></td>
-        <td data-label="Visit date">{application.home_visit_date || '—'}</td>
+        <td>{application.full_name || application.applicant?.full_name}</td>
+        <td><StatusBadge status={application.home_visit_status} /></td>
+        <td>{application.home_visit_date || '—'}</td>
         <td className="dashActionsCell">
-          <span className="dashActionsRow">
-            <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Track'}</button>
-            <button className="dashBtn dashBtnPrimary" onClick={markDone}>Mark as done</button>
-          </span>
+          <span className="dashActionsRow">{actions}</span>
         </td>
       </tr>
       {expanded && (
         <tr>
-          <td colSpan={6} className="dashExpandPanel">
-            {error && <div className="ui-error">{error}</div>}
-            <HomeVisitPanel application={application} onSaved={onChanged} />
-          </td>
+          <td colSpan={6} className="dashExpandPanel">{panel}</td>
         </tr>
       )}
     </>
@@ -333,10 +393,30 @@ export function OngoingApprovedRow({ application, onChanged }) {
 }
 
 export function CompletedAdoptionRow({ application, settings }) {
+  const isMobile = useIsMobile();
+  const viewBtn = (
+    <button className="dashBtn dashBtnPrimary" onClick={() => printAdoptionContract(application, settings)}>View details</button>
+  );
+
+  if (isMobile) {
+    return (
+      <DashCard
+        media={animalMedia(application)}
+        title={application.animal?.name || 'Unknown'}
+        subtitle={application.reference_no}
+        fields={[
+          { label: 'Applicant', value: application.full_name || application.applicant?.full_name },
+          { label: 'Visit date', value: application.home_visit_date || '—' },
+        ]}
+        actions={viewBtn}
+      />
+    );
+  }
+
   return (
     <tr>
-      <td data-label="Reference">{application.reference_no}</td>
-      <td data-label="Animal">
+      <td>{application.reference_no}</td>
+      <td>
         <div className="dashFlexRow">
           {application.animal?.photo ? (
             <img src={photoSrc(application.animal.photo)} alt="" className="dashThumbSm" />
@@ -344,12 +424,10 @@ export function CompletedAdoptionRow({ application, settings }) {
           {application.animal?.name || 'Unknown'}
         </div>
       </td>
-      <td data-label="Applicant">{application.full_name || application.applicant?.full_name}</td>
-      <td data-label="Visit date">{application.home_visit_date || '—'}</td>
+      <td>{application.full_name || application.applicant?.full_name}</td>
+      <td>{application.home_visit_date || '—'}</td>
       <td className="dashActionsCell">
-        <span className="dashActionsRow">
-          <button className="dashBtn dashBtnPrimary" onClick={() => printAdoptionContract(application, settings)}>View details</button>
-        </span>
+        <span className="dashActionsRow">{viewBtn}</span>
       </td>
     </tr>
   );

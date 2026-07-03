@@ -3,6 +3,8 @@ import { adminListVisitations, adminUpdateVisitation, adminMarkVisitationRead } 
 import { Calendar } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import Pagination from '../../components/Pagination';
+import DashCard from '../../components/DashCard';
+import useIsMobile from '../../lib/useIsMobile';
 
 const STATUSES = ['pending', 'approved', 'rejected', 'completed'];
 const SLOT_LABELS = { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening' };
@@ -45,6 +47,7 @@ function NotesPanel({ visitation, onSaved }) {
 }
 
 function VisitationRow({ visitation, onChanged }) {
+  const isMobile = useIsMobile();
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState('');
   const isUnread = !visitation.read_at;
@@ -73,38 +76,64 @@ function VisitationRow({ visitation, onChanged }) {
     }
   };
 
+  const actions = (
+    <>
+      {visitation.status === 'pending' && (
+        <>
+          <button className="dashBtn dashBtnPrimary" onClick={() => setStatus('approved')}>Approve</button>
+          <button className="dashBtn dashBtnDanger" onClick={() => setStatus('rejected')}>Reject</button>
+        </>
+      )}
+      {visitation.status === 'approved' && (
+        <button className="dashBtn" onClick={() => setStatus('completed')}>Mark completed</button>
+      )}
+      <button className="dashBtn" onClick={toggleDetails}>{expanded ? 'Hide' : 'Details'}</button>
+    </>
+  );
+  const panel = (
+    <>
+      {error && <div className="ui-error">{error}</div>}
+      <div className="ui-muted" style={{ fontSize: '0.85rem', marginBottom: 6 }}>
+        {visitation.visitor?.email}{visitation.visitor?.phone ? ` · ${visitation.visitor.phone}` : ''}
+      </div>
+      <NotesPanel visitation={visitation} onSaved={onChanged} />
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <>
+        <DashCard
+          accent={isUnread ? 'unread' : undefined}
+          title={visitation.visitor?.full_name || '—'}
+          subtitle={visitation.requested_date || '—'}
+          fields={[
+            { label: 'Time slot', value: SLOT_LABELS[visitation.time_slot] || visitation.time_slot },
+            { label: 'Party size', value: visitation.num_visitors },
+            { label: 'Status', value: <StatusBadge status={visitation.status} /> },
+          ]}
+          actions={actions}
+        />
+        {expanded && <div className="dashCardExpand">{panel}</div>}
+      </>
+    );
+  }
+
   return (
     <>
       <tr className={isUnread ? 'dashRowUnread' : ''}>
-        <td data-label="Visitor">{visitation.visitor?.full_name || '—'}</td>
-        <td data-label="Date">{visitation.requested_date || '—'}</td>
-        <td data-label="Time slot">{SLOT_LABELS[visitation.time_slot] || visitation.time_slot}</td>
-        <td data-label="Party size">{visitation.num_visitors}</td>
-        <td data-label="Status"><StatusBadge status={visitation.status} /></td>
+        <td>{visitation.visitor?.full_name || '—'}</td>
+        <td>{visitation.requested_date || '—'}</td>
+        <td>{SLOT_LABELS[visitation.time_slot] || visitation.time_slot}</td>
+        <td>{visitation.num_visitors}</td>
+        <td><StatusBadge status={visitation.status} /></td>
         <td className="dashActionsCell">
-          <span className="dashActionsRow">
-            {visitation.status === 'pending' && (
-              <>
-                <button className="dashBtn dashBtnPrimary" onClick={() => setStatus('approved')}>Approve</button>
-                <button className="dashBtn dashBtnDanger" onClick={() => setStatus('rejected')}>Reject</button>
-              </>
-            )}
-            {visitation.status === 'approved' && (
-              <button className="dashBtn" onClick={() => setStatus('completed')}>Mark completed</button>
-            )}
-            <button className="dashBtn" onClick={toggleDetails}>{expanded ? 'Hide' : 'Details'}</button>
-          </span>
+          <span className="dashActionsRow">{actions}</span>
         </td>
       </tr>
       {expanded && (
         <tr>
-          <td colSpan={6} className="dashExpandPanel">
-            {error && <div className="ui-error">{error}</div>}
-            <div className="ui-muted" style={{ fontSize: '0.85rem', marginBottom: 6 }}>
-              {visitation.visitor?.email}{visitation.visitor?.phone ? ` · ${visitation.visitor.phone}` : ''}
-            </div>
-            <NotesPanel visitation={visitation} onSaved={onChanged} />
-          </td>
+          <td colSpan={6} className="dashExpandPanel">{panel}</td>
         </tr>
       )}
     </>
@@ -112,6 +141,7 @@ function VisitationRow({ visitation, onChanged }) {
 }
 
 export default function VisitationsAdmin() {
+  const isMobile = useIsMobile();
   const [visitations, setVisitations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -165,6 +195,12 @@ export default function VisitationsAdmin() {
         <div className="ui-empty">Loading…</div>
       ) : visitations.length === 0 ? (
         <div className="ui-empty">No visit requests match this filter.</div>
+      ) : isMobile ? (
+        <div className="dashCardList">
+          {visitations.map((v) => (
+            <VisitationRow key={v.id} visitation={v} onChanged={refresh} />
+          ))}
+        </div>
       ) : (
         <div className="dashTableWrap">
           <table className="dashTable">

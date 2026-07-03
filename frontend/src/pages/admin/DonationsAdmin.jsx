@@ -3,6 +3,8 @@ import { adminListDonations, adminGetDonationStats, adminVerifyDonation } from '
 import { HandCoins } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import Pagination from '../../components/Pagination';
+import DashCard from '../../components/DashCard';
+import useIsMobile from '../../lib/useIsMobile';
 
 const STATUSES = ['pending', 'verified', 'rejected'];
 
@@ -54,6 +56,7 @@ function StatsCards() {
 }
 
 export default function DonationsAdmin({ isAdmin = false }) {
+  const isMobile = useIsMobile();
   const [donations, setDonations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -117,6 +120,29 @@ export default function DonationsAdmin({ isAdmin = false }) {
         <div className="ui-empty">Loading…</div>
       ) : donations.length === 0 ? (
         <div className="ui-empty">No donations match this filter.</div>
+      ) : isMobile ? (
+        <div className="dashCardList">
+          {donations.map((d) => (
+            <DashCard
+              key={d.id}
+              title={d.donor?.full_name || '—'}
+              subtitle={d.reference_no}
+              fields={[
+                { label: 'Amount', value: money(d.amount) },
+                { label: 'Method', value: d.payment_method },
+                { label: 'Proof', value: d.proof_image ? <a href={fileSrc(d.proof_image)} target="_blank" rel="noreferrer">View</a> : '—' },
+                { label: 'Status', value: <StatusBadge status={d.status} /> },
+                d.donor?.email && { label: 'Email', value: d.donor.email },
+              ]}
+              actions={isAdmin && d.status === 'pending' ? (
+                <>
+                  <button className="dashBtn dashBtnPrimary" onClick={() => handleVerify(d, 'verified')}>Verify</button>
+                  <button className="dashBtn dashBtnDanger" onClick={() => handleVerify(d, 'rejected')}>Reject</button>
+                </>
+              ) : null}
+            />
+          ))}
+        </div>
       ) : (
         <div className="dashTableWrap">
           <table className="dashTable">
@@ -134,16 +160,16 @@ export default function DonationsAdmin({ isAdmin = false }) {
             <tbody>
               {donations.map((d) => (
                 <tr key={d.id}>
-                  <td data-label="Reference">{d.reference_no}</td>
-                  <td data-label="Donor">{d.donor?.full_name || '—'}<br /><span style={{ fontSize: 12, color: 'var(--muted)' }}>{d.donor?.email}</span></td>
-                  <td data-label="Amount">{money(d.amount)}</td>
-                  <td data-label="Method">{d.payment_method}</td>
-                  <td data-label="Proof">
+                  <td>{d.reference_no}</td>
+                  <td>{d.donor?.full_name || '—'}<br /><span style={{ fontSize: 12, color: 'var(--muted)' }}>{d.donor?.email}</span></td>
+                  <td>{money(d.amount)}</td>
+                  <td>{d.payment_method}</td>
+                  <td>
                     {d.proof_image ? (
                       <a href={fileSrc(d.proof_image)} target="_blank" rel="noreferrer">View</a>
                     ) : '—'}
                   </td>
-                  <td data-label="Status"><StatusBadge status={d.status} /></td>
+                  <td><StatusBadge status={d.status} /></td>
                   {isAdmin && (
                     <td className="dashActionsCell">
                       <span className="dashActionsRow">
