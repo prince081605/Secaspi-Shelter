@@ -495,12 +495,12 @@ function MedicalManager({ animalId, onChanged }) {
             <tbody>
               {records.map((r) => (
                 <tr key={r.id}>
-                  <td>{r.type}</td>
-                  <td>{r.description || '—'}</td>
-                  <td>{r.vet_name || '—'}</td>
-                  <td>{r.cost ?? '—'}</td>
-                  <td>{r.record_date}</td>
-                  <td>{r.follow_up_date || '—'}</td>
+                  <td data-label="Type">{r.type}</td>
+                  <td data-label="Description">{r.description || '—'}</td>
+                  <td data-label="Vet">{r.vet_name || '—'}</td>
+                  <td data-label="Cost">{r.cost ?? '—'}</td>
+                  <td data-label="Date">{r.record_date}</td>
+                  <td data-label="Follow-up">{r.follow_up_date || '—'}</td>
                   <td><button className="dashBtn dashBtnDanger" aria-label="Delete medical record" onClick={() => handleDeleteRecord(r.id)}><X size={14} /></button></td>
                 </tr>
               ))}
@@ -532,9 +532,9 @@ function MedicalManager({ animalId, onChanged }) {
             <tbody>
               {vaccinations.map((v) => (
                 <tr key={v.id}>
-                  <td>{v.vaccine_name}</td>
-                  <td>{v.date_given}</td>
-                  <td>{v.next_due || '—'}</td>
+                  <td data-label="Vaccine">{v.vaccine_name}</td>
+                  <td data-label="Date given">{v.date_given}</td>
+                  <td data-label="Next due">{v.next_due || '—'}</td>
                   <td><button className="dashBtn dashBtnDanger" aria-label="Delete vaccination record" onClick={() => handleDeleteVaccination(v.id)}><X size={14} /></button></td>
                 </tr>
               ))}
@@ -784,10 +784,10 @@ export default function AnimalsAdmin() {
                         </div>
                       </div>
                     </td>
-                    <td>{a.age ? `${a.age} yrs` : '—'}</td>
-                    <td>{a.gender || '—'}</td>
-                    <td>{a.size || '—'}</td>
-                    <td><StatusBadge status={a.status} /></td>
+                    <td data-label="Age">{a.age ? `${a.age} yrs` : '—'}</td>
+                    <td data-label="Sex">{a.gender || '—'}</td>
+                    <td data-label="Size">{a.size || '—'}</td>
+                    <td data-label="Status"><StatusBadge status={a.status} /></td>
                     <td><div className="aa-row-actions">{renderActions(a)}</div></td>
                   </tr>
                   {hasExpanded(a) && (

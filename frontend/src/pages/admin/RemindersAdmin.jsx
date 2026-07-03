@@ -65,13 +65,13 @@ export default function RemindersAdmin({ onChanged }) {
             <tbody>
               {reminders.map((r) => (
                 <tr key={r.id} style={r.is_overdue ? { background: 'rgba(180, 35, 24, 0.06)' } : undefined}>
-                  <td>{r.title}</td>
-                  <td>{r.animal?.name || '—'}</td>
-                  <td>
+                  <td data-label="Reminder">{r.title}</td>
+                  <td data-label="Animal">{r.animal?.name || '—'}</td>
+                  <td data-label="Due date">
                     {r.reminder_date}
                     {r.is_overdue && <span className="badge badgeOrange" style={{ marginLeft: 8 }}>overdue</span>}
                   </td>
-                  <td><span className="badge badgeSky">{r.status}</span></td>
+                  <td data-label="Status"><span className="badge badgeSky">{r.status}</span></td>
                   <td className="dashActionsCell">
                     <span className="dashActionsRow">
                       <button className="dashBtn dashBtnPrimary" onClick={() => markDone(r.id)}>Mark done</button>

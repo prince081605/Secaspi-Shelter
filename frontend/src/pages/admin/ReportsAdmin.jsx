@@ -176,7 +176,7 @@ export default function ReportsAdmin({ isAdmin = false }) {
                 <tbody>
                   {data.rows.map((row, i) => (
                     <tr key={i}>
-                      {data.columns.map((c) => <td key={c.key}>{row[c.key] ?? '—'}</td>)}
+                      {data.columns.map((c) => <td key={c.key} data-label={c.label}>{row[c.key] ?? '—'}</td>)}
                     </tr>
                   ))}
                 </tbody>

@@ -73,7 +73,7 @@ function ApplicationRow({ application, onChanged }) {
   return (
     <>
       <tr>
-        <td>
+        <td data-label="Animal">
           <div className="dashFlexRow">
             {application.animal?.photo ? (
               <img src={photoSrc(application.animal.photo)} alt="" className="dashThumbSm" />
@@ -81,10 +81,10 @@ function ApplicationRow({ application, onChanged }) {
             {application.animal?.name || 'Unknown'}
           </div>
         </td>
-        <td>{application.applicant?.full_name || '—'}</td>
-        <td><StatusBadge status={application.status} /></td>
-        <td>{application.start_date || '—'} → {application.end_date || '—'}</td>
-        <td>{(application.created_at || '').slice(0, 10)}</td>
+        <td data-label="Applicant">{application.applicant?.full_name || '—'}</td>
+        <td data-label="Status"><StatusBadge status={application.status} /></td>
+        <td data-label="Foster period">{application.start_date || '—'} → {application.end_date || '—'}</td>
+        <td data-label="Submitted">{(application.created_at || '').slice(0, 10)}</td>
         <td className="dashActionsCell">
           <span className="dashActionsRow">
             {application.status === 'pending' && (

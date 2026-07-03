@@ -221,8 +221,8 @@ export function ApplicationRow({ application, onChanged, onUnreadChanged }) {
   return (
     <>
       <tr className={isUnread ? 'dashRowUnread' : ''}>
-        <td>{application.reference_no}</td>
-        <td>
+        <td data-label="Reference">{application.reference_no}</td>
+        <td data-label="Animal">
           <div className="dashFlexRow">
             {application.animal?.photo ? (
               <img src={photoSrc(application.animal.photo)} alt="" className="dashThumbSm" />
@@ -230,10 +230,10 @@ export function ApplicationRow({ application, onChanged, onUnreadChanged }) {
             {application.animal?.name || 'Unknown'}
           </div>
         </td>
-        <td>{application.full_name || application.applicant?.full_name}</td>
-        <td><StatusBadge status={application.status} /></td>
-        <td><StatusBadge status={application.home_visit_status} /></td>
-        <td>{(application.created_at || '').slice(0, 10)}</td>
+        <td data-label="Applicant">{application.full_name || application.applicant?.full_name}</td>
+        <td data-label="Status"><StatusBadge status={application.status} /></td>
+        <td data-label="Home visit"><StatusBadge status={application.home_visit_status} /></td>
+        <td data-label="Submitted">{(application.created_at || '').slice(0, 10)}</td>
         <td className="dashActionsCell">
           <span className="dashActionsRow">
             <button className="dashBtn" onClick={toggleReview}>{expanded ? 'Hide' : 'Review'}</button>
@@ -301,8 +301,8 @@ export function OngoingApprovedRow({ application, onChanged }) {
   return (
     <>
       <tr>
-        <td>{application.reference_no}</td>
-        <td>
+        <td data-label="Reference">{application.reference_no}</td>
+        <td data-label="Animal">
           <div className="dashFlexRow">
             {application.animal?.photo ? (
               <img src={photoSrc(application.animal.photo)} alt="" className="dashThumbSm" />
@@ -310,9 +310,9 @@ export function OngoingApprovedRow({ application, onChanged }) {
             {application.animal?.name || 'Unknown'}
           </div>
         </td>
-        <td>{application.full_name || application.applicant?.full_name}</td>
-        <td><StatusBadge status={application.home_visit_status} /></td>
-        <td>{application.home_visit_date || '—'}</td>
+        <td data-label="Applicant">{application.full_name || application.applicant?.full_name}</td>
+        <td data-label="Home visit"><StatusBadge status={application.home_visit_status} /></td>
+        <td data-label="Visit date">{application.home_visit_date || '—'}</td>
         <td className="dashActionsCell">
           <span className="dashActionsRow">
             <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Track'}</button>
@@ -335,8 +335,8 @@ export function OngoingApprovedRow({ application, onChanged }) {
 export function CompletedAdoptionRow({ application, settings }) {
   return (
     <tr>
-      <td>{application.reference_no}</td>
-      <td>
+      <td data-label="Reference">{application.reference_no}</td>
+      <td data-label="Animal">
         <div className="dashFlexRow">
           {application.animal?.photo ? (
             <img src={photoSrc(application.animal.photo)} alt="" className="dashThumbSm" />
@@ -344,8 +344,8 @@ export function CompletedAdoptionRow({ application, settings }) {
           {application.animal?.name || 'Unknown'}
         </div>
       </td>
-      <td>{application.full_name || application.applicant?.full_name}</td>
-      <td>{application.home_visit_date || '—'}</td>
+      <td data-label="Applicant">{application.full_name || application.applicant?.full_name}</td>
+      <td data-label="Visit date">{application.home_visit_date || '—'}</td>
       <td className="dashActionsCell">
         <span className="dashActionsRow">
           <button className="dashBtn dashBtnPrimary" onClick={() => printAdoptionContract(application, settings)}>View details</button>

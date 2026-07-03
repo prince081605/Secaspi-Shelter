@@ -302,11 +302,11 @@ function IntakeRow({ intake, onChanged }) {
   return (
     <>
       <tr>
-        <td>{intake.intake_type.replace('_', ' ')}</td>
-        <td>{intake.animal_name || '—'} {intake.species ? `(${intake.species})` : ''}</td>
-        <td>{intake.reporter_name || '—'}</td>
-        <td><StatusBadge status={intake.status} /></td>
-        <td>{(intake.created_at || '').slice(0, 10)}</td>
+        <td data-label="Type">{intake.intake_type.replace('_', ' ')}</td>
+        <td data-label="Animal">{intake.animal_name || '—'} {intake.species ? `(${intake.species})` : ''}</td>
+        <td data-label="Reporter">{intake.reporter_name || '—'}</td>
+        <td data-label="Status"><StatusBadge status={intake.status} /></td>
+        <td data-label="Submitted">{(intake.created_at || '').slice(0, 10)}</td>
         <td style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Details'}</button>
           {intake.status === 'converted' ? (

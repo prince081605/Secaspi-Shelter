@@ -77,6 +77,29 @@
   .dashTab { flex: 1; text-align: center; }
   .dashTable th,
   .dashTable td { padding: 9px 10px; }
+  /* Stacked rows: below 560px admin tables reflow into label/value blocks instead of
+     scrolling sideways. Labels come from each cell's data-label attribute; cells without
+     one (actions, empty states, expanded detail panels) just render full-width. */
+  /* table.dashTable outranks the base .dashTable { min-width: 560px } rule, which appears
+     later in this file and would otherwise win the source-order tie. */
+  table.dashTable { min-width: 0; }
+  .dashTable thead { display: none; }
+  .dashTable tbody { display: block; }
+  .dashTable tbody tr { display: block; padding: 8px 0; }
+  .dashTable tbody tr + tr { border-top: 1px solid var(--line); }
+  .dashTable tbody td { display: block; border-bottom: none; padding: 5px 12px; }
+  /* Row-header tables (e.g. the profile card) stack their th above the value. */
+  .dashTable tbody th { display: block; border-bottom: none; background: transparent; padding: 5px 12px 0; }
+  .dashTable tbody td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1px;
+  }
   .dashTitle { font-size: 1.35rem; }
   /* The full-width tabs wrap the bell onto its own row at the LEFT edge, so the
      right-anchored dropdown would open off-screen — anchor it left instead. */

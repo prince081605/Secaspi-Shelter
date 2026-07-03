@@ -76,11 +76,11 @@ function VisitationRow({ visitation, onChanged }) {
   return (
     <>
       <tr className={isUnread ? 'dashRowUnread' : ''}>
-        <td>{visitation.visitor?.full_name || '—'}</td>
-        <td>{visitation.requested_date || '—'}</td>
-        <td>{SLOT_LABELS[visitation.time_slot] || visitation.time_slot}</td>
-        <td>{visitation.num_visitors}</td>
-        <td><StatusBadge status={visitation.status} /></td>
+        <td data-label="Visitor">{visitation.visitor?.full_name || '—'}</td>
+        <td data-label="Date">{visitation.requested_date || '—'}</td>
+        <td data-label="Time slot">{SLOT_LABELS[visitation.time_slot] || visitation.time_slot}</td>
+        <td data-label="Party size">{visitation.num_visitors}</td>
+        <td data-label="Status"><StatusBadge status={visitation.status} /></td>
         <td className="dashActionsCell">
           <span className="dashActionsRow">
             {visitation.status === 'pending' && (

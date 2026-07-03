@@ -116,8 +116,8 @@ export default function UsersAdmin({ currentUserId }) {
                       <br />
                       <span style={{ fontSize: 12, color: 'var(--muted)' }}>{u.email}</span>
                     </td>
-                    <td>{u.phone || '—'}</td>
-                    <td>
+                    <td data-label="Phone">{u.phone || '—'}</td>
+                    <td data-label="Role">
                       <select
                         className="ui-input"
                         style={{ maxWidth: 130 }}
@@ -129,7 +129,7 @@ export default function UsersAdmin({ currentUserId }) {
                         {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
                       </select>
                     </td>
-                    <td>
+                    <td data-label="Status">
                       <StatusBadge status={u.status} />
                       {u.status === 'suspended' && u.suspension_reason && (
                         <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4, maxWidth: 220 }} title={u.suspension_reason}>

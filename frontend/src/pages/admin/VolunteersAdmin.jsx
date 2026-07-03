@@ -80,9 +80,9 @@ function AddPersonForm({ type, onCancel, onAdded }) {
                 <tbody>
                   {results.map((u) => (
                     <tr key={u.id}>
-                      <td>{u.full_name}</td>
-                      <td>{u.email}</td>
-                      <td>{u.role}</td>
+                      <td data-label="Name">{u.full_name}</td>
+                      <td data-label="Email">{u.email}</td>
+                      <td data-label="Role">{u.role}</td>
                       <td><button className="dashBtn dashBtnPrimary" onClick={() => setSelected(u)}>Select</button></td>
                     </tr>
                   ))}
@@ -168,9 +168,9 @@ function TasksPanel({ volunteer, onChanged }) {
             <tbody>
               {volunteer.tasks.map((t) => (
                 <tr key={t.id}>
-                  <td>{t.task_name}</td>
-                  <td><StatusBadge status={t.status} /></td>
-                  <td>{t.assigned_date || '—'}</td>
+                  <td data-label="Task">{t.task_name}</td>
+                  <td data-label="Status"><StatusBadge status={t.status} /></td>
+                  <td data-label="Date">{t.assigned_date || '—'}</td>
                   <td className="dashActionsCell">
                     <span className="dashActionsRow">
                       {t.status === 'requested' && (
@@ -230,14 +230,14 @@ function PersonnelRow({ personnel, onChanged }) {
     <>
       <tr>
         <td>{personnel.user?.full_name}<br /><span style={{ fontSize: 12, color: 'var(--muted)' }}>{personnel.user?.email}</span></td>
-        <td>{personnel.availability || '—'}</td>
-        <td className="dashActionsCell">
+        <td data-label="Availability">{personnel.availability || '—'}</td>
+        <td data-label="Hours rendered" className="dashActionsCell">
           <span className="dashActionsRow">
             <input className="ui-input" type="number" min="0" style={{ width: 80 }} value={hours} onChange={(e) => setHours(e.target.value)} />
             <button className="dashBtn" onClick={saveHours}>Save</button>
           </span>
         </td>
-        <td>{personnel.tasks.length}</td>
+        <td data-label="Tasks">{personnel.tasks.length}</td>
         <td className="dashActionsCell">
           <span className="dashActionsRow">
             <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Tasks'}</button>
@@ -294,9 +294,9 @@ function RequestRow({ application, onChanged }) {
     <>
       <tr className={isUnread ? 'dashRowUnread' : ''}>
         <td>{application.applicant?.full_name || '—'}<br /><span style={{ fontSize: 12, color: 'var(--muted)' }}>{application.applicant?.email}</span></td>
-        <td>{application.availability || '—'}</td>
-        <td><StatusBadge status={application.status} /></td>
-        <td>{(application.created_at || '').slice(0, 10)}</td>
+        <td data-label="Availability">{application.availability || '—'}</td>
+        <td data-label="Status"><StatusBadge status={application.status} /></td>
+        <td data-label="Submitted">{(application.created_at || '').slice(0, 10)}</td>
         <td className="dashActionsCell">
           <span className="dashActionsRow">
             {application.status === 'pending' && (

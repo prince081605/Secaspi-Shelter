@@ -151,12 +151,12 @@ function ReportRow({ report, onChanged, onUnreadChanged }) {
   return (
     <>
       <tr className={isUnread ? 'dashRowUnread' : ''}>
-        <td>{report.reporter_name || 'Anonymous'}</td>
-        <td>{report.location}</td>
-        <td><UrgencyBadge urgency={report.urgency} /></td>
-        <td><StatusBadge status={report.status} /></td>
-        <td>{report.assigned_to || '—'}</td>
-        <td>{(report.created_at || '').slice(0, 10)}</td>
+        <td data-label="Reporter">{report.reporter_name || 'Anonymous'}</td>
+        <td data-label="Location">{report.location}</td>
+        <td data-label="Urgency"><UrgencyBadge urgency={report.urgency} /></td>
+        <td data-label="Status"><StatusBadge status={report.status} /></td>
+        <td data-label="Assigned to">{report.assigned_to || '—'}</td>
+        <td data-label="Submitted">{(report.created_at || '').slice(0, 10)}</td>
         <td style={{ whiteSpace: 'nowrap' }}>
           <button className="dashBtn" onClick={() => open('detail')}>{mode === 'detail' ? 'Hide' : 'Detail'}</button>
           <button className="dashBtn" style={{ marginLeft: 6 }} onClick={() => open('triage')}>{mode === 'triage' ? 'Hide' : 'Triage'}</button>

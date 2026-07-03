@@ -134,16 +134,16 @@ export default function DonationsAdmin({ isAdmin = false }) {
             <tbody>
               {donations.map((d) => (
                 <tr key={d.id}>
-                  <td>{d.reference_no}</td>
-                  <td>{d.donor?.full_name || '—'}<br /><span style={{ fontSize: 12, color: 'var(--muted)' }}>{d.donor?.email}</span></td>
-                  <td>{money(d.amount)}</td>
-                  <td>{d.payment_method}</td>
-                  <td>
+                  <td data-label="Reference">{d.reference_no}</td>
+                  <td data-label="Donor">{d.donor?.full_name || '—'}<br /><span style={{ fontSize: 12, color: 'var(--muted)' }}>{d.donor?.email}</span></td>
+                  <td data-label="Amount">{money(d.amount)}</td>
+                  <td data-label="Method">{d.payment_method}</td>
+                  <td data-label="Proof">
                     {d.proof_image ? (
                       <a href={fileSrc(d.proof_image)} target="_blank" rel="noreferrer">View</a>
                     ) : '—'}
                   </td>
-                  <td><StatusBadge status={d.status} /></td>
+                  <td data-label="Status"><StatusBadge status={d.status} /></td>
                   {isAdmin && (
                     <td className="dashActionsCell">
                       <span className="dashActionsRow">

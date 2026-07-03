@@ -98,9 +98,9 @@ function ActivityFeed({ activity }) {
             <tbody>
               {activity.map((a, idx) => (
                 <tr key={idx}>
-                  <td>{a.label}</td>
-                  <td><StatusBadge status={a.status} /></td>
-                  <td>{(a.created_at || '').toString().slice(0, 16)}</td>
+                  <td data-label="Event">{a.label}</td>
+                  <td data-label="Status"><StatusBadge status={a.status} /></td>
+                  <td data-label="When">{(a.created_at || '').toString().slice(0, 16)}</td>
                 </tr>
               ))}
             </tbody>
@@ -134,8 +134,8 @@ function UserApplications({ applications, loading }) {
             <tbody>
               {applications.map((r) => (
                 <tr key={`${r.type}-${r.id}`}>
-                  <td>{r.type}</td>
-                  <td>
+                  <td data-label="Type">{r.type}</td>
+                  <td data-label="Animal">
                     <div className="dashFlexRow">
                       {r.animal?.photo ? (
                         <img
@@ -147,10 +147,10 @@ function UserApplications({ applications, loading }) {
                       {r.animal?.name || 'Unknown animal'}
                     </div>
                   </td>
-                  <td>
+                  <td data-label="Status">
                     <StatusBadge status={r.status} />
                   </td>
-                  <td>{(r.created_at || '').slice(0, 10) || '—'}</td>
+                  <td data-label="Submitted">{(r.created_at || '').slice(0, 10) || '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -335,9 +335,9 @@ function VolunteerTasksPanel() {
             <tbody>
               {volunteer.tasks.map((t) => (
                 <tr key={t.id}>
-                  <td>{t.task_name}</td>
-                  <td><StatusBadge status={t.status} /></td>
-                  <td>{t.status === 'requested' ? 'Awaiting confirmation' : (t.assigned_date || '—')}</td>
+                  <td data-label="Task">{t.task_name}</td>
+                  <td data-label="Status"><StatusBadge status={t.status} /></td>
+                  <td data-label="When">{t.status === 'requested' ? 'Awaiting confirmation' : (t.assigned_date || '—')}</td>
                 </tr>
               ))}
             </tbody>
@@ -379,7 +379,7 @@ function ReadOnlyAnimals() {
             <tbody>
               {animals.map((a) => (
                 <tr key={a.id}>
-                  <td>
+                  <td data-label="Name">
                     <div className="dashFlexRow">
                       {a.photo ? (
                         <img
@@ -391,9 +391,9 @@ function ReadOnlyAnimals() {
                       {a.name || 'Unnamed'}
                     </div>
                   </td>
-                  <td>{a.species || '—'}</td>
-                  <td>{a.breed || '—'}</td>
-                  <td><StatusBadge status={a.status} /></td>
+                  <td data-label="Species">{a.species || '—'}</td>
+                  <td data-label="Breed">{a.breed || '—'}</td>
+                  <td data-label="Status"><StatusBadge status={a.status} /></td>
                 </tr>
               ))}
             </tbody>
