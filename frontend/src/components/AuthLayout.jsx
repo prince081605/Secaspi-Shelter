@@ -10,6 +10,16 @@ const styles = `
   .authFooter { margin-top: 1.5rem; text-align: center; font-size: 0.9rem; color: var(--muted); }
   .authFooter a { color: var(--brand); font-weight: 600; text-decoration: none; }
   .authFooter a:hover { text-decoration: underline; }
+
+  /* Phone: the fixed 2.5rem card padding left ~260px of content on a 375px screen. */
+  @media (max-width: 560px) {
+    .authNav { padding: 1rem 5vw; }
+    .authWrap { padding: 1.25rem 0.9rem; }
+    .authCard { padding: 1.75rem 1.25rem; }
+  }
+  @media (max-width: 380px) {
+    .authCard { padding: 1.4rem 1rem; }
+  }
 `;
 
 export default function AuthLayout({ title, subtitle, children, footer }) {

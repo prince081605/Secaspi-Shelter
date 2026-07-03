@@ -359,3 +359,15 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* ---- mobile: iOS focus-zoom guard ----
+   The root font drops to 16px at 1024px (index.css), which puts 0.95rem controls at 15.2px —
+   below the 16px threshold where iOS Safari auto-zooms a focused input. Hold controls at
+   exactly 16px on those screens. */
+@media (max-width: 1024px) {
+  .ui-input,
+  .ui-select,
+  .ui-textarea {
+    font-size: 16px;
+  }
+}

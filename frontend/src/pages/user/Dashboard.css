@@ -77,6 +77,10 @@
   .dashTab { flex: 1; text-align: center; }
   .dashTable th,
   .dashTable td { padding: 9px 10px; }
+  .dashTitle { font-size: 1.35rem; }
+  /* The full-width tabs wrap the bell onto its own row at the LEFT edge, so the
+     right-anchored dropdown would open off-screen — anchor it left instead. */
+  .notifBell .notifDropdown { left: 0; right: auto; }
 }
 
 .dashSidebar {
@@ -734,8 +738,9 @@
   position: absolute;
   right: 0;
   top: calc(100% + 8px);
-  width: 320px;
-  max-height: 420px;
+  /* min() keeps these identical on desktop but stops the panel overflowing small phones. */
+  width: min(320px, calc(100vw - 32px));
+  max-height: min(420px, calc(100vh - 140px));
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: var(--radius);
