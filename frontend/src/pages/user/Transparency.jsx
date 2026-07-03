@@ -33,6 +33,12 @@ const styles = `
   .tpFeedAmt { font-weight: 700; color: var(--brand); white-space: nowrap; }
   .tpUsageImg { width: 100%; border-radius: 12px; border: 1px solid var(--line); display: block; }
   .tpCta { text-align: center; margin-top: 2.5rem; }
+  @media (max-width: 560px) {
+    .tpBody { padding: 2rem 1rem 3rem; }
+    .tpFeedItem { flex-wrap: wrap; gap: 0.2rem 1rem; }
+    .tpFeedName { overflow-wrap: anywhere; }
+    .tpMethodVal { width: auto; min-width: 70px; }
+  }
 `;
 
 const METHOD_LABELS = { gcash: 'GCash', cash: 'Cash', bank: 'Bank' };

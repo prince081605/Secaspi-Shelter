@@ -15,7 +15,7 @@ const styles = `
   .adoptControls { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 2.2rem; }
   .adoptSearch { flex: 1 1 280px; display: flex; gap: 0.6rem; align-items: center; }
   @media (max-width: 900px) { .adoptGrid { grid-template-columns: 1fr 1fr; } }
-  @media (max-width: 560px) { .adoptGrid { grid-template-columns: 1fr; } }
+  @media (max-width: 560px) { .adoptGrid { grid-template-columns: 1fr; } .adoptPhoto { height: 180px; } }
 `;
 
 function tagVariant(status) {

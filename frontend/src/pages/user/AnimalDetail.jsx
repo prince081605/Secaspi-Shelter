@@ -29,7 +29,14 @@ const styles = `
   .detGuideTitle { font-weight: 700; color: var(--ink); margin-bottom: 0.5rem; font-size: 0.95rem; }
   .detGuideCategory { font-size: 0.75rem; text-transform: uppercase; color: var(--muted); letter-spacing: 0.5px; margin-bottom: 0.7rem; }
   .detGuideContent { font-size: 0.88rem; color: var(--ink-soft); line-height: 1.5; }
-  @media (max-width: 900px) { .detBody { grid-template-columns: 1fr; padding: 2rem 6vw; } }
+  @media (max-width: 900px) { .detBody { grid-template-columns: 1fr; padding: 2rem 6vw; gap: 2rem; } }
+  @media (max-width: 560px) {
+    .detBody { padding: 1.5rem 5vw; gap: 1.5rem; }
+    /* Fixed 380px hero is too tall for a phone; keep a photo-friendly 4:3 box instead. */
+    .detMain { height: auto; aspect-ratio: 4 / 3; font-size: 4rem; }
+    .detThumb { width: 56px; height: 56px; }
+    .detActions { gap: 0.6rem; }
+  }
 `;
 
 export default function AnimalDetail() {

@@ -4,7 +4,7 @@ import { findMatches } from '../../lib/matchmakerApi';
 import { PawPrint, Sparkles, Dog, Check, AlertTriangle } from 'lucide-react';
 
 const styles = `
-  .mmGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.4rem; }
+  .mmGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: 1.4rem; }
   .mmCard { overflow: hidden; }
   .mmPhoto { height: 190px; background: var(--bg-soft-2); display: flex; align-items: center; justify-content: center; font-size: 4.5rem; }
   .mmPhoto img { width: 100%; height: 100%; object-fit: cover; }
@@ -12,7 +12,7 @@ const styles = `
   .mmBar { height: 10px; border-radius: 999px; background: var(--bg-soft-2); overflow: hidden; margin: 0.5rem 0 0.7rem; }
   .mmBarFill { height: 100%; background: linear-gradient(90deg, #7c8b6b, #c1612e); }
   .mmReason { font-size: 0.83rem; color: var(--muted); display: flex; gap: 0.4rem; margin-bottom: 0.2rem; }
-  .mmForm { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.6rem; }
+  .mmForm { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 1rem; margin-bottom: 1.6rem; }
   .mmField label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--ink); margin-bottom: 0.35rem; }
 `;
 

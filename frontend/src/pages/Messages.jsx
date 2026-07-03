@@ -18,7 +18,13 @@ const styles = `
   .msgTheirs { align-self: flex-start; background: var(--bg-soft-2, #efe7d6); color: var(--ink, #34302a); border-bottom-left-radius: 3px; }
   .msgMeta { font-size: 0.68rem; opacity: 0.75; margin-top: 3px; }
   .msgComposer { display: flex; gap: 8px; margin-top: 10px; }
-  @media (max-width: 760px) { .msgWrap { grid-template-columns: 1fr; } }
+  @media (max-width: 760px) {
+    .msgWrap { grid-template-columns: 1fr; }
+    /* Stacked list + thread must share the screen: viewport-relative heights, wider bubbles. */
+    .msgList { max-height: 35vh; }
+    .msgScroll { max-height: min(440px, 50vh); }
+    .msgBubble { max-width: 88%; overflow-wrap: anywhere; }
+  }
 `;
 
 export default function Messages({ staff = false }) {
