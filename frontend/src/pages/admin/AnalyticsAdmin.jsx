@@ -66,7 +66,7 @@ export default function AnalyticsAdmin() {
         <Card label="Verified donations" value={peso(s.verified_donations_total)} sub="All-time total" />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 14, marginTop: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: 14, marginTop: 16 }}>
         <ChartBox title="Intake vs. adoptions (12 months)">
           <LineChart data={data.flow_by_month}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e7ddc9" />

@@ -68,7 +68,7 @@ function AddPersonForm({ type, onCancel, onAdded }) {
       {state.status === 'error' && <div className="ui-error">{state.error}</div>}
       {!selected ? (
         <>
-          <form onSubmit={search} style={{ display: 'flex', gap: 8 }}>
+          <form onSubmit={search} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <input className="ui-input" placeholder="Search user by name/email" aria-label="Search users by name or email" value={q} onChange={(e) => setQ(e.target.value)} />
             <button className="dashBtn" type="submit">Search</button>
             <button className="dashBtn" type="button" onClick={onCancel}>Cancel</button>
@@ -102,7 +102,7 @@ function AddPersonForm({ type, onCancel, onAdded }) {
             <label className="ui-label">Notes</label>
             <textarea className="ui-input" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button className="ui-btn-primary" type="submit" disabled={state.status === 'loading'}>
               {state.status === 'loading' ? 'Adding…' : 'Confirm add'}
             </button>

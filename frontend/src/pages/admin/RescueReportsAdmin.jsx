@@ -42,14 +42,14 @@ function DetailPanel({ report }) {
       {report.photo_url && (
         <div style={{ marginTop: 10 }}>
           <strong>Photo:</strong>
-          <div><img src={photoSrc(report.photo_url)} alt="Rescue report" style={{ maxWidth: 320, marginTop: 6, borderRadius: 8 }} /></div>
+          <div><img src={photoSrc(report.photo_url)} alt="Rescue report" style={{ maxWidth: 'min(320px, 100%)', marginTop: 6, borderRadius: 8 }} /></div>
         </div>
       )}
 
       <div style={{ marginTop: 10 }}>
         <strong><MapPin size={15} style={{ verticalAlign: '-3px' }} /> Exact location:</strong>
         {hasPin ? (
-          <div style={{ height: 300, marginTop: 6, borderRadius: 10, overflow: 'hidden' }}>
+          <div style={{ height: 'clamp(220px, 45vh, 300px)', marginTop: 6, borderRadius: 10, overflow: 'hidden' }}>
             <MapContainer center={center} zoom={16} style={{ height: '100%', width: '100%' }} scrollWheelZoom>
               <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
               <CircleMarker center={center} radius={11} pathOptions={{ color: URGENCY_COLOR[report.urgency] || '#c0392b', fillOpacity: 0.85 }}>
