@@ -885,7 +885,9 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {activeTab !== 'volunteer' && (
+          {/* Overview stat cards belong to the dashboard landing only — inside a module they're
+              redundant, so they aren't rendered there (any screen size). Volunteers never see them. */}
+          {activeTab !== 'volunteer' && activeNav === 'dashboard' && (
             <OverviewCards cards={activeTab === 'admin' ? (overview?.stats || []) : userStats} />
           )}
 
