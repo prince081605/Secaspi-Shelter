@@ -158,6 +158,21 @@
   .aa-module .dashFormGrid { grid-template-columns: 1fr; }
 }
 
+/* Compact "quick add" rows in the Medical panel (add-record, add-vaccination). Each control is
+   wrapped in an .aa-quickField label so it gets a small caption stacked above it — date pickers
+   never render placeholder text, so without this they'd read as blank, unlabeled boxes. The
+   field width is set inline per control; the input just fills it. */
+.aa-module .aa-quickField {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.aa-module .aa-quickField > .ui-label {
+  font-size: 0.72rem;
+  margin-bottom: 0.3rem;
+  white-space: nowrap;
+}
+
 /* ---------- Cards / panels / section titles ---------- */
 .aa-module .dashCard { background: var(--aa-paper); border-color: var(--aa-line); border-radius: var(--aa-radius); }
 .aa-module .dashSectionTitle { font-family: 'Fraunces', serif; color: var(--aa-ink); }

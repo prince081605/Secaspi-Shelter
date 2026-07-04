@@ -528,15 +528,33 @@ function MedicalManager({ animalId, onChanged }) {
           </table>
         </div>
       )}
-      <form onSubmit={handleAddRecord} style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8, alignItems: 'flex-end' }}>
-        <select className="ui-input" style={{ maxWidth: 130 }} value={recordForm.type} onChange={(e) => setRecordForm((f) => ({ ...f, type: e.target.value }))}>
-          {RECORD_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-        </select>
-        <input className="ui-input" style={{ maxWidth: 160 }} placeholder="Description" value={recordForm.description} onChange={(e) => setRecordForm((f) => ({ ...f, description: e.target.value }))} />
-        <input className="ui-input" style={{ maxWidth: 120 }} placeholder="Vet name" value={recordForm.vet_name} onChange={(e) => setRecordForm((f) => ({ ...f, vet_name: e.target.value }))} />
-        <input className="ui-input" style={{ maxWidth: 90 }} type="number" min="0" step="0.01" placeholder="Cost" value={recordForm.cost} onChange={(e) => setRecordForm((f) => ({ ...f, cost: e.target.value }))} />
-        <input className="ui-input" style={{ maxWidth: 140 }} type="date" required aria-label="Record date (required)" value={recordForm.record_date} onChange={(e) => setRecordForm((f) => ({ ...f, record_date: e.target.value }))} />
-        <input className="ui-input" style={{ maxWidth: 150 }} type="date" aria-label="Follow-up date (optional — creates a reminder)" title="Optional follow-up date — auto-creates a health reminder" value={recordForm.follow_up_date} onChange={(e) => setRecordForm((f) => ({ ...f, follow_up_date: e.target.value }))} />
+      <form onSubmit={handleAddRecord} style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8, alignItems: 'flex-end' }}>
+        <label className="aa-quickField" style={{ width: 130 }}>
+          <span className="ui-label">Type</span>
+          <select className="ui-input" value={recordForm.type} onChange={(e) => setRecordForm((f) => ({ ...f, type: e.target.value }))}>
+            {RECORD_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </label>
+        <label className="aa-quickField" style={{ width: 160 }}>
+          <span className="ui-label">Description</span>
+          <input className="ui-input" value={recordForm.description} onChange={(e) => setRecordForm((f) => ({ ...f, description: e.target.value }))} />
+        </label>
+        <label className="aa-quickField" style={{ width: 130 }}>
+          <span className="ui-label">Vet name</span>
+          <input className="ui-input" value={recordForm.vet_name} onChange={(e) => setRecordForm((f) => ({ ...f, vet_name: e.target.value }))} />
+        </label>
+        <label className="aa-quickField" style={{ width: 90 }}>
+          <span className="ui-label">Cost</span>
+          <input className="ui-input" type="number" min="0" step="0.01" value={recordForm.cost} onChange={(e) => setRecordForm((f) => ({ ...f, cost: e.target.value }))} />
+        </label>
+        <label className="aa-quickField" style={{ width: 150 }}>
+          <span className="ui-label ui-label-required">Record date</span>
+          <input className="ui-input" type="date" required value={recordForm.record_date} onChange={(e) => setRecordForm((f) => ({ ...f, record_date: e.target.value }))} />
+        </label>
+        <label className="aa-quickField" style={{ width: 160 }}>
+          <span className="ui-label">Follow-up date</span>
+          <input className="ui-input" type="date" title="Optional — auto-creates a health reminder for this date" value={recordForm.follow_up_date} onChange={(e) => setRecordForm((f) => ({ ...f, follow_up_date: e.target.value }))} />
+        </label>
         <button className="dashBtn dashBtnPrimary" type="submit" disabled={state.status === 'loading'}>+ Add</button>
       </form>
 
@@ -576,10 +594,19 @@ function MedicalManager({ animalId, onChanged }) {
           </table>
         </div>
       )}
-      <form onSubmit={handleAddVaccination} style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8, alignItems: 'flex-end' }}>
-        <input className="ui-input" style={{ maxWidth: 160 }} placeholder="Vaccine name *" required value={vaccinationForm.vaccine_name} onChange={(e) => setVaccinationForm((f) => ({ ...f, vaccine_name: e.target.value }))} />
-        <input className="ui-input" style={{ maxWidth: 140 }} type="date" required aria-label="Date given (required)" value={vaccinationForm.date_given} onChange={(e) => setVaccinationForm((f) => ({ ...f, date_given: e.target.value }))} />
-        <input className="ui-input" style={{ maxWidth: 140 }} type="date" value={vaccinationForm.next_due} onChange={(e) => setVaccinationForm((f) => ({ ...f, next_due: e.target.value }))} />
+      <form onSubmit={handleAddVaccination} style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8, alignItems: 'flex-end' }}>
+        <label className="aa-quickField" style={{ width: 170 }}>
+          <span className="ui-label ui-label-required">Vaccine name</span>
+          <input className="ui-input" required value={vaccinationForm.vaccine_name} onChange={(e) => setVaccinationForm((f) => ({ ...f, vaccine_name: e.target.value }))} />
+        </label>
+        <label className="aa-quickField" style={{ width: 150 }}>
+          <span className="ui-label ui-label-required">Date given</span>
+          <input className="ui-input" type="date" required value={vaccinationForm.date_given} onChange={(e) => setVaccinationForm((f) => ({ ...f, date_given: e.target.value }))} />
+        </label>
+        <label className="aa-quickField" style={{ width: 150 }}>
+          <span className="ui-label">Next due</span>
+          <input className="ui-input" type="date" title="Optional — when the next dose is due" value={vaccinationForm.next_due} onChange={(e) => setVaccinationForm((f) => ({ ...f, next_due: e.target.value }))} />
+        </label>
         <button className="dashBtn dashBtnPrimary" type="submit" disabled={state.status === 'loading'}>+ Add</button>
       </form>
     </div>
