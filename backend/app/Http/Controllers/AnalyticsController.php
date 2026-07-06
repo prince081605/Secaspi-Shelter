@@ -108,13 +108,24 @@ class AnalyticsController extends Controller
 
     private function speciesMix(): array
     {
-        return DB::table('animals')
-            ->selectRaw('species, COUNT(*) as count')
-            ->groupBy('species')
-            ->orderByDesc('count')
-            ->get()
-            ->map(fn ($r) => ['species' => $r->species ?: 'Unknown', 'count' => (int) $r->count])
-            ->all();
+        // Group case- and whitespace-insensitively in PHP (DB-agnostic) so spelling
+        // variants of the same species — "Dog", "dog", " DOG " — collapse into one slice
+        // instead of showing up as separate species.
+        $buckets = [];
+        foreach (DB::table('animals')->pluck('species') as $species) {
+            $trimmed = trim((string) $species);
+            $key = $trimmed === '' ? 'unknown' : mb_strtolower($trimmed);
+            if (! isset($buckets[$key])) {
+                $label = $trimmed === '' ? 'Unknown' : mb_convert_case($trimmed, MB_CASE_TITLE);
+                $buckets[$key] = ['species' => $label, 'count' => 0];
+            }
+            $buckets[$key]['count']++;
+        }
+
+        $mix = array_values($buckets);
+        usort($mix, fn ($a, $b) => $b['count'] <=> $a['count']);
+
+        return $mix;
     }
 
     /**
