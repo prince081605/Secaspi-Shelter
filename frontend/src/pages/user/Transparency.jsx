@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getTransparency } from '../../lib/publicHomeApi';
+import { labelFor } from '../../lib/donationCategories';
 
 const styles = `
   .tpBody { max-width: 920px; margin: 0 auto; padding: 3rem 1.5rem 4rem; }
@@ -30,6 +31,7 @@ const styles = `
   .tpFeedItem:last-child { border-bottom: none; }
   .tpFeedName { font-weight: 600; }
   .tpFeedDate { font-size: 0.78rem; color: var(--muted); }
+  .tpFeedCat { display: inline-block; margin-top: 0.25rem; font-size: 0.72rem; font-weight: 600; color: var(--brand-2); background: var(--brand-soft); border-radius: 999px; padding: 0.08rem 0.5rem; }
   .tpFeedAmt { font-weight: 700; color: var(--brand); white-space: nowrap; }
   .tpCatRow { margin-bottom: 1.1rem; }
   .tpCatRow:last-child { margin-bottom: 0; }
@@ -212,6 +214,7 @@ export default function Transparency() {
                     <span>
                       <span className="tpFeedName">{d.name}</span>
                       <div className="tpFeedDate">{d.date ? new Date(d.date).toLocaleDateString() : ''}</div>
+                      <div><span className="tpFeedCat">{labelFor(d.category)}</span></div>
                     </span>
                     <span className="tpFeedAmt">{peso(d.amount)}</span>
                   </li>

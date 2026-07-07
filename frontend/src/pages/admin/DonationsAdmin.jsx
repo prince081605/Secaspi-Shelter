@@ -9,6 +9,15 @@ import { labelFor } from '../../lib/donationCategories';
 
 const STATUSES = ['pending', 'verified', 'rejected'];
 
+// Fixed layout at 100% width so all columns fit the panel with no horizontal scroll: columns take
+// their assigned share, and long values (emails, category labels, references) wrap inside their
+// cell instead of forcing the table wider than its container.
+const TABLE_STYLES = `
+  table.donAdminTable { table-layout: fixed; width: 100%; min-width: 0; }
+  table.donAdminTable th, table.donAdminTable td { padding: 10px 10px; overflow-wrap: anywhere; white-space: normal; vertical-align: top; }
+  table.donAdminTable td { font-size: 0.9rem; }
+`;
+
 function fileSrc(path) {
   if (!path) return '';
   return path.startsWith('http') ? path : `${import.meta.env.VITE_API_BASE_URL}/storage/${path}`;
@@ -106,6 +115,7 @@ export default function DonationsAdmin({ isAdmin = false }) {
 
   return (
     <>
+      <style>{TABLE_STYLES}</style>
       <h2 className="dashSectionTitle"><HandCoins size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />Donation Management</h2>
       <StatsCards />
       {error && <div className="ui-error">{error}</div>}
@@ -147,17 +157,17 @@ export default function DonationsAdmin({ isAdmin = false }) {
         </div>
       ) : (
         <div className="dashTableWrap">
-          <table className="dashTable">
+          <table className="dashTable donAdminTable">
             <thead>
               <tr>
-                <th>Reference</th>
-                <th>Donor</th>
-                <th>Amount</th>
-                <th>Category</th>
-                <th>Method</th>
-                <th>Proof</th>
-                <th>Status</th>
-                {isAdmin && <th>Actions</th>}
+                <th style={{ width: '12%' }}>Reference</th>
+                <th style={{ width: '20%' }}>Donor</th>
+                <th style={{ width: '10%' }}>Amount</th>
+                <th style={{ width: '15%' }}>Category</th>
+                <th style={{ width: '9%' }}>Method</th>
+                <th style={{ width: '8%' }}>Proof</th>
+                <th style={{ width: '11%' }}>Status</th>
+                {isAdmin && <th style={{ width: '15%' }}>Actions</th>}
               </tr>
             </thead>
             <tbody>

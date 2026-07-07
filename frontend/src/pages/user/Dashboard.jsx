@@ -836,6 +836,9 @@ export default function Dashboard() {
                 >
                   <Trophy size={16} style={{ verticalAlign: '-3px' }} /> My Impact
                 </button>
+                <button className="dashNavBtn" onClick={() => navigate('/donations')}>
+                  <HandCoins size={16} style={{ verticalAlign: '-3px' }} /> My Donations
+                </button>
                 <button
                   className={'dashNavBtn ' + (activeNav === 'messages' ? 'dashNavBtnActive' : '')}
                   onClick={() => setActiveNav('messages')}

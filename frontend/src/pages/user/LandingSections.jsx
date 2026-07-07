@@ -82,6 +82,7 @@ export function Navbar({ shelterName, isLoggedIn, menuOpen, scrolled, onToggleMe
           <li><a href="/volunteer">Volunteer</a></li>
           <li><a href="/transparency">Transparency</a></li>
           <li><a href="#donate">Donate</a></li>
+          {isLoggedIn && <li><a href="/donations">My Donations</a></li>}
         </ul>
         <div className="lp-nav-actions">
           <button className="lp-nav-ghost" onClick={() => onNavigate(isLoggedIn ? "/dashboard" : "/login")}>
@@ -106,6 +107,7 @@ export function Navbar({ shelterName, isLoggedIn, menuOpen, scrolled, onToggleMe
         <a href="/transparency" onClick={onToggleMenu}>Transparency</a>
         <a href="#donate" onClick={onToggleMenu}>Donate</a>
         <a href="#report" onClick={onToggleMenu}>Report a stray</a>
+        {isLoggedIn && <a href="/donations" onClick={onToggleMenu}>My Donations</a>}
         <a href={isLoggedIn ? "/dashboard" : "/login"} onClick={onToggleMenu}>{isLoggedIn ? "Dashboard" : "Login"}</a>
       </div>
     </header>

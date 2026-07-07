@@ -132,7 +132,7 @@ class PublicHomeController extends Controller
                 ->where('donations.status', 'verified')
                 ->orderByDesc('donations.donated_at')
                 ->limit(10)
-                ->get(['donations.amount', 'donations.donated_at', 'donations.is_anonymous', 'users.full_name'])
+                ->get(['donations.amount', 'donations.donated_at', 'donations.is_anonymous', 'donations.category', 'users.full_name'])
                 ->map(function ($d) {
                     $name = (! $d->is_anonymous && $d->full_name) ? PublicStats::maskName($d->full_name) : 'Anonymous';
 
@@ -140,6 +140,7 @@ class PublicHomeController extends Controller
                         'name' => $name,
                         'amount' => (float) $d->amount,
                         'date' => $d->donated_at,
+                        'category' => $d->category,
                     ];
                 })
                 ->values();

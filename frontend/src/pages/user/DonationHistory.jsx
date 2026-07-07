@@ -4,8 +4,11 @@ import { listDonations } from '../../lib/donationsApi';
 import { labelFor } from '../../lib/donationCategories';
 
 const styles = `
-  .donHistTableWrap { overflow-x: auto; }
-  .donHistTable { width: 100%; min-width: 560px; }
+  .donHistTableWrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; }
+  .donHistTable { width: 100%; min-width: 620px; border-collapse: collapse; }
+  /* Keep every cell on one line so the table scrolls horizontally as a unit instead of
+     wrapping long values (reference nos., category labels) into tall, cramped rows. */
+  .donHistTable th, .donHistTable td { white-space: nowrap; }
 `;
 
 function statusVariant(status) {
