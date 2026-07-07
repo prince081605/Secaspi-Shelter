@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { createDonation } from '../../lib/donationsApi';
 import { getTransparency } from '../../lib/publicHomeApi';
+import { DONATION_CATEGORIES, NEEDED_MOST_LABEL, NEEDED_MOST_VALUE } from '../../lib/donationCategories';
 
 const peso = (n) => `₱${Number(n || 0).toLocaleString()}`;
 
@@ -40,6 +41,7 @@ export default function Donate() {
     preselected && !PRESET_AMOUNTS.includes(preselected) ? String(preselected) : ''
   );
   const [paymentMethod, setPaymentMethod] = useState('gcash');
+  const [category, setCategory] = useState('');
   const [proofImage, setProofImage] = useState(null);
   const [proofPreviewUrl, setProofPreviewUrl] = useState('');
   const [listPublicly, setListPublicly] = useState(false);
@@ -85,6 +87,9 @@ export default function Donate() {
       formData.append('amount', amount);
       formData.append('payment_method', paymentMethod);
       if (proofImage) formData.append('proof_image', proofImage);
+      // A real category is sent as-is; the explicit "needed most" choice sends nothing so the
+      // backend records it as null (and the spillover logic pools it toward the neediest category).
+      if (category && category !== NEEDED_MOST_VALUE) formData.append('category', category);
       // Checked = wants to be named publicly (not anonymous).
       formData.append('is_anonymous', listPublicly ? '0' : '1');
 
@@ -169,6 +174,36 @@ export default function Donate() {
               </div>
 
               <div className="ui-field">
+                <label className="ui-label ui-label-required">Where should your gift go?</label>
+                <select className="ui-select" value={category} onChange={(e) => setCategory(e.target.value)} required>
+                  <option value="" disabled>Choose a category…</option>
+                  {DONATION_CATEGORIES.map((c) => (
+                    <option key={c.key} value={c.key}>{c.label}</option>
+                  ))}
+                  <option value={NEEDED_MOST_VALUE}>{NEEDED_MOST_LABEL}</option>
+                </select>
+                {(() => {
+                  if (!category) return null;
+                  if (category === NEEDED_MOST_VALUE) {
+                    return (
+                      <p className="ui-muted" style={{ fontSize: '0.82rem', marginTop: '0.4rem' }}>
+                        We'll direct your gift to whichever category needs it most this month.
+                      </p>
+                    );
+                  }
+                  const cat = (transparency?.categories || []).find((c) => c.key === category);
+                  if (!cat) return null;
+                  return (
+                    <p className="ui-muted" style={{ fontSize: '0.82rem', marginTop: '0.4rem' }}>
+                      {cat.funded
+                        ? `This category has met its ${peso(cat.goal)} monthly goal — extra gifts flow to categories still in need.`
+                        : `${cat.progress_pct}% of this category's ${peso(cat.goal)} monthly goal is funded so far.`}
+                    </p>
+                  );
+                })()}
+              </div>
+
+              <div className="ui-field">
                 <label className="ui-label">Payment method</label>
                 <select className="ui-select" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
                   <option value="gcash">GCash</option>
@@ -220,7 +255,7 @@ export default function Donate() {
                 </label>
               </div>
 
-              <button className="ui-btn-primary" style={{ width: '100%' }} type="submit" disabled={submitting || !amount}>
+              <button className="ui-btn-primary" style={{ width: '100%' }} type="submit" disabled={submitting || !amount || !category}>
                 {submitting ? 'Submitting…' : `Donate ₱${Number(amount || 0).toLocaleString()}`}
               </button>
             </form>

@@ -5,6 +5,7 @@ import StatusBadge from '../../components/StatusBadge';
 import Pagination from '../../components/Pagination';
 import DashCard from '../../components/DashCard';
 import useIsMobile from '../../lib/useIsMobile';
+import { labelFor } from '../../lib/donationCategories';
 
 const STATUSES = ['pending', 'verified', 'rejected'];
 
@@ -129,6 +130,7 @@ export default function DonationsAdmin({ isAdmin = false }) {
               subtitle={d.reference_no}
               fields={[
                 { label: 'Amount', value: money(d.amount) },
+                { label: 'Category', value: labelFor(d.category) },
                 { label: 'Method', value: d.payment_method },
                 { label: 'Proof', value: d.proof_image ? <a href={fileSrc(d.proof_image)} target="_blank" rel="noreferrer">View</a> : '—' },
                 { label: 'Status', value: <StatusBadge status={d.status} /> },
@@ -151,6 +153,7 @@ export default function DonationsAdmin({ isAdmin = false }) {
                 <th>Reference</th>
                 <th>Donor</th>
                 <th>Amount</th>
+                <th>Category</th>
                 <th>Method</th>
                 <th>Proof</th>
                 <th>Status</th>
@@ -163,6 +166,7 @@ export default function DonationsAdmin({ isAdmin = false }) {
                   <td>{d.reference_no}</td>
                   <td>{d.donor?.full_name || '—'}<br /><span style={{ fontSize: 12, color: 'var(--muted)' }}>{d.donor?.email}</span></td>
                   <td>{money(d.amount)}</td>
+                  <td>{labelFor(d.category)}</td>
                   <td>{d.payment_method}</td>
                   <td>
                     {d.proof_image ? (

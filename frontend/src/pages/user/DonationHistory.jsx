@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { listDonations } from '../../lib/donationsApi';
+import { labelFor } from '../../lib/donationCategories';
 
 const styles = `
   .donHistTableWrap { overflow-x: auto; }
@@ -71,6 +72,7 @@ export default function DonationHistory() {
                 <tr>
                   <th style={{ textAlign: 'left', padding: '0.9rem 1.1rem', borderBottom: '1px solid var(--line)', color: 'var(--muted)' }}>Reference</th>
                   <th style={{ textAlign: 'left', padding: '0.9rem 1.1rem', borderBottom: '1px solid var(--line)', color: 'var(--muted)' }}>Amount</th>
+                  <th style={{ textAlign: 'left', padding: '0.9rem 1.1rem', borderBottom: '1px solid var(--line)', color: 'var(--muted)' }}>Category</th>
                   <th style={{ textAlign: 'left', padding: '0.9rem 1.1rem', borderBottom: '1px solid var(--line)', color: 'var(--muted)' }}>Method</th>
                   <th style={{ textAlign: 'left', padding: '0.9rem 1.1rem', borderBottom: '1px solid var(--line)', color: 'var(--muted)' }}>Status</th>
                   <th style={{ textAlign: 'left', padding: '0.9rem 1.1rem', borderBottom: '1px solid var(--line)', color: 'var(--muted)' }}>Date</th>
@@ -82,6 +84,7 @@ export default function DonationHistory() {
                   <tr key={d.id}>
                     <td style={{ padding: '0.9rem 1.1rem', borderBottom: '1px solid var(--line)' }}>{d.reference_no}</td>
                     <td style={{ padding: '0.9rem 1.1rem', borderBottom: '1px solid var(--line)' }}>₱{Number(d.amount).toLocaleString()}</td>
+                    <td style={{ padding: '0.9rem 1.1rem', borderBottom: '1px solid var(--line)' }}>{labelFor(d.category)}</td>
                     <td style={{ padding: '0.9rem 1.1rem', borderBottom: '1px solid var(--line)', textTransform: 'capitalize' }}>{d.payment_method}</td>
                     <td style={{ padding: '0.9rem 1.1rem', borderBottom: '1px solid var(--line)' }}>
                       <span className={`ui-tag ${statusVariant(d.status)}`}>{d.status}</span>

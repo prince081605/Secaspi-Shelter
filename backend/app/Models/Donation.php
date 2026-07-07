@@ -12,6 +12,7 @@ class Donation extends Model
         'reference_no',
         'amount',
         'payment_method',
+        'category',
         'proof_image',
         'status',
         'is_anonymous',

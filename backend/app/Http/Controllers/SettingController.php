@@ -48,6 +48,12 @@ class SettingController extends Controller
             'about_us_content' => ['nullable', 'string'],
             'adoption_policies' => ['nullable', 'string'],
             'donation_monthly_goal' => ['nullable', 'numeric', 'min:0'],
+            // Per-category monthly funding goals for the Transparency allocation board.
+            'cat_goal_personnel' => ['nullable', 'numeric', 'min:0'],
+            'cat_goal_facility' => ['nullable', 'numeric', 'min:0'],
+            'cat_goal_transportation' => ['nullable', 'numeric', 'min:0'],
+            'cat_goal_animal_care' => ['nullable', 'numeric', 'min:0'],
+            'cat_goal_cleaning' => ['nullable', 'numeric', 'min:0'],
             // AI Shelter Assistant controls (the API key lives in env, never here).
             'ai_assistant_enabled' => ['nullable', 'in:0,1'],
             'ai_daily_message_cap' => ['nullable', 'integer', 'min:1', 'max:1000'],

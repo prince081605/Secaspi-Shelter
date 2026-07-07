@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Donation;
 use App\Notifications\DonationStatusChanged;
+use App\Support\DonationCategories;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class DonationController extends Controller
 {
@@ -17,6 +19,7 @@ class DonationController extends Controller
         $validator = Validator::make($request->all(), [
             'amount'         => ['required', 'numeric', 'min:1'],
             'payment_method' => ['required', 'in:gcash,cash,bank'],
+            'category'       => ['nullable', Rule::in(DonationCategories::keys())],
             'proof_image'    => ['required_if:payment_method,gcash', 'image', 'max:5120'],
             'is_anonymous'   => ['sometimes', 'boolean'],
         ]);
@@ -38,6 +41,7 @@ class DonationController extends Controller
                 'reference_no'   => $referenceNo,
                 'amount'         => $request->input('amount'),
                 'payment_method' => $request->input('payment_method'),
+                'category'       => $request->input('category'),
                 'proof_image'    => $proofPath,
                 'status'         => 'pending',
                 // Default anonymous unless the donor explicitly opts in to be named.
@@ -60,6 +64,7 @@ class DonationController extends Controller
                 'reference_no'   => $donation->reference_no,
                 'amount'         => $donation->amount,
                 'payment_method' => $donation->payment_method,
+                'category'       => $donation->category,
                 'status'         => $donation->status,
             ],
         ], 201);
@@ -136,6 +141,7 @@ class DonationController extends Controller
             'reference_no' => $d->reference_no,
             'amount' => $d->amount,
             'payment_method' => $d->payment_method,
+            'category' => $d->category,
             'proof_image' => $d->proof_image ? Storage::url($d->proof_image) : null,
             'status' => $d->status,
             'donated_at' => $d->donated_at,

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\DonationCategories;
 use App\Support\PublicStats;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -146,6 +147,27 @@ class PublicHomeController extends Controller
             $fundUsageKey = DB::table('settings')->where('key', 'fund_usage_image_path')->value('value');
             $fundUsageImage = $fundUsageKey ? Storage::url($fundUsageKey) : null;
 
+            // Per-category allocation of THIS month's verified donations, with spillover: a category
+            // donated past its goal (plus the "needed most" pool) is redistributed to the categories
+            // that still fall short. Keyed to the same monthly window as the goal bar above.
+            $categoryRows = $verified()
+                ->where('donated_at', '>=', $monthStart)
+                ->selectRaw('category, COALESCE(SUM(amount), 0) as total')
+                ->groupBy('category')
+                ->get();
+
+            $direct = [];
+            $needyPool = 0.0;
+            foreach ($categoryRows as $row) {
+                if ($row->category !== null && in_array($row->category, DonationCategories::keys(), true)) {
+                    $direct[$row->category] = (float) $row->total;
+                } else {
+                    // null category or any legacy/unknown value → "where it's needed most".
+                    $needyPool += (float) $row->total;
+                }
+            }
+            $allocation = DonationCategories::allocate($direct, $needyPool);
+
             return response()->json([
                 'monthly_goal' => $monthlyGoal,
                 'this_month_raised' => $thisMonthRaised,
@@ -157,6 +179,9 @@ class PublicHomeController extends Controller
                 'monthly_trend' => $monthlyTrend,
                 'recent_donations' => $recentDonations,
                 'fund_usage_image' => $fundUsageImage,
+                'categories' => $allocation['categories'],
+                'category_redistributed' => $allocation['redistributed_total'],
+                'category_surplus' => $allocation['surplus'],
             ]);
         } catch (\Throwable $e) {
             // Log internally; never leak exception/SQL detail to anonymous clients.

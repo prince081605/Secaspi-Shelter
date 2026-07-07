@@ -6,6 +6,11 @@ import {
   adminUploadSettingImage,
   settingImageUrl,
 } from '../../lib/settingsApi';
+import { DONATION_CATEGORIES, goalSettingKey } from '../../lib/donationCategories';
+
+const CATEGORY_GOAL_FIELDS = Object.fromEntries(
+  DONATION_CATEGORIES.map((c) => [goalSettingKey(c.key), '']),
+);
 
 const FIELDS = {
   shelter_name: '',
@@ -20,6 +25,7 @@ const FIELDS = {
   about_us_content: '',
   adoption_policies: '',
   donation_monthly_goal: '',
+  ...CATEGORY_GOAL_FIELDS,
   ai_assistant_enabled: '0',
   ai_daily_message_cap: '20',
   ai_persona: '',
@@ -156,6 +162,29 @@ export default function SettingsAdmin({ onSaved } = {}) {
           <div className="ui-field">
             <label className="ui-label">Monthly fundraising goal (₱)</label>
             <input className="ui-input" type="number" min="0" value={form.donation_monthly_goal} onChange={handleChange('donation_monthly_goal')} placeholder="80220" />
+          </div>
+
+          <div className="ui-field">
+            <label className="ui-label">Per-category monthly goals (₱)</label>
+            <p className="ui-muted" style={{ fontSize: '0.82rem', margin: '0 0 0.6rem' }}>
+              Donors choose a category when giving. Once a category hits its goal, extra donations flow
+              to categories that still need funding. Leave blank to use the default.
+            </p>
+            {DONATION_CATEGORIES.map((c) => (
+              <div key={c.key} style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', marginBottom: '0.5rem' }}>
+                <span style={{ flex: 1, fontSize: '0.88rem' }}>{c.label}</span>
+                <input
+                  className="ui-input"
+                  style={{ maxWidth: 160 }}
+                  type="number"
+                  min="0"
+                  value={form[goalSettingKey(c.key)]}
+                  onChange={handleChange(goalSettingKey(c.key))}
+                  placeholder={String(c.defaultGoal)}
+                  aria-label={`${c.label} monthly goal`}
+                />
+              </div>
+            ))}
           </div>
           <div className="ui-field">
             <label className="ui-label">"Where your donations go" image</label>

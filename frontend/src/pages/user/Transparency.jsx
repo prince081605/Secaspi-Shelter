@@ -31,6 +31,14 @@ const styles = `
   .tpFeedName { font-weight: 600; }
   .tpFeedDate { font-size: 0.78rem; color: var(--muted); }
   .tpFeedAmt { font-weight: 700; color: var(--brand); white-space: nowrap; }
+  .tpCatRow { margin-bottom: 1.1rem; }
+  .tpCatRow:last-child { margin-bottom: 0; }
+  .tpCatTop { display: flex; justify-content: space-between; align-items: baseline; gap: 0.6rem; margin-bottom: 0.4rem; flex-wrap: wrap; }
+  .tpCatName { font-weight: 600; font-size: 0.92rem; }
+  .tpCatFunded { display: inline-block; margin-left: 0.4rem; font-size: 0.72rem; font-weight: 700; color: var(--brand); background: var(--brand-soft); border-radius: 999px; padding: 0.1rem 0.5rem; vertical-align: middle; }
+  .tpCatVal { font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
+  .tpCatVal strong { color: var(--fg, inherit); }
+  .tpCatNote { display: flex; gap: 0.6rem; align-items: flex-start; margin-top: 1.3rem; padding: 0.9rem 1rem; border-radius: 10px; background: var(--brand-soft); font-size: 0.85rem; line-height: 1.45; }
   .tpUsageImg { width: 100%; border-radius: 12px; border: 1px solid var(--line); display: block; }
   .tpCta { text-align: center; margin-top: 2.5rem; }
   @media (max-width: 560px) {
@@ -107,6 +115,45 @@ export default function Transparency() {
                 <div className="tpBarFill" style={{ width: `${Math.min(100, data.progress_pct)}%` }} />
               </div>
             </div>
+
+            {/* Per-category allocation with spillover */}
+            {Array.isArray(data.categories) && data.categories.length > 0 && (
+              <div className="ui-card" style={{ padding: '1.6rem', marginTop: '1rem' }}>
+                <h3 className="ui-h2" style={{ fontSize: '1.1rem', marginBottom: '0.3rem' }}>Fund allocation by category</h3>
+                <p className="ui-muted" style={{ fontSize: '0.85rem', marginBottom: '1.2rem' }}>
+                  How this month's donations are distributed across our expense categories.
+                </p>
+                {data.categories.map((c) => (
+                  <div className="tpCatRow" key={c.key}>
+                    <div className="tpCatTop">
+                      <span className="tpCatName">
+                        {c.label}
+                        {c.funded && <span className="tpCatFunded">Funded ✓</span>}
+                      </span>
+                      <span className="tpCatVal">
+                        <strong>{peso(c.allocated)}</strong> / {peso(c.goal)} · {c.progress_pct}%
+                      </span>
+                    </div>
+                    <div className="tpBarTrack">
+                      <div className="tpBarFill" style={{ width: `${Math.min(100, c.progress_pct)}%` }} />
+                    </div>
+                  </div>
+                ))}
+                <div className="tpCatNote">
+                  <span aria-hidden="true">↻</span>
+                  <span>
+                    {Number(data.category_redistributed) > 0 ? (
+                      <>Once a category reaches its monthly goal, extra donations automatically flow to
+                      categories that still need support — <strong>{peso(data.category_redistributed)}</strong> has
+                      been redirected this way this month.</>
+                    ) : (
+                      <>Once a category reaches its monthly goal, any extra donations automatically flow to
+                      categories that still need support.</>
+                    )}
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Headline stats */}
             <div className="tpGrid tpStats">
