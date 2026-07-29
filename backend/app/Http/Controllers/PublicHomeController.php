@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Animal;
 use App\Support\DonationCategories;
 use App\Support\PublicStats;
 use Illuminate\Support\Carbon;
@@ -206,6 +207,11 @@ class PublicHomeController extends Controller
                 ]);
             }
 
+            // rescue_story backs the hover panel on the landing page's dog cards. Guarded the
+            // same way as the tables above: an environment whose schema predates the column
+            // still gets a valid response, just without the story.
+            $hasStory = DB::getSchemaBuilder()->hasColumn('animals', 'rescue_story');
+
             $query = DB::table('animals')
                 ->select([
                     'animals.id as id',
@@ -217,6 +223,10 @@ class PublicHomeController extends Controller
                 ->whereNotIn('animals.status', ['archived', 'adopted'])
                 ->orderByDesc('animals.id')
                 ->limit(8);
+
+            if ($hasStory) {
+                $query = $query->addSelect('animals.rescue_story');
+            }
 
             if ($photosTableExists) {
                 // Pick exactly one photo per animal (prefer is_main, else the earliest row),
@@ -234,15 +244,9 @@ class PublicHomeController extends Controller
 
             $animals = $query->get();
 
-            $statusToLabel = function ($status) {
-                return match ($status) {
-                    'available' => 'Available for adoption',
-                    'adopted' => 'Adopted',
-                    'fostered' => 'In foster care',
-                    'medical' => 'Medical recovery',
-                    default => 'Status: '.$status,
-                };
-            };
+            // Was an inline closure duplicating the same mapping; moved to Animal so the
+            // adoption list and this page can't word the same status differently.
+            $statusToLabel = fn ($status) => Animal::statusLabel($status);
 
             return response()->json([
                 'animals' => $animals->map(function ($a) use ($statusToLabel) {
@@ -255,6 +259,9 @@ class PublicHomeController extends Controller
                         // Keep backward-compatible key expected by frontend. Resolve the
                         // stored key to an absolute URL so it works on any disk (local/S3).
                         'photo' => $a->photo_url ? Storage::url($a->photo_url) : '',
+                        // Empty string rather than null so the frontend's truthiness check
+                        // reads the same whether the column is missing or merely unfilled.
+                        'story' => isset($a->rescue_story) ? (string) $a->rescue_story : '',
                     ];
                 })->all(),
             ]);

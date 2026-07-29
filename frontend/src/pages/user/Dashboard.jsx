@@ -5,6 +5,7 @@ import { auth } from '../../lib/auth';
 import { listMyAdoptionApplications, listMyFosterApplications, browseAnimals } from '../../lib/animalsApi';
 import { updateProfile, changePassword } from '../../lib/profileApi';
 import { getPublicSettings } from '../../lib/settingsApi';
+import Reveal from '../../components/Reveal';
 import {
   Clock, Heart, User, Pencil, Lock, ClipboardList, Dog, Trophy, LayoutDashboard,
   ArrowLeft, Menu, X, LogOut, MessageSquare, PawPrint, Bell, Inbox, HeartHandshake,
@@ -66,12 +67,14 @@ function safeRoleFromUser(user) {
 }
 
 function OverviewCards({ cards }) {
+  // One observer for the whole row; each card's --i staggers it 100ms behind the last.
   return (
-    <div className="dashGridCards">
-      {cards.map((c) => (
+    <Reveal variant="group" className="dashGridCards">
+      {cards.map((c, i) => (
         <div
           key={c.key}
-          className={"dashCard " + (c.variant === 'green' ? 'dashCardGreen' : c.variant)}
+          style={{ '--i': i }}
+          className={"dashCard ui-reveal-item " + (c.variant === 'green' ? 'dashCardGreen' : c.variant)}
         >
           <div className="dashCardValue">
             {c.value}
@@ -80,7 +83,7 @@ function OverviewCards({ cards }) {
           {c.sub ? <div className="dashCardSub">{c.sub}</div> : null}
         </div>
       ))}
-    </div>
+    </Reveal>
   );
 }
 

@@ -110,7 +110,11 @@ class AnimalController extends Controller
                 'gender' => $animal->gender,
                 'size' => $animal->size,
                 'weight' => $animal->weight,
+                // Raw enum for any consumer switching on it; the label is what the detail
+                // page's hero pill displays, shared with the list and landing page so the
+                // same animal never reads "available" here and "Available for adoption" there.
                 'status' => $animal->status,
+                'status_label' => Animal::statusLabel($animal->status),
                 'rescue_story' => $animal->rescue_story,
                 'behavioral_assessment' => $animal->behavioral_assessment,
                 'qr_code' => $qrCode ? Storage::url($qrCode) : null,
@@ -500,10 +504,17 @@ class AnimalController extends Controller
             'age' => $animal->age,
             'gender' => $animal->gender,
             'size' => $animal->size,
+            // Raw enum stays — the status filter and tag-variant logic switch on it. The
+            // label is a separate field purely for display, so consumers can choose.
             'status' => $animal->status,
+            'status_label' => Animal::statusLabel($animal->status),
             'photo' => $animal->mainPhoto && $animal->mainPhoto->photo_url
                 ? Storage::url($animal->mainPhoto->photo_url)
                 : null,
+            // Backs the frosted story panel on the adoption cards. Cast to string so an
+            // unfilled story arrives as '' rather than null, matching the featured-animals
+            // endpoint and keeping the frontend's truthiness check identical on both.
+            'story' => (string) ($animal->rescue_story ?? ''),
         ];
     }
 }

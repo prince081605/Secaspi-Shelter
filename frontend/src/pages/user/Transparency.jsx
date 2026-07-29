@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getTransparency } from '../../lib/publicHomeApi';
 import { labelFor } from '../../lib/donationCategories';
+import Reveal from '../../components/Reveal';
 
 const styles = `
   .tpBody { max-width: 920px; margin: 0 auto; padding: 3rem 1.5rem 4rem; }
@@ -102,7 +103,7 @@ export default function Transparency() {
         {data && (
           <>
             {/* Monthly goal progress */}
-            <div className="ui-card" style={{ padding: '1.6rem' }}>
+            <Reveal className="ui-card" style={{ padding: '1.6rem' }}>
               <div className="tpGoalTop">
                 <div>
                   <div className="tpGoalRaised">{peso(data.this_month_raised)}</div>
@@ -116,11 +117,11 @@ export default function Transparency() {
               <div className="tpBarTrack">
                 <div className="tpBarFill" style={{ width: `${Math.min(100, data.progress_pct)}%` }} />
               </div>
-            </div>
+            </Reveal>
 
             {/* Per-category allocation with spillover */}
             {Array.isArray(data.categories) && data.categories.length > 0 && (
-              <div className="ui-card" style={{ padding: '1.6rem', marginTop: '1rem' }}>
+              <Reveal className="ui-card" style={{ padding: '1.6rem', marginTop: '1rem' }}>
                 <h3 className="ui-h2" style={{ fontSize: '1.1rem', marginBottom: '0.3rem' }}>Fund allocation by category</h3>
                 <p className="ui-muted" style={{ fontSize: '0.85rem', marginBottom: '1.2rem' }}>
                   How this month's donations are distributed across our expense categories.
@@ -154,28 +155,30 @@ export default function Transparency() {
                     )}
                   </span>
                 </div>
-              </div>
+              </Reveal>
             )}
 
-            {/* Headline stats */}
-            <div className="tpGrid tpStats">
-              <div className="ui-card tpStat">
+            {/* Headline stats — one observer for the row, children staggered by --i */}
+            <Reveal variant="group" className="tpGrid tpStats">
+              <div className="ui-card tpStat ui-reveal-item" style={{ '--i': 0 }}>
                 <div className="tpStatValue">{peso(data.total_raised)}</div>
                 <div className="tpStatLabel">Total raised (verified)</div>
               </div>
-              <div className="ui-card tpStat">
+              <div className="ui-card tpStat ui-reveal-item" style={{ '--i': 1 }}>
                 <div className="tpStatValue">{Number(data.donation_count || 0).toLocaleString()}</div>
                 <div className="tpStatLabel">Donations received</div>
               </div>
-              <div className="ui-card tpStat">
+              <div className="ui-card tpStat ui-reveal-item" style={{ '--i': 2 }}>
                 <div className="tpStatValue">{Number(data.donor_count || 0).toLocaleString()}</div>
                 <div className="tpStatLabel">Generous donors</div>
               </div>
-            </div>
+            </Reveal>
 
             {/* By method + trend */}
             <div className="tpGrid tpTwo">
-              <div className="ui-card" style={{ padding: '1.4rem' }}>
+              {/* Side-by-side pair slides in from its own edge, so the two cards meet in
+                  the middle rather than both rising identically. */}
+              <Reveal variant="left" className="ui-card" style={{ padding: '1.4rem' }}>
                 <h3 className="ui-h2" style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>By payment method</h3>
                 {methodEntries.length === 0 && <p className="ui-muted">No verified donations yet.</p>}
                 {methodEntries.map(([method, total]) => (
@@ -187,9 +190,9 @@ export default function Transparency() {
                     <span className="tpMethodVal">{peso(total)}</span>
                   </div>
                 ))}
-              </div>
+              </Reveal>
 
-              <div className="ui-card" style={{ padding: '1.4rem' }}>
+              <Reveal variant="right" className="ui-card" style={{ padding: '1.4rem' }}>
                 <h3 className="ui-h2" style={{ fontSize: '1.1rem', marginBottom: '0.2rem' }}>Last 6 months</h3>
                 <div className="tpChart">
                   {trend.map((t, i) => (
@@ -199,11 +202,11 @@ export default function Transparency() {
                     </div>
                   ))}
                 </div>
-              </div>
+              </Reveal>
             </div>
 
             {/* Recent donations */}
-            <div className="ui-card" style={{ padding: '1.4rem', marginTop: '1rem' }}>
+            <Reveal className="ui-card" style={{ padding: '1.4rem', marginTop: '1rem' }}>
               <h3 className="ui-h2" style={{ fontSize: '1.1rem', marginBottom: '0.8rem' }}>Recent donations</h3>
               {(!data.recent_donations || data.recent_donations.length === 0) && (
                 <p className="ui-muted">No verified donations yet — be the first to give!</p>
@@ -220,17 +223,17 @@ export default function Transparency() {
                   </li>
                 ))}
               </ul>
-            </div>
+            </Reveal>
 
             {/* Fund usage image (placeholder until the shelter uploads one) */}
-            <div className="ui-card" style={{ padding: '1.4rem', marginTop: '1rem' }}>
+            <Reveal className="ui-card" style={{ padding: '1.4rem', marginTop: '1rem' }}>
               <h3 className="ui-h2" style={{ fontSize: '1.1rem', marginBottom: '0.8rem' }}>How we use your donations</h3>
               <img
                 className="tpUsageImg"
                 src={data.fund_usage_image || '/fund-usage-placeholder.svg'}
                 alt="How the shelter uses donations"
               />
-            </div>
+            </Reveal>
 
             <div className="tpCta">
               <button className="ui-btn-primary" onClick={() => navigate('/donate')}>Make a donation</button>

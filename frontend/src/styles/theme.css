@@ -49,8 +49,29 @@
 
   --radius: 16px;
   --radius-sm: 10px;
+
+  /* Button size scale. Single source of truth for both button families — the app-wide
+     .ui-btn-* here and the landing page's .lp-btn — which previously each hardcoded their
+     own near-but-not-quite-equal values (0.85rem/1.8rem/50px vs 14px/26px/999px) and drifted
+     apart. Heights are a min-height, not a fixed height, so a button that wraps grows rather
+     than clipping its label. --btn-h-min is the 44px tap target Apple's HIG and WCAG 2.2
+     target size both call for; on touch layouts every control is raised to it. */
+  --btn-h: 48px;
+  --btn-h-sm: 40px;
+  --btn-h-min: 44px;
+  --btn-pad-x: 26px;
+  --btn-pad-x-sm: 18px;
+  --btn-font: 15px;
+  --btn-font-sm: 14px;
+  --btn-radius: 999px;
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Scroll-reveal motion. Tune the whole app's entrance feel from these three.
+     Override per element for a one-off, e.g. style={{ '--reveal-duration': '0.8s' }}. */
+  --reveal-slide: 100px;      /* horizontal travel for slide-left / slide-right */
+  --reveal-rise: 40px;        /* vertical travel for the default slide-up */
+  --reveal-duration: 1.5s;
   --shadow-sm: 0 1px 2px rgba(43, 36, 32, 0.06), 0 1px 1px rgba(43, 36, 32, 0.04);
   --shadow-md: 0 12px 28px -12px rgba(43, 36, 32, 0.18);
   --shadow-lg: 0 24px 48px -18px rgba(43, 36, 32, 0.22);
@@ -89,10 +110,109 @@ body {
 
 .ui-animate-in { animation: uiFadeUp 0.5s var(--ease-out) both; }
 
+/* ---- scroll reveal ----
+   Entrance animations for user-facing pages, driven by the useInView hook (src/lib/useInView.js):
+   put the ref on a container, then append `is-visible` once it scrolls in.
+
+       const [ref, inView] = useInView();
+       <div ref={ref} className={`ui-reveal-group${inView ? ' is-visible' : ''}`}>
+         {items.map((it, i) => <Card key={it.id} className="ui-reveal-item" style={{ '--i': i }} />)}
+       </div>
+
+   These animate the independent `translate` property rather than `transform`, following the
+   landing page's convention (LandingPage.css): a card's hover lift also animates `transform`,
+   and if the reveal used it too the two would overwrite each other instead of composing. */
+@keyframes uiRevealUp {
+  from { opacity: 0; translate: 0 var(--reveal-rise, 40px); }
+  to { opacity: 1; translate: 0 0; }
+}
+@keyframes uiRevealLeft {
+  from { opacity: 0; translate: calc(-1 * var(--reveal-slide, 100px)) 0; }
+  to { opacity: 1; translate: 0 0; }
+}
+@keyframes uiRevealRight {
+  from { opacity: 0; translate: var(--reveal-slide, 100px) 0; }
+  to { opacity: 1; translate: 0 0; }
+}
+
+/* These use `animation`, not `transition`, and that choice is load-bearing. Cards routinely
+   declare their own `transition: transform .2s, box-shadow .2s` for a hover lift, and the
+   `transition` shorthand replaces the whole property — so a transition-based reveal on the
+   same element gets silently wiped, delay and all (`.adoptCard` in Adoption.jsx did exactly
+   that to all 12 cards). Animations are a separate channel: the reveal and the card's own
+   hover transition coexist instead of overwriting each other. */
+.ui-reveal,
+.ui-reveal-left,
+.ui-reveal-right,
+.ui-reveal-item { opacity: 0; }
+
+/* Stagger comes from a --i custom property set per item, so it scales to any list length.
+   The landing page's older nth-child(2..5) rules gave every 6th-and-later item a delay of
+   zero, so the tail of a long list popped in as one block. */
+/* Each revealed state declares `opacity: 1` *as well as* the animation. A running animation
+   sits in a higher cascade origin, so it still owns opacity while it plays and the fade-in
+   looks normal. But if the animation never applies at all — unsupported, stripped, or
+   otherwise dropped — the declared value stands and the content is simply visible. Without
+   it, `opacity: 0` from the base rule would be the last word and the element would never
+   appear. Nothing here may leave content permanently invisible. */
+.ui-reveal.is-visible,
+.ui-reveal-group.is-visible .ui-reveal-item {
+  opacity: 1;
+  animation: uiRevealUp var(--reveal-duration, 1.5s) ease both;
+  animation-delay: calc(min(var(--i, 0), 8) * 100ms);
+}
+.ui-reveal-left.is-visible {
+  opacity: 1;
+  animation: uiRevealLeft var(--reveal-duration, 1.5s) ease both;
+  animation-delay: calc(min(var(--i, 0), 8) * 100ms);
+}
+.ui-reveal-right.is-visible {
+  opacity: 1;
+  animation: uiRevealRight var(--reveal-duration, 1.5s) ease both;
+  animation-delay: calc(min(var(--i, 0), 8) * 100ms);
+}
+
+/* Last-resort visibility guarantee, applied by useInView 2.5s after an element is revealed
+   (src/lib/useInView.js). By then any real entrance has finished, so this changes nothing
+   visually in a normal browser. It exists for environments that apply an animation or
+   transition and then never advance it, freezing the element at opacity 0 and rendering the
+   section blank.
+
+   Both channels have to be cut, not just overridden. A running transition outranks even an
+   `!important` author declaration, and a stalled animation holds its frame-0 value the same
+   way — so `transition: none` and `animation: none` are what actually let the forced opacity
+   take effect. Covers descendants too, since group reveals put the trigger on the container
+   while the animated elements are its children.
+
+   The rule for this codebase: no failure of the animation machinery may ever leave content
+   invisible. Missing motion is acceptable; a blank page is not. */
+.reveal-settled,
+.reveal-settled .ui-reveal-item,
+.reveal-settled .lp-reveal-item {
+  /* Deliberately does NOT set `transition: none`. It used to, and that killed the hover lift
+     on every card carrying a reveal class — the settle class lands on the same element, so a
+     blanket transition reset takes the component's own interactions down with it. Cancelling
+     the animation plus forcing the end state is enough: the reveals are animation-driven, and
+     the transition-based ones simply retarget to the forced value. */
+  animation: none !important;
+  opacity: 1 !important;
+  /* Only `translate` is reset — never `transform`. Reveals travel via the independent
+     `translate` property, whereas `transform` carries deliberate static styling such as
+     .lp-hero-card's rotate(1.5deg), which resetting here would silently flatten. */
+  translate: none !important;
+}
+
 /* ---- layout shells ---- */
 .ui-page {
   min-height: 100vh;
   background: var(--bg);
+  /* A slide-in-from-right reveal puts the element --reveal-slide past the right edge for the
+     first frames of its animation, which would otherwise show a transient horizontal
+     scrollbar (measured: a card reaching 459px inside a 375px viewport). `clip` contains it.
+     It must be `clip` and not `hidden`: `hidden` would make this a scroll container and break
+     `position: sticky` on .ui-nav — the same defect that was silently disabling the landing
+     page's sticky header. */
+  overflow-x: clip;
 }
 
 .ui-page-center {
@@ -185,9 +305,15 @@ body {
   background: var(--brand);
   color: #fff;
   border: 1px solid transparent;
-  padding: 0.85rem 1.8rem;
-  border-radius: 50px;
-  font-size: 0.95rem;
+  /* inline-flex + centring so the label sits centred once min-height exceeds the text box */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--btn-h);
+  padding: 0 var(--btn-pad-x);
+  border-radius: var(--btn-radius);
+  font-size: var(--btn-font);
   font-weight: 600;
   cursor: pointer;
   transition: background 0.18s var(--ease), transform 0.18s var(--ease), box-shadow 0.18s var(--ease);
@@ -218,9 +344,14 @@ body {
   background: var(--paper);
   color: var(--ink);
   border: 1px solid var(--line);
-  padding: 0.85rem 1.8rem;
-  border-radius: 50px;
-  font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--btn-h);
+  padding: 0 var(--btn-pad-x);
+  border-radius: var(--btn-radius);
+  font-size: var(--btn-font);
   font-weight: 600;
   cursor: pointer;
   transition: border-color 0.18s var(--ease), color 0.18s var(--ease), transform 0.18s var(--ease);
@@ -331,6 +462,17 @@ body {
   box-shadow: var(--shadow-sm);
   animation: uiFadeUp 0.45s var(--ease-out) both;
 }
+/* A card that also carries a reveal class would otherwise run its mount animation while
+   waiting to be scrolled to. Suppress it only in the not-yet-revealed state.
+   The `:not(.is-visible)` is essential, not cosmetic: without it this rule and
+   `.ui-reveal.is-visible` both weigh (0,2,0), and since this block sits later in the file it
+   would win and leave `animation: none` on a revealed card — which, because .ui-reveal sets
+   `opacity: 0` and nothing would ever animate it back, renders the card permanently
+   invisible. */
+.ui-card.ui-reveal:not(.is-visible),
+.ui-card.ui-reveal-left:not(.is-visible),
+.ui-card.ui-reveal-right:not(.is-visible),
+.ui-reveal-group:not(.is-visible) .ui-card.ui-reveal-item { animation: none; }
 
 /* ---- tags ---- */
 .ui-tag {
@@ -348,15 +490,30 @@ body {
 .ui-tag-sky { background: var(--sage-soft); color: var(--sage-dark); }
 .ui-tag-muted { background: var(--bg-soft-2); color: var(--muted); }
 
-/* ---- reduced motion ---- */
+/* ---- reduced motion ----
+   This block previously disabled `animation` only. The reveal utilities above are
+   transition-based, so transitions must be cut too or they keep running for someone who
+   explicitly asked for less motion.
+
+   Critically, the reveals must also be forced to their FINAL state. Cutting the transition
+   alone would leave any element whose observer hasn't fired stranded at `opacity: 0` —
+   permanently invisible content, which is far worse than an unwanted animation. */
 @media (prefers-reduced-motion: reduce) {
-  .ui-card,
-  .ui-empty,
-  .ui-animate-in {
-    animation: none !important;
-  }
-  * {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    transition-delay: 0ms !important;
     scroll-behavior: auto !important;
+  }
+  .ui-reveal,
+  .ui-reveal-left,
+  .ui-reveal-right,
+  .ui-reveal-item {
+    opacity: 1 !important;
+    translate: none !important;
   }
 }
 

@@ -29,7 +29,11 @@ html { scroll-behavior: smooth; }
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-reveal: cubic-bezier(.16,1,.3,1);
 
-  overflow-x: hidden;
+  /* `clip`, not `hidden`. Both stop sideways overflow, but `hidden` makes this element a
+     scroll container, which silently broke `position: sticky` on .lp-header — the nav
+     scrolled away with the page instead of pinning. `clip` creates no scrollport, so
+     sticky descendants resolve against the viewport as intended. */
+  overflow-x: clip;
   background: var(--cream);
   color: var(--lp-ink);
   font-family: 'Work Sans', sans-serif;
@@ -80,14 +84,41 @@ html { scroll-behavior: smooth; }
 .landingPage .ui-success-msg { background: var(--cream-2); border-color: var(--lp-line); color: var(--terracotta-dark); }
 
 /* ---------- Header ---------- */
-.lp-header { position: sticky; top: 0; z-index: 50; background: rgba(246,241,231,0.92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--lp-line); box-shadow: 0 1px 0 rgba(0,0,0,0); transition: box-shadow .2s var(--ease); }
-.lp-header.scrolled { box-shadow: 0 8px 24px -16px rgba(43,36,32,0.35); }
-.lp-nav { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) var(--space-5); max-width: 1180px; margin: 0 auto; }
+/* The header itself is now just a transparent sticky rail — the visible chrome moved to
+   .lp-nav so it can round into a floating pill on scroll. Kept `position: sticky` (not
+   fixed) so the header still occupies layout space and the hero needs no top offset;
+   sticky is also a positioned value, so it remains the containing block for the
+   absolutely-positioned .lp-mobile-menu below even though backdrop-filter moved off it. */
+/* Padding is static and no longer transitions. Animating it ran a layout pass on every
+   scroll-state toggle, and the 4px it was worth is not visible next to the pill's
+   background/border/shadow fade, which carries the whole condense effect. */
+.lp-header { position: sticky; top: 0; z-index: 50; padding: var(--space-2) var(--space-3); }
+.lp-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--space-3) var(--space-4); max-width: 1180px; margin: 0 auto;
+  border: 1px solid transparent; border-radius: 999px; background: transparent;
+  /* backdrop-filter is deliberately NOT in this list: transitioning a backdrop blur re-blurs
+     everything behind the nav every frame, which is among the most expensive things to
+     animate. It switches instantly while the background and border fade around it — the
+     change is imperceptible and the scroll stays smooth. */
+  transition: background .35s var(--ease), border-color .35s var(--ease),
+              box-shadow .35s var(--ease);
+}
+/* The nav earns its background only once there is content scrolling behind it. */
+.lp-header.scrolled .lp-nav {
+  background: rgba(255,252,246,0.82);
+  backdrop-filter: blur(14px);
+  border-color: var(--lp-line);
+  box-shadow: 0 10px 30px -20px rgba(43,36,32,0.5);
+}
 .lp-logo { display: flex; align-items: center; gap: 10px; font-family: 'Fraunces', serif; font-weight: 700; font-size: 20px; }
 .lp-logo-mark { width: 34px; height: 34px; border-radius: 8px; background: var(--terracotta); display: flex; align-items: center; justify-content: center; color: var(--cream); font-size: 18px; flex-shrink: 0; }
 .lp-nav-links { display: flex; gap: var(--space-5); list-style: none; font-size: 15px; font-weight: 500; }
-.lp-nav-links a { color: var(--lp-ink-soft); transition: color .15s var(--ease); }
+.lp-nav-links a { position: relative; padding: 4px 0; color: var(--lp-ink-soft); transition: color .15s var(--ease); }
+/* Underline wipes in from the left rather than appearing all at once. */
+.lp-nav-links a::after { content: ''; position: absolute; left: 0; bottom: 0; width: 0; height: 1.5px; background: var(--terracotta); transition: width .25s var(--ease); }
 .lp-nav-links a:hover { color: var(--terracotta-dark); }
+.lp-nav-links a:hover::after { width: 100%; }
 .lp-nav-actions { display: flex; align-items: center; gap: var(--space-3); }
 .lp-nav-cta { display: inline-flex; align-items: center; gap: 8px; background: var(--terracotta); color: #fff; padding: 10px 20px; border-radius: 999px; font-weight: 600; font-size: 14px; border: none; cursor: pointer; transition: background .15s var(--ease), transform .15s var(--ease); will-change: transform; }
 .lp-nav-cta:hover { background: var(--terracotta-dark); transform: translateY(-1px); }
@@ -100,8 +131,10 @@ html { scroll-behavior: smooth; }
 .lp-hamburger.open span:nth-child(2) { opacity: 0; }
 .lp-hamburger.open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
 /* Anchored with top:100% to the header's bottom edge (the header is the containing block
-   because its backdrop-filter establishes one), so it always sits exactly below the header
-   regardless of header height — no magic pixel offset that can overlap or leave a gap. */
+   because `position: sticky` is a positioned value), so it always sits exactly below the
+   header regardless of header height — no magic pixel offset that can overlap or leave a
+   gap. The backdrop-filter that used to sit on the header moved to .lp-nav for the
+   floating-pill treatment; containment survives that, since sticky alone is enough. */
 .lp-mobile-menu { display: flex; flex-direction: column; gap: var(--space-4); position: absolute; top: 100%; left: 0; right: 0; height: 100vh; overflow-y: auto; background: var(--paper); padding: var(--space-5); z-index: 49; border-top: 1px solid var(--lp-line); opacity: 0; transform: translateY(-8px); pointer-events: none; transition: opacity .2s var(--ease), transform .2s var(--ease); }
 .lp-mobile-menu.open { opacity: 1; transform: translateY(0); pointer-events: auto; }
 .lp-mobile-menu a { font-size: 20px; font-weight: 600; transition: color .15s var(--ease); }
@@ -113,11 +146,24 @@ html { scroll-behavior: smooth; }
 .lp-hero h1 { font-size: clamp(36px, 4.6vw, 58px); line-height: 1.06; margin: var(--space-3) 0 var(--space-4); }
 .lp-hero p.lead { font-size: 18px; color: var(--lp-ink-soft); max-width: 480px; margin-bottom: var(--space-5); }
 .lp-hero-actions { display: flex; gap: var(--space-3); flex-wrap: wrap; }
-.lp-btn { display: inline-flex; align-items: center; gap: 8px; padding: 14px 26px; border-radius: 999px; font-weight: 600; font-size: 15px; border: 1px solid transparent; cursor: pointer; transition: background .15s var(--ease), border-color .15s var(--ease), transform .15s var(--ease), box-shadow .15s var(--ease); will-change: transform; }
+/* Sizing comes from the shared --btn-* scale in styles/theme.css so this stays in lockstep
+   with .ui-btn-* elsewhere in the app; only the landing page's colour treatment lives here.
+   justify-content matters once these are stretched full-width on narrow screens. */
+.lp-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: var(--btn-h); padding: 0 var(--btn-pad-x); border-radius: var(--btn-radius); font-weight: 600; font-size: var(--btn-font); border: 1px solid transparent; cursor: pointer; transition: background .15s var(--ease), border-color .15s var(--ease), transform .15s var(--ease), box-shadow .15s var(--ease); will-change: transform; }
 .lp-btn-primary { background: var(--terracotta); color: #fff; }
 .lp-btn-primary:hover { background: var(--terracotta-dark); transform: translateY(-2px); box-shadow: 0 12px 24px -14px rgba(155,74,34,0.55); }
 .lp-btn-primary:active { transform: translateY(0) scale(.97); box-shadow: none; }
 .lp-btn-primary:disabled { opacity: .6; cursor: default; transform: none; box-shadow: none; }
+/* The one smaller button size. A modifier rather than an inline font-size override, so it
+   still reads as part of the same family instead of becoming a one-off. */
+.lp-btn-sm { min-height: var(--btn-h-sm); padding: 0 var(--btn-pad-x-sm); font-size: var(--btn-font-sm); }
+
+/* "Use my current location" + its pin-status text. Side by side there is not enough room at
+   phone widths, and the button's label wrapped to two lines — rendering it 62px tall beside
+   48px siblings. Stacking keeps the button at its natural height and the status legible. */
+.lp-geo-row { display: flex; gap: 8px; align-items: center; margin: 8px 0; flex-wrap: wrap; }
+.lp-geo-row .lp-btn { white-space: nowrap; }
+
 .lp-btn-ghost { background: transparent; color: var(--lp-ink); border-color: var(--lp-line); }
 .lp-btn-ghost:hover { border-color: var(--lp-ink); transform: translateY(-2px); }
 .lp-btn-ghost:active { transform: translateY(0) scale(.97); }
@@ -152,18 +198,106 @@ html { scroll-behavior: smooth; }
 
 /* ---------- Featured Aspins ---------- */
 .lp-featured-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: var(--space-4); }
-.lp-intake-card { background: var(--paper); border: 1px solid var(--lp-line); border-radius: var(--lp-radius); overflow: hidden; cursor: pointer; transition: transform .2s var(--ease), box-shadow .2s var(--ease); text-align: left; will-change: transform; }
-.lp-intake-card:hover { transform: translateY(-4px); box-shadow: 0 16px 30px -20px rgba(43,36,32,0.4); }
-.lp-intake-card .photo-block { aspect-ratio: 1/1; background: linear-gradient(150deg, var(--tan-card), var(--cream-2)); display: flex; align-items: center; justify-content: center; color: var(--terracotta-dark); font-size: 12px; font-weight: 600; border-bottom: 1px solid var(--lp-line); overflow: hidden; }
-.lp-intake-card .photo-block img { width: 100%; height: 100%; object-fit: cover; transition: transform .25s var(--ease); }
-.lp-intake-card:hover .photo-block img { transform: scale(1.04); }
-.lp-intake-card .body { padding: var(--space-3) var(--space-3) var(--space-4); }
-.lp-intake-card .top-row { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); }
-.lp-intake-card .name { font-family: 'Fraunces', serif; font-weight: 600; font-size: 18px; }
-.lp-intake-card .age { font-size: 12px; color: var(--lp-ink-soft); white-space: nowrap; }
-.lp-intake-card .tags { display: flex; gap: 6px; margin-top: var(--space-2); flex-wrap: wrap; }
-.lp-intake-card .tag { font-size: 11px; font-weight: 600; background: var(--cream-2); padding: 3px 9px; border-radius: 999px; color: var(--lp-ink-soft); }
+/* Tall portrait tile. The photo is the card: it fills the frame, and the caption sits on a
+   scrim over the bottom of the image rather than in a panel underneath. A fixed
+   aspect-ratio keeps every card the same height whatever the photo's own proportions. */
+.lp-intake-card {
+  position: relative; overflow: hidden; cursor: pointer; text-align: left;
+  aspect-ratio: 3/4.1; border-radius: 20px;
+  background: linear-gradient(150deg, var(--tan-card), var(--cream-2));
+  transition: transform .3s var(--ease-reveal), box-shadow .3s var(--ease-reveal);
+  will-change: transform;
+}
+.lp-intake-card:hover { transform: translateY(-8px); box-shadow: 0 34px 60px -38px rgba(43,36,32,0.7); }
+.lp-intake-card .photo-block { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--terracotta-dark); font-size: 12px; font-weight: 600; }
+.lp-intake-card .photo-block img { width: 100%; height: 100%; object-fit: cover; transition: transform .6s var(--ease-reveal); }
+.lp-intake-card:hover .photo-block img { transform: scale(1.07); }
+/* Scrim only over the lower half — enough contrast for the caption without dulling the
+   whole photograph. */
+.lp-intake-card .scrim { position: absolute; inset: 0; background: linear-gradient(to top, rgba(28,22,18,.88) 0%, rgba(28,22,18,.35) 38%, transparent 62%); }
+.lp-intake-card .status-tag {
+  position: absolute; top: 14px; left: 14px; background: rgba(255,252,246,.94);
+  color: var(--terracotta-dark); font-size: 11px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; padding: 5px 12px; border-radius: 999px;
+}
+/* ---- Story panel (glassmorphism) ----
+   Frosted overlay revealed on hover/focus. The blur is the whole effect, so the panel must
+   stay translucent — a solid fill would have nothing to frost. It sits above .scrim but
+   below .meta so the dog's name stays legible throughout the transition. */
+.lp-intake-card .story-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  padding: 22px 20px 76px;      /* bottom clears the name/age block */
+  color: #fff;
+  background: rgba(43, 36, 32, 0.42);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  backdrop-filter: blur(10px) saturate(140%);
+  border-top: 1px solid rgba(255, 255, 255, 0.18);   /* the light catch that reads as glass */
+  opacity: 0;
+  translate: 0 12px;
+  pointer-events: none;
+  transition: opacity .35s var(--ease), translate .35s var(--ease);
+}
+.lp-intake-card .story-label {
+  font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.75);
+}
+.lp-intake-card .story-panel p {
+  font-size: 13.5px; line-height: 1.55;
+  /* Stories vary wildly in length; clamp so a long one can't overflow the card. */
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 7; overflow: hidden;
+}
+/* :focus-within as well as :hover — the card is role="button" tabIndex={0}, so a keyboard
+   user must be able to reach the story too. Gated behind `hover: hover` so touch devices,
+   which fire a sticky emulated hover on tap, don't flash the panel while navigating. */
+@media (hover: hover) {
+  .lp-intake-card:hover .story-panel { opacity: 1; translate: 0 0; }
+}
+.lp-intake-card:focus-within .story-panel { opacity: 1; translate: 0 0; }
+
+.lp-intake-card .meta { position: absolute; left: 18px; right: 18px; bottom: 16px; color: #fff; z-index: 2; }
+.lp-intake-card .name { display: block; font-family: 'Fraunces', serif; font-weight: 600; font-size: 21px; line-height: 1.15; }
+.lp-intake-card .sub { display: block; font-size: 13px; opacity: .82; margin-top: 2px; }
 .lp-featured-foot { text-align: center; margin-top: var(--space-6); }
+
+/* ---------- Report a stray ----------
+   Written report on the left, the map it refers to alongside it. Previously the map sat
+   inside the location field in a single 680px column, which buried it and left the form
+   feeling like one long scroll. */
+/* `stretch` (not `start`) so the map column matches the form card's height instead of
+   sizing to its own content and leaving a ragged gap beside a tall form. */
+.lp-report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); align-items: stretch; }
+.lp-report-card { background: var(--paper); border: 1px solid var(--lp-line); border-radius: 20px; padding: var(--space-5); }
+/* Name + contact side by side. This was an inline 1fr 1fr grid that never collapsed, so
+   the two inputs stayed cramped side by side down to 375px — now it stacks. */
+.lp-field-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); margin-bottom: var(--space-3); }
+.lp-report-submit { width: 100%; margin-top: var(--space-2); }
+/* No longer sticky: sticky sizes the box to its own content, which would defeat the
+   stretch that makes this column match the form's height. */
+.lp-report-aside { display: flex; flex-direction: column; gap: var(--space-3); }
+/* The map needs an explicit height: Leaflet measures its container, and a grid child with
+   only aspect-ratio can leave it initialising at zero height. */
+/* Grows to fill whatever height the form gives the column, minus the geo row beneath it.
+   `min-height` rather than `height` is deliberate: Leaflet's container is height:100% of this
+   box, so the box's own content height is 0 — with a flex-basis of 0 it would collapse
+   entirely in the single-column layout, where there is no free space to grow into. The
+   min-height floors it there, and flex-grow takes over once the column is stretched. */
+.lp-map-frame { flex: 1 1 auto; min-height: 380px; border-radius: 20px; overflow: hidden; border: 1px solid var(--lp-line); position: relative; z-index: 0; }
+/* `position: relative; z-index: 0` above is what stops the map painting over the sticky
+   header. Leaflet gives its internal panes and controls very high z-indexes (400 for panes,
+   up to 1000 for controls) which would otherwise compete directly with .lp-header's z-index
+   of 50 in the root stacking context. Declaring z-index on a positioned ancestor creates a
+   stacking context, so all of Leaflet's layering is resolved *inside* this frame and the
+   whole thing sits at level 0 relative to the header. */
+.lp-map-frame .leaflet-container { height: 100%; width: 100%; }
+/* Left-aligned section head, for sections whose body is a two-column layout rather than a
+   centred column — a centred heading over an asymmetric body reads misaligned. */
+.lp-section-head-left { margin-left: 0; margin-right: 0; text-align: left; }
 
 /* ---------- Impact band ---------- */
 .lp-impact { background: var(--lp-ink); color: var(--cream); border-radius: 24px; margin: 0 var(--space-5); padding: var(--space-7) var(--space-5); }
@@ -189,7 +323,7 @@ html { scroll-behavior: smooth; }
 .lp-cta-banner .lp-btn-ghost:hover { border-color: #fff; }
 .lp-cta-actions { display: flex; gap: var(--space-3); justify-content: center; flex-wrap: wrap; }
 .lp-amounts { display: flex; gap: var(--space-2); justify-content: center; flex-wrap: wrap; margin-bottom: var(--space-4); }
-.lp-amt { background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.35); padding: 10px 20px; border-radius: 999px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s var(--ease), border-color .15s var(--ease), transform .15s var(--ease); will-change: transform; }
+.lp-amt { display: inline-flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.35); min-height: var(--btn-h-sm); padding: 0 var(--btn-pad-x-sm); border-radius: var(--btn-radius); font-size: var(--btn-font-sm); font-weight: 600; cursor: pointer; transition: background .15s var(--ease), border-color .15s var(--ease), transform .15s var(--ease); will-change: transform; }
 .lp-amt:hover { border-color: #fff; transform: translateY(-2px); }
 .lp-amt:active { transform: translateY(0) scale(.96); }
 .lp-amt.active { background: #fff; color: var(--terracotta-dark); border-color: #fff; }
@@ -258,6 +392,12 @@ html { scroll-behavior: smooth; }
   .lp-nav-links { display: none; }
   .lp-nav-actions .lp-nav-cta, .lp-nav-actions .lp-nav-ghost { display: none; }
   .lp-hamburger { display: flex; }
+  /* Map above the form once stacked: pinning the location is the first thing you do, and
+     `sticky` has nothing to stick to in a single column. */
+  .lp-report-grid { grid-template-columns: 1fr; }
+  .lp-report-aside { order: -1; }
+  /* min-height, not height — a fixed height would fight the flex-grow above. */
+  .lp-map-frame { min-height: 320px; }
   /* The horizontal step connector only makes sense in the single 4-across row; once the
      grid wraps it dangles into empty space, so drop it. */
   .lp-step:not(:last-child)::after { display: none; }
@@ -270,6 +410,33 @@ html { scroll-behavior: smooth; }
   .lp-donors { grid-template-columns: 1fr 1fr; }
   .lp-footer-grid { grid-template-columns: 1fr; }
   .lp-impact, .lp-cta-banner { margin: 0 var(--space-3); border-radius: 18px; }
+  /* Name and contact each get a full row — side by side they were ~150px wide here. */
+  .lp-field-pair { grid-template-columns: 1fr; }
+  .lp-report-card { padding: var(--space-4); }
+  .lp-map-frame { min-height: 260px; }
+
+  /* --- Touch targets ---------------------------------------------------------------
+     Everything tappable clears --btn-h-min (44px). On desktop a 38px chip or a bare text
+     link is a fine pointer target; on a phone it is a miss waiting to happen, so the
+     minimum only applies here rather than inflating the desktop layout. */
+  .lp-amt, .lp-btn-sm { min-height: var(--btn-h-min); }
+  .lp-hamburger { width: var(--btn-h-min); height: var(--btn-h-min); }
+  /* Bare-link buttons ship with padding:0, so they render ~16px tall. Padding would shift
+     them out of their text flow, so grow the hit area with a pseudo-element instead — the
+     text stays exactly where it sits today. */
+  .lp-pathway-card .link { position: relative; }
+  .lp-pathway-card .link::after {
+    content: ''; position: absolute; left: 0; right: 0; top: 50%;
+    height: var(--btn-h-min); transform: translateY(-50%);
+  }
+
+  /* --- Button placement ------------------------------------------------------------
+     Side-by-side actions get cramped and ragged below 560px. Stacking them full-width
+     gives every CTA the same width and left edge instead of each sizing to its own label. */
+  .lp-hero-actions, .lp-cta-actions { flex-direction: column; align-items: stretch; gap: var(--space-3); }
+  .lp-hero-actions .lp-btn, .lp-cta-actions .lp-btn { width: 100%; }
+  .lp-geo-row { flex-direction: column; align-items: stretch; }
+  .lp-geo-row .lp-btn { width: 100%; }
 }
 
 #animals, #report, #donate, #impact, #how { scroll-margin-top: 88px; }

@@ -92,7 +92,12 @@ return [
 
         'pgsql' => [
             'driver' => 'pgsql',
-            'url' => env('DB_URL'),
+            // Accept DATABASE_URL as well as Laravel's DB_URL: Render, Heroku and Neon all
+            // hand out the connection string under the DATABASE_URL name, and a mismatch here
+            // fails confusingly — the url is ignored and the host silently falls back to the
+            // 127.0.0.1 default below, so you get "connection refused" on localhost instead of
+            // anything pointing at the real problem.
+            'url' => env('DB_URL') ?: env('DATABASE_URL'),
             'host' => env('DB_HOST', '127.0.0.1'),
             'port' => env('DB_PORT', '5432'),
             'database' => env('DB_DATABASE', 'laravel'),

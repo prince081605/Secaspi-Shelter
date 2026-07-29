@@ -4,7 +4,9 @@ import { api } from './api';
 
 export async function getFeaturedAnimals() {
   // Expected shape:
-  // { animals: [{ id, name, species, age, status }, ...] }
+  // { animals: [{ id, name, species, age, status, photo, story }, ...] }
+  // `story` is the animal's rescue_story, used by the hover panel on the landing page's
+  // dog cards. It is '' when unset, or when the column is absent from an older schema.
   // Public endpoints live under /api in Laravel
   return api.get('/api/home/featured-animals');
 }

@@ -25,6 +25,28 @@ class Animal extends Model
         'behavioral_assessment' => 'array',
     ];
 
+    /**
+     * Human-readable form of the stored status enum, for display to the public.
+     *
+     * Static (not an accessor) so it can also be used where animals are read via the query
+     * builder rather than the model — PublicHomeController::featuredAnimals() selects raw
+     * rows for speed and gets stdClass back, which no accessor would reach. Keeping the one
+     * copy here is what stops the landing page and the adoption list drifting apart, which
+     * they had: one said "Available for adoption", the other showed the raw "available".
+     */
+    public static function statusLabel(?string $status): string
+    {
+        return match ($status) {
+            'available' => 'Available for adoption',
+            'adopted' => 'Adopted',
+            'fostered' => 'In foster care',
+            'medical' => 'Medical recovery',
+            'quarantine' => 'In quarantine',
+            'archived' => 'Archived',
+            default => $status ? ucfirst($status) : 'Unknown',
+        };
+    }
+
     public function photos()
     {
         return $this->hasMany(AnimalPhoto::class, 'animal_id');

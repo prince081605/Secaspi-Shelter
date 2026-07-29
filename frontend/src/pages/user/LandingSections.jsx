@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
+import useInView from "../../lib/useInView";
 import { MapContainer, TileLayer, CircleMarker, useMapEvents, useMap } from "react-leaflet";
-import { Home, PawPrint, MapPin, ArrowDown, Check } from "lucide-react";
+import { Home, PawPrint, MapPin, Check } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 
 // Presentational sections for the public LandingPage, extracted from LandingPage.jsx (audit §0.2)
@@ -24,6 +25,33 @@ function RecenterOnPin({ lat, lng }) {
   return null;
 }
 
+/**
+ * Keeps Leaflet's cached container size in sync with the element.
+ *
+ * Leaflet measures its container once at init and only loads tiles for that area. The map
+ * frame is now flex-sized to match the report form's height (.lp-map-frame), so it grows
+ * after Leaflet has already measured it — leaving the extra height as blank, untiled space.
+ * invalidateSize() forces a re-measure and fills it in. A ResizeObserver covers every later
+ * change too: breakpoint switches, window resizes, and the form growing as validation
+ * messages appear.
+ */
+function InvalidateOnResize() {
+  const map = useMap();
+  useEffect(() => {
+    const el = map.getContainer();
+    // One deferred pass for the initial layout, which settles after Leaflet's own init.
+    const initial = setTimeout(() => map.invalidateSize(), 0);
+    if (typeof ResizeObserver === 'undefined') return () => clearTimeout(initial);
+    const ro = new ResizeObserver(() => map.invalidateSize());
+    ro.observe(el);
+    return () => {
+      clearTimeout(initial);
+      ro.disconnect();
+    };
+  }, [map]);
+  return null;
+}
+
 const pathways = [
   { key: "adopt", icon: Home, title: "Adopt", desc: "Browse profiles of vaccinated, vetted Aspins ready for a forever home.", linkLabel: "View adoptable dogs →", target: "animals" },
   { key: "donate", icon: PawPrint, title: "Donate", desc: "Fund food, vaccines, and medical care for dogs currently in intake. Every peso is tracked and reported.", linkLabel: "Support the shelter →", target: "donate" },
@@ -44,30 +72,6 @@ function animalPhotoSrc(photo) {
   return photo.startsWith("http") ? photo : `${import.meta.env.VITE_API_BASE_URL}/storage/${photo}`;
 }
 
-// Fires once an element scrolls into view, used to trigger the fade/slide-up reveal CSS.
-function useInView() {
-  const ref = useRef(null);
-  const [inView, setInView] = useState(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setInView(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.15 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  return [ref, inView];
-}
-
 export function Navbar({ shelterName, isLoggedIn, menuOpen, scrolled, onToggleMenu, onNavigate }) {
   return (
     <header className={`lp-header${scrolled ? " scrolled" : ""}`}>
@@ -82,7 +86,6 @@ export function Navbar({ shelterName, isLoggedIn, menuOpen, scrolled, onToggleMe
           <li><a href="/volunteer">Volunteer</a></li>
           <li><a href="/transparency">Transparency</a></li>
           <li><a href="#donate">Donate</a></li>
-          {isLoggedIn && <li><a href="/donations">My Donations</a></li>}
         </ul>
         <div className="lp-nav-actions">
           <button className="lp-nav-ghost" onClick={() => onNavigate(isLoggedIn ? "/dashboard" : "/login")}>
@@ -107,7 +110,6 @@ export function Navbar({ shelterName, isLoggedIn, menuOpen, scrolled, onToggleMe
         <a href="/transparency" onClick={onToggleMenu}>Transparency</a>
         <a href="#donate" onClick={onToggleMenu}>Donate</a>
         <a href="#report" onClick={onToggleMenu}>Report a stray</a>
-        {isLoggedIn && <a href="/donations" onClick={onToggleMenu}>My Donations</a>}
         <a href={isLoggedIn ? "/dashboard" : "/login"} onClick={onToggleMenu}>{isLoggedIn ? "Dashboard" : "Login"}</a>
       </div>
     </header>
@@ -194,19 +196,29 @@ export function FeaturedAnimals({ animals, onAdopt }) {
           {animals.slice(0, 4).map((a) => {
             const photo = animalPhotoSrc(a.photo);
             return (
+              // Portrait card: the photo fills the whole tile and the name/age sit over a
+              // gradient scrim, so the dog carries the card instead of a square thumbnail
+              // with a text block beneath it.
               <article className="lp-intake-card lp-reveal-item" key={a.id ?? a.name} onClick={onAdopt} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter") onAdopt(); }}>
                 <div className="photo-block">
                   {photo ? <img src={photo} alt={a.name} /> : "Photo placeholder"}
                 </div>
-                <div className="body">
-                  <div className="top-row">
-                    <span className="name">{a.name}</span>
-                    <span className="age">{a.age}</span>
+                <div className="scrim" aria-hidden="true" />
+                {a.status && <span className="status-tag">{a.status}</span>}
+                {/* Frosted panel with the rescue story, revealed on hover/focus. Only
+                    rendered when there is a story to tell — an empty frosted panel over the
+                    photo would read as a bug. */}
+                {a.story && (
+                  <div className="story-panel">
+                    <span className="story-label">Their story</span>
+                    <p>{a.story}</p>
                   </div>
-                  <div className="tags">
-                    {a.species && <span className="tag">{a.species}</span>}
-                    {a.status && <span className="tag">{a.status}</span>}
-                  </div>
+                )}
+                <div className="meta">
+                  <span className="name">{a.name}</span>
+                  {/* age and species read as one line here; filter keeps the separator
+                      from dangling when either is missing */}
+                  <span className="sub">{[a.age, a.species].filter(Boolean).join(" · ")}</span>
                 </div>
               </article>
             );
@@ -268,8 +280,10 @@ export function RescueForm({ form, reportPhoto, reportState, onChange, onPhotoCh
 
   return (
     <section id="report" className="lp-section">
-      <div ref={ref} className={`lp-container lp-reveal${inView ? " is-visible" : ""}`} style={{ maxWidth: 680 }}>
-        <div className="lp-section-head">
+      {/* The 680px clamp that used to be here is gone — it was sized for the old
+          single-column form and would squeeze the two-column layout. */}
+      <div ref={ref} className={`lp-container lp-reveal${inView ? " is-visible" : ""}`}>
+        <div className="lp-section-head lp-section-head-left">
           <span className="lp-eyebrow">Emergency Rescue</span>
           <h2>Spotted a dog in distress?</h2>
           <p>Report it and our rescue team will respond fast.</p>
@@ -280,23 +294,50 @@ export function RescueForm({ form, reportPhoto, reportState, onChange, onPhotoCh
         {reportState.status === "error" && (
           <div className="ui-error">{reportState.error}</div>
         )}
-        <form onSubmit={onSubmit}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-            <div><label className="ui-label">Your name</label><input className="ui-input" name="name" value={form.name} onChange={onChange} placeholder="Juan dela Cruz" /></div>
-            <div><label className="ui-label">Contact</label><input className="ui-input" name="contact" value={form.contact} onChange={onChange} placeholder="09XX XXX XXXX" /></div>
-          </div>
-          <div className="ui-field">
-            <label className="ui-label ui-label-required">Location</label>
-            <input className="ui-input" name="location" required value={form.location} onChange={onChange} placeholder="Be specific: house no. / street, landmark, barangay, city" />
-            <div style={{ fontSize: 12, color: "var(--lp-ink-soft)", marginTop: 6 }}>
-              The more detailed, the faster our team finds the animal. Pin the exact spot on the map below <ArrowDown size={15} style={{ verticalAlign: '-3px' }} />
+        {/* Two columns: the written report on the left, the map it refers to alongside it
+            rather than buried inside the location field. Both stay inside <form> so the
+            map still participates in the same submission. */}
+        <form onSubmit={onSubmit} className="lp-report-grid">
+          <div className="lp-report-card">
+            <div className="lp-field-pair">
+              <div><label className="ui-label">Your name</label><input className="ui-input" name="name" value={form.name} onChange={onChange} placeholder="Juan dela Cruz" /></div>
+              <div><label className="ui-label">Contact</label><input className="ui-input" name="contact" value={form.contact} onChange={onChange} placeholder="09XX XXX XXXX" /></div>
             </div>
+            <div className="ui-field">
+              <label className="ui-label ui-label-required">Location</label>
+              <input className="ui-input" name="location" required value={form.location} onChange={onChange} placeholder="Be specific: house no. / street, landmark, barangay, city" />
+              <div style={{ fontSize: 12, color: "var(--lp-ink-soft)", marginTop: 6 }}>
+                The more detailed, the faster our team finds the animal. Pin the exact spot on the map <MapPin size={14} style={{ verticalAlign: '-2px' }} />
+              </div>
+            </div>
+            <div className="ui-field"><label className="ui-label">Condition</label><select className="ui-select" name="condition" value={form.condition} onChange={onChange}><option>Injured or sick</option><option>Stray / no owner</option><option>Abandoned</option><option>In immediate danger</option><option>Other</option></select></div>
+            <div className="ui-field"><label className="ui-label">Details</label><textarea className="ui-textarea" name="details" value={form.details} onChange={onChange} placeholder="Describe what you see..." /></div>
+            <div className="ui-field">
+              <label className="ui-label">Photo (optional)</label>
+              <input className="ui-input" type="file" accept="image/*" onChange={onPhotoChange} />
+              {reportPhoto && <span style={{ display: "block", fontSize: 13, color: "var(--lp-ink-soft)", marginTop: 6 }}>Selected: {reportPhoto.name}</span>}
+            </div>
+            <button type="submit" className="lp-btn lp-btn-primary lp-report-submit" disabled={reportState.status === "loading"}>
+              {reportState.status === "loading" ? "Sending..." : "Send Report"}
+            </button>
+          </div>
 
-            <div style={{ display: "flex", gap: 8, alignItems: "center", margin: "8px 0" }}>
+          <aside className="lp-report-aside">
+            <div className="lp-map-frame">
+              <MapContainer center={form.latitude ? [form.latitude, form.longitude] : RESCUE_MAP_DEFAULT} zoom={form.latitude ? 16 : 12} style={{ height: "100%", width: "100%" }} scrollWheelZoom>
+                <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                <ClickToPin onPin={onPinLocation} />
+                <RecenterOnPin lat={form.latitude} lng={form.longitude} />
+                <InvalidateOnResize />
+                {form.latitude != null && form.longitude != null && (
+                  <CircleMarker center={[form.latitude, form.longitude]} radius={10} pathOptions={{ color: "#c0392b", fillOpacity: 0.85 }} />
+                )}
+              </MapContainer>
+            </div>
+            <div className="lp-geo-row">
               <button
                 type="button"
-                className="lp-btn lp-btn-ghost"
-                style={{ fontSize: 13 }}
+                className="lp-btn lp-btn-ghost lp-btn-sm"
                 onClick={() => {
                   if (!navigator.geolocation) return;
                   navigator.geolocation.getCurrentPosition(
@@ -311,28 +352,7 @@ export function RescueForm({ form, reportPhoto, reportState, onChange, onPhotoCh
                 {form.latitude ? <>Exact spot pinned <Check size={14} style={{ verticalAlign: '-2px' }} /></> : "No pin yet — tap the map"}
               </span>
             </div>
-
-            <div style={{ height: 260, borderRadius: 12, overflow: "hidden", border: "1px solid var(--lp-line, #e7ddc9)" }}>
-              <MapContainer center={form.latitude ? [form.latitude, form.longitude] : RESCUE_MAP_DEFAULT} zoom={form.latitude ? 16 : 12} style={{ height: "100%", width: "100%" }} scrollWheelZoom>
-                <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                <ClickToPin onPin={onPinLocation} />
-                <RecenterOnPin lat={form.latitude} lng={form.longitude} />
-                {form.latitude != null && form.longitude != null && (
-                  <CircleMarker center={[form.latitude, form.longitude]} radius={10} pathOptions={{ color: "#c0392b", fillOpacity: 0.85 }} />
-                )}
-              </MapContainer>
-            </div>
-          </div>
-          <div className="ui-field"><label className="ui-label">Condition</label><select className="ui-select" name="condition" value={form.condition} onChange={onChange}><option>Injured or sick</option><option>Stray / no owner</option><option>Abandoned</option><option>In immediate danger</option><option>Other</option></select></div>
-          <div className="ui-field"><label className="ui-label">Details</label><textarea className="ui-textarea" name="details" value={form.details} onChange={onChange} placeholder="Describe what you see..." /></div>
-          <div className="ui-field">
-            <label className="ui-label">Photo (optional)</label>
-            <input className="ui-input" type="file" accept="image/*" onChange={onPhotoChange} />
-            {reportPhoto && <span style={{ display: "block", fontSize: 13, color: "var(--lp-ink-soft)", marginTop: 6 }}>Selected: {reportPhoto.name}</span>}
-          </div>
-          <button type="submit" className="lp-btn lp-btn-primary" disabled={reportState.status === "loading"}>
-            {reportState.status === "loading" ? "Sending..." : "Send Report"}
-          </button>
+          </aside>
         </form>
       </div>
     </section>

@@ -1,0 +1,776 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SECASPI Shelter — landing redesign concept</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* =============================================================================
+   SECASPI Shelter — landing page redesign concept (standalone, not deployed)
+
+   A self-contained exploration of a warmer, more editorial direction for the
+   public landing page. Deliberately NOT wired to the React app: this exists so
+   the look can be judged side by side with the live page before anything is
+   ported back.
+
+   Token names mirror frontend/src/styles/theme.css on purpose (--bg, --brand,
+   --ink, --btn-h, ...). Porting this back should be a matter of moving rules
+   into LandingPage.css, not renaming every variable.
+
+   Sample dog names/figures below are placeholders for layout only.
+   ============================================================================= */
+
+:root {
+  /* --- surfaces: carried over from theme.css, unchanged ------------------- */
+  --bg: #f6f1e7;
+  --bg-soft: #efe6d4;
+  --paper: #fffcf6;
+
+  /* A deeper toasted tone the live palette lacks. The current page alternates
+     only between two creams, which is what makes it read flat; this gives
+     sections something to sit against without introducing a new hue. */
+  --bg-deep: #e8dcc6;
+
+  /* --- ink --------------------------------------------------------------- */
+  --ink: #2b2420;
+  --ink-soft: #5c5246;
+  --muted: #8c8071;
+  --line: #ddd0b8;
+
+  /* --- accents ----------------------------------------------------------- */
+  --brand: #c1612e;
+  --brand-2: #9b4a22;
+  --brand-soft: #f2dfcb;
+  --sage: #7c8b6b;
+  --sage-dark: #4f5c41;
+
+  /* Olive, as a third accent for eyebrows and rules. Keeps the palette warm
+     while giving small type somewhere to go other than terracotta. */
+  --olive: #9c9060;
+
+  --footer-bg: #241d19;
+  --footer-text: #c9bba6;
+
+  --radius: 16px;
+  --radius-lg: 28px;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* --- button scale: same tokens established in theme.css ----------------- */
+  --btn-h: 52px;
+  --btn-h-sm: 44px;
+  --btn-h-min: 44px;
+  --btn-pad-x: 30px;
+  --btn-font: 15px;
+  --btn-radius: 999px;
+
+  /* --- fluid type --------------------------------------------------------
+     clamp() rather than breakpoint steps so headlines scale continuously.
+     The display size is the single biggest change from the live page, where
+     h1 sits close to body size and flattens the hierarchy. */
+  --fs-display: clamp(2.75rem, 1.4rem + 6vw, 6rem);
+  --fs-h2: clamp(2rem, 1.2rem + 3.4vw, 3.5rem);
+  --fs-h3: clamp(1.15rem, 1rem + 0.6vw, 1.5rem);
+  --fs-lead: clamp(1rem, 0.95rem + 0.4vw, 1.2rem);
+
+  --shell: 1240px;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: 'Work Sans', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--ink-soft);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+h1, h2, h3, h4 {
+  font-family: 'Fraunces', Georgia, serif;
+  color: var(--ink);
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.05;      /* tight leading is what makes large serif read editorial */
+  letter-spacing: -0.02em;
+}
+p { margin: 0; }
+img { max-width: 100%; display: block; }
+a { color: inherit; text-decoration: none; }
+ul { margin: 0; padding: 0; list-style: none; }
+
+/* Paper grain. An inline SVG data URI (no external request) at very low opacity —
+   enough to stop the large flat cream areas looking like plain #fff-ish fill. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.32;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
+}
+
+.shell { max-width: var(--shell); margin: 0 auto; padding: 0 32px; }
+
+/* Small-caps eyebrow with a rule. Replaces the plain coloured label on the live
+   page and gives every section head a consistent entry point. */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--olive);
+  margin-bottom: 18px;
+}
+.eyebrow::before { content: ''; width: 34px; height: 1px; background: currentColor; opacity: 0.6; }
+
+.section { padding: clamp(72px, 9vw, 140px) 0; }
+.section-head { max-width: 660px; margin-bottom: clamp(40px, 5vw, 72px); }
+.section-head h2 { font-size: var(--fs-h2); margin-bottom: 18px; }
+.section-head p { font-size: var(--fs-lead); color: var(--ink-soft); }
+.section-head.center { margin-left: auto; margin-right: auto; text-align: center; }
+.section-head.center .eyebrow::after { content: ''; width: 34px; height: 1px; background: currentColor; opacity: 0.6; }
+
+/* --- buttons ---------------------------------------------------------------
+   min-height (never fixed height) so a wrapping label grows instead of
+   clipping — the bug found on the live page, where an inline font-size
+   override left one button 62px tall beside its 48px siblings. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: var(--btn-h);
+  padding: 0 var(--btn-pad-x);
+  border-radius: var(--btn-radius);
+  font-family: inherit;
+  font-size: var(--btn-font);
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background .2s var(--ease), border-color .2s var(--ease),
+              transform .2s var(--ease), box-shadow .2s var(--ease), color .2s var(--ease);
+}
+.btn-primary { background: var(--brand); color: #fff; }
+.btn-primary:hover { background: var(--brand-2); transform: translateY(-2px); box-shadow: 0 14px 28px -16px rgba(155,74,34,.7); }
+.btn-ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+.btn-ghost:hover { border-color: var(--ink); transform: translateY(-2px); }
+.btn-light { background: #fff; color: var(--brand-2); }
+.btn-light:hover { background: var(--brand-soft); transform: translateY(-2px); }
+.btn:active { transform: translateY(0) scale(.98); }
+.btn-sm { min-height: var(--btn-h-sm); padding: 0 20px; font-size: 14px; }
+
+/* Text links keep their inline rhythm; the tap area is grown with a pseudo
+   element instead of padding so the text does not shift position. */
+.tlink {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--brand-2);
+  transition: gap .2s var(--ease);
+}
+.tlink:hover { gap: 12px; }
+.tlink::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: var(--btn-h-min); transform: translateY(-50%); }
+
+/* =============================== NAV ====================================== */
+.nav-wrap { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 18px 0; transition: padding .35s var(--ease); }
+.nav {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 24px; padding: 14px 26px; border-radius: 999px;
+  background: transparent; border: 1px solid transparent;
+  transition: background .35s var(--ease), border-color .35s var(--ease),
+              box-shadow .35s var(--ease), backdrop-filter .35s var(--ease);
+}
+/* Condense into a floating pill once scrolled — the nav earns its background
+   only when there is content behind it. */
+.nav-wrap.scrolled { padding: 10px 0; }
+.nav-wrap.scrolled .nav {
+  background: rgba(255, 252, 246, 0.82);
+  backdrop-filter: blur(14px);
+  border-color: var(--line);
+  box-shadow: 0 10px 30px -20px rgba(43,36,32,.5);
+}
+.logo { display: inline-flex; align-items: center; gap: 11px; font-family: 'Fraunces', serif; font-weight: 600; font-size: 19px; color: var(--ink); }
+.logo-mark { width: 36px; height: 36px; border-radius: 50%; background: var(--brand); color: #fff; display: grid; place-items: center; font-size: 17px; }
+.nav-links { display: flex; gap: 30px; font-size: 15px; font-weight: 500; }
+.nav-links a { position: relative; padding: 4px 0; color: var(--ink-soft); transition: color .18s var(--ease); }
+.nav-links a::after { content: ''; position: absolute; left: 0; bottom: 0; width: 0; height: 1.5px; background: var(--brand); transition: width .25s var(--ease); }
+.nav-links a:hover { color: var(--ink); }
+.nav-links a:hover::after { width: 100%; }
+.nav-actions { display: flex; align-items: center; gap: 12px; }
+.hamburger { display: none; width: var(--btn-h-min); height: var(--btn-h-min); border: 0; background: none; cursor: pointer; flex-direction: column; align-items: center; justify-content: center; gap: 5px; }
+.hamburger span { display: block; width: 22px; height: 2px; background: var(--ink); border-radius: 2px; transition: transform .3s var(--ease), opacity .2s var(--ease); }
+.hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.hamburger.open span:nth-child(2) { opacity: 0; }
+.hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+.mobile-menu {
+  position: fixed; inset: 0; z-index: 99; background: var(--bg);
+  display: flex; flex-direction: column; justify-content: center; gap: 8px;
+  padding: 40px 32px; opacity: 0; pointer-events: none;
+  transform: translateY(-12px); transition: opacity .28s var(--ease), transform .28s var(--ease);
+}
+.mobile-menu.open { opacity: 1; pointer-events: auto; transform: translateY(0); }
+/* :not(.btn) matters — without it the 30px menu-link size lands on the CTA button
+   too, blowing it up to 72px. Same failure the live page had with an inline
+   font-size override, just arriving via a descendant selector instead. */
+.mobile-menu a:not(.btn) { font-family: 'Fraunces', serif; font-size: 30px; font-weight: 600; color: var(--ink); padding: 10px 0; }
+.mobile-menu .btn { margin-top: 22px; align-self: flex-start; }
+
+/* =============================== HERO =====================================
+   Asymmetric split: an oversized headline against a layered image cluster.
+   The live hero is a symmetrical text/card pair, which reads static — the
+   offset second frame and floating stat give this one depth. */
+.hero { padding: clamp(130px, 17vw, 200px) 0 clamp(70px, 8vw, 110px); position: relative; overflow: hidden; }
+/* Soft radial wash behind the hero so the fold has a focal point. */
+.hero::after {
+  content: ''; position: absolute; top: -20%; right: -10%; width: 70vw; height: 70vw;
+  max-width: 900px; max-height: 900px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(193,97,46,.13), transparent 62%);
+}
+.hero-grid { position: relative; z-index: 1; display: grid; grid-template-columns: 1.05fr .95fr; gap: clamp(40px, 5vw, 80px); align-items: center; }
+.hero h1 { font-size: var(--fs-display); margin-bottom: 26px; }
+/* The one italic accent. Used once, on a single phrase, so it stays an accent. */
+.hero h1 em { font-style: italic; font-weight: 400; color: var(--brand-2); }
+.hero-lead { font-size: var(--fs-lead); max-width: 30em; margin-bottom: 36px; }
+.hero-actions { display: flex; gap: 14px; flex-wrap: wrap; }
+.hero-stats { display: flex; gap: clamp(24px, 4vw, 52px); margin-top: 52px; padding-top: 32px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.hero-stat .num { font-family: 'Fraunces', serif; font-size: clamp(1.9rem, 1.4rem + 1.6vw, 2.8rem); font-weight: 600; color: var(--brand-2); line-height: 1; }
+.hero-stat .label { font-size: 13px; color: var(--muted); margin-top: 7px; letter-spacing: .03em; }
+
+.hero-media { position: relative; }
+.hero-media .frame { border-radius: var(--radius-lg); overflow: hidden; background: linear-gradient(150deg, var(--bg-deep), var(--brand-soft)); box-shadow: 0 40px 80px -50px rgba(43,36,32,.65); }
+.hero-media .frame img { width: 100%; height: 100%; object-fit: cover; aspect-ratio: 4/4.6; }
+/* Offset secondary frame — the layering that gives the composition depth. */
+.hero-media .frame-2 {
+  position: absolute; left: -46px; bottom: -34px; width: 46%;
+  border-radius: 20px; overflow: hidden; border: 7px solid var(--bg);
+  background: linear-gradient(150deg, var(--sage-soft, #e3e8d9), var(--bg-deep));
+  aspect-ratio: 1/1; box-shadow: 0 26px 48px -30px rgba(43,36,32,.55);
+  display: grid; place-items: center; color: var(--sage-dark); font-size: 34px;
+}
+.hero-badge {
+  position: absolute; top: 26px; right: -18px; background: var(--paper);
+  border: 1px solid var(--line); border-radius: 999px; padding: 11px 20px;
+  display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600; color: var(--ink);
+  box-shadow: 0 16px 32px -22px rgba(43,36,32,.5);
+}
+.hero-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--sage); }
+
+/* ============================= PATHWAYS =================================== */
+.pathways { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.pathway {
+  background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-lg);
+  padding: 38px 32px 32px; position: relative; overflow: hidden;
+  transition: transform .3s var(--ease-out), box-shadow .3s var(--ease-out), border-color .3s var(--ease);
+}
+.pathway:hover { transform: translateY(-6px); box-shadow: 0 30px 56px -38px rgba(43,36,32,.6); border-color: var(--brand-soft); }
+/* Accent rule that draws across on hover. */
+.pathway::before { content: ''; position: absolute; top: 0; left: 0; width: 0; height: 3px; background: var(--brand); transition: width .4s var(--ease-out); }
+.pathway:hover::before { width: 100%; }
+.pathway .ico { width: 54px; height: 54px; border-radius: 16px; background: var(--brand-soft); color: var(--brand-2); display: grid; place-items: center; font-size: 24px; margin-bottom: 22px; }
+.pathway h3 { font-size: var(--fs-h3); margin-bottom: 11px; }
+.pathway p { font-size: 15px; margin-bottom: 20px; }
+
+/* ============================== DOGS ======================================
+   Tall portrait cards with the caption over a scrim, rather than the live
+   page's square image with the text stacked beneath it. Lets the photograph
+   carry the section. */
+.dogs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; }
+.dog {
+  position: relative; border-radius: var(--radius-lg); overflow: hidden; cursor: pointer;
+  aspect-ratio: 3/4.1; background: linear-gradient(150deg, var(--bg-deep), var(--brand-soft));
+  transition: transform .35s var(--ease-out), box-shadow .35s var(--ease-out);
+}
+.dog:hover { transform: translateY(-8px); box-shadow: 0 34px 60px -38px rgba(43,36,32,.7); }
+.dog img { width: 100%; height: 100%; object-fit: cover; transition: transform .6s var(--ease-out); }
+.dog:hover img { transform: scale(1.07); }
+.dog .scrim { position: absolute; inset: 0; background: linear-gradient(to top, rgba(28,22,18,.88) 0%, rgba(28,22,18,.35) 38%, transparent 62%); }
+.dog .meta { position: absolute; left: 22px; right: 22px; bottom: 20px; color: #fff; }
+.dog .meta h3 { color: #fff; font-size: 1.35rem; margin-bottom: 3px; }
+.dog .meta span { font-size: 13px; opacity: .82; }
+.dog .tag {
+  position: absolute; top: 16px; left: 16px; background: rgba(255,252,246,.94);
+  color: var(--brand-2); font-size: 11px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; padding: 6px 13px; border-radius: 999px;
+}
+.dogs-more { text-align: center; margin-top: 52px; }
+
+/* ============================= IMPACT ===================================== */
+.impact-band { background: var(--bg-deep); border-radius: var(--radius-lg); padding: clamp(48px, 6vw, 80px) clamp(28px, 4vw, 64px); }
+.impact-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; text-align: center; }
+.impact-stat .num { font-family: 'Fraunces', serif; font-size: clamp(2.4rem, 1.6rem + 3vw, 4.2rem); font-weight: 600; color: var(--brand-2); line-height: 1; }
+.impact-stat .label { font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); margin-top: 12px; }
+
+/* ============================= PROCESS ====================================
+   Numbered steps on a single connecting rule. The live page drops its
+   connector once the grid wraps; here the rule is drawn per-item so it
+   survives any column count. */
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 28px; }
+.step { position: relative; padding-top: 40px; }
+.step::before { content: ''; position: absolute; top: 13px; left: 0; right: 0; height: 1px; background: var(--line); }
+.step:first-child::before { left: 13px; }
+.step:last-child::before { right: calc(100% - 13px); }
+.step .n {
+  position: absolute; top: 0; left: 0; width: 27px; height: 27px; border-radius: 50%;
+  background: var(--brand); color: #fff; display: grid; place-items: center;
+  font-size: 12px; font-weight: 700; font-family: 'Work Sans', sans-serif;
+}
+.step h3 { font-size: 1.2rem; margin-bottom: 9px; }
+.step p { font-size: 14.5px; }
+
+/* ============================== REPORT ==================================== */
+.report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(32px, 4vw, 64px); align-items: start; }
+.report-card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: clamp(28px, 3.4vw, 44px); }
+.field { margin-bottom: 18px; }
+.field label { display: block; font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 7px; letter-spacing: .01em; }
+.field input, .field select, .field textarea {
+  width: 100%; min-height: var(--btn-h-min); padding: 12px 16px; border-radius: 12px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+  font-family: inherit; font-size: 15px; transition: border-color .18s var(--ease), box-shadow .18s var(--ease);
+}
+.field textarea { min-height: 110px; resize: vertical; }
+.field input:focus, .field select:focus, .field textarea:focus {
+  outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(193,97,46,.14);
+}
+.map-placeholder {
+  border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--line);
+  background:
+    repeating-linear-gradient(0deg, rgba(43,36,32,.05) 0 1px, transparent 1px 42px),
+    repeating-linear-gradient(90deg, rgba(43,36,32,.05) 0 1px, transparent 1px 42px),
+    linear-gradient(150deg, var(--sage-soft, #e3e8d9), var(--bg-deep));
+  aspect-ratio: 4/3.4; display: grid; place-items: center; text-align: center; padding: 24px;
+}
+.map-placeholder .pin { font-size: 34px; color: var(--brand); margin-bottom: 10px; }
+.map-placeholder p { font-size: 14px; color: var(--ink-soft); }
+.geo-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 16px; }
+
+/* ============================ SUPPORTERS ==================================
+   Marquee instead of a static grid — a donor wall reads better as something
+   continuous, and it scales past the five the grid could show. */
+.marquee { position: relative; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent); mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent); }
+.marquee-track { display: flex; gap: 20px; width: max-content; animation: slide 38s linear infinite; }
+.marquee:hover .marquee-track { animation-play-state: paused; }
+@keyframes slide { to { transform: translateX(-50%); } }
+.donor { background: var(--paper); border: 1px solid var(--line); border-radius: 20px; padding: 26px 30px; min-width: 232px; text-align: center; }
+.donor .rank { font-family: 'Fraunces', serif; font-size: 13px; font-weight: 700; color: var(--olive); letter-spacing: .1em; }
+.donor .name { font-weight: 700; color: var(--ink); margin: 8px 0 4px; }
+/* Deliberately NOT .amt — that class is the donation chip button below, and the
+   collision styled these plain figures as pills. */
+.donor-amt { font-size: 14px; color: var(--brand-2); font-weight: 600; }
+
+/* ============================== DONATE ==================================== */
+.donate-band {
+  background: linear-gradient(135deg, var(--brand-2), var(--brand));
+  border-radius: var(--radius-lg); padding: clamp(48px, 6vw, 88px) clamp(28px, 4vw, 56px);
+  text-align: center; color: #fff; position: relative; overflow: hidden;
+}
+.donate-band::before { content: ''; position: absolute; top: -55%; left: -12%; width: 46%; height: 190%; background: rgba(255,255,255,.06); transform: rotate(18deg); pointer-events: none; }
+.donate-band h2 { color: #fff; font-size: var(--fs-h2); max-width: 17ch; margin: 0 auto 18px; }
+.donate-band > p { max-width: 54ch; margin: 0 auto 34px; color: rgba(255,255,255,.9); font-size: var(--fs-lead); }
+.amounts { display: flex; gap: 11px; justify-content: center; flex-wrap: wrap; margin-bottom: 30px; position: relative; }
+.amt {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: var(--btn-h-sm); padding: 0 22px; border-radius: 999px;
+  background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.4);
+  color: #fff; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: background .18s var(--ease), border-color .18s var(--ease), transform .18s var(--ease), color .18s var(--ease);
+}
+.amt:hover { border-color: #fff; transform: translateY(-2px); }
+.amt.active { background: #fff; color: var(--brand-2); border-color: #fff; }
+
+/* ============================== FOOTER ==================================== */
+.footer { background: var(--footer-bg); color: var(--footer-text); padding: clamp(60px, 7vw, 100px) 0 34px; }
+.footer-grid { display: grid; grid-template-columns: 1.7fr 1fr 1fr 1fr; gap: 44px; }
+.footer .logo, .footer h4 { color: #fff; }
+.footer-brand p { margin-top: 16px; font-size: 14.5px; max-width: 34ch; }
+.footer h4 { font-family: 'Work Sans', sans-serif; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; margin-bottom: 18px; font-weight: 600; }
+.footer-col li { margin-bottom: 11px; font-size: 14.5px; }
+.footer-col a { transition: color .16s var(--ease); }
+.footer-col a:hover { color: #fff; }
+.footer-bottom {
+  margin-top: 56px; padding-top: 26px; border-top: 1px solid rgba(255,255,255,.1);
+  display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-size: 13px;
+}
+
+/* ============================== REVEAL ====================================
+   Same class contract as the live page (LandingSections.jsx:55) so these
+   rules port straight into LandingPage.css. */
+.reveal { opacity: 0; transform: translateY(26px); transition: opacity .75s var(--ease-out), transform .75s var(--ease-out); }
+.reveal.is-visible { opacity: 1; transform: none; }
+.reveal-item { opacity: 0; transform: translateY(26px); transition: opacity .7s var(--ease-out), transform .7s var(--ease-out); transition-delay: calc(var(--i, 0) * 90ms); }
+.reveal-group.is-visible .reveal-item { opacity: 1; transform: none; }
+
+/* ============================ RESPONSIVE ================================== */
+@media (max-width: 1024px) {
+  .hero-grid { grid-template-columns: 1fr; }
+  .hero-media { max-width: 460px; margin: 0 auto; }
+  .hero-media .frame-2 { left: -22px; width: 42%; }
+  .dogs { grid-template-columns: repeat(2, 1fr); }
+  .steps { grid-template-columns: repeat(2, 1fr); row-gap: 44px; }
+  .step::before { display: none; }   /* the rule only reads in a single row */
+  .impact-grid { grid-template-columns: repeat(2, 1fr); gap: 40px; }
+  .footer-grid { grid-template-columns: 1fr 1fr; gap: 36px; }
+  .nav-links, .nav-actions .btn-ghost { display: none; }
+  .hamburger { display: flex; }
+}
+@media (max-width: 860px) {
+  .pathways { grid-template-columns: 1fr; }
+  .report-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .shell { padding: 0 20px; }
+  .hero { padding-top: 120px; }
+  .hero-media .frame-2 { left: -10px; bottom: -20px; width: 40%; }
+  .hero-badge { right: 0; }
+  .impact-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
+  .steps { grid-template-columns: 1fr; }
+  .footer-grid { grid-template-columns: 1fr; gap: 32px; }
+  .footer-bottom { flex-direction: column; gap: 8px; }
+
+  /* Stack action rows full width: every CTA then shares one width and one
+     left edge instead of each sizing to its own label. */
+  .hero-actions, .geo-row { flex-direction: column; align-items: stretch; }
+  .hero-actions .btn, .geo-row .btn { width: 100%; }
+  /* Two per row, but flex-grow 0 — with five chips the odd one out would
+     otherwise stretch to a full-width bar and break the grid rhythm. */
+  .amt { flex: 0 1 calc(50% - 6px); }
+}
+
+/* Reduced motion: resolve reveals to their FINAL state rather than disabling
+   the transition, otherwise anything not yet observed stays at opacity 0. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+  .reveal, .reveal-item { opacity: 1 !important; transform: none !important; }
+  .marquee-track { animation: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="nav-wrap" id="navWrap">
+  <div class="shell">
+    <nav class="nav">
+      <a href="#" class="logo"><span class="logo-mark">🐾</span> SECASPI Shelter</a>
+      <ul class="nav-links">
+        <li><a href="#how">How it works</a></li>
+        <li><a href="#animals">Adopt</a></li>
+        <li><a href="#impact">Impact</a></li>
+        <li><a href="#donate">Donate</a></li>
+      </ul>
+      <div class="nav-actions">
+        <button class="btn btn-ghost btn-sm">Sign in</button>
+        <a href="#report" class="btn btn-primary btn-sm">Report a stray</a>
+        <button class="hamburger" id="burger" aria-label="Menu" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </nav>
+  </div>
+</div>
+
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#how">How it works</a>
+  <a href="#animals">Adopt</a>
+  <a href="#impact">Impact</a>
+  <a href="#donate">Donate</a>
+  <a href="#report" class="btn btn-primary">Report a stray</a>
+</div>
+
+<!-- ================================ HERO ================================= -->
+<header class="hero">
+  <div class="shell hero-grid">
+    <div class="reveal">
+      <span class="eyebrow">Calamba, Laguna</span>
+      <h1>Every Aspin deserves a home, <em>not just a street.</em></h1>
+      <p class="hero-lead">SECASPI rescues, rehabilitates, and rehomes the Philippines' native dogs — the Aspin — connecting stray animals with people ready to give them a second chance.</p>
+      <div class="hero-actions">
+        <a href="#animals" class="btn btn-primary">Browse adoptable Aspins</a>
+        <a href="#report" class="btn btn-ghost">Report a stray</a>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat"><div class="num" data-count="248">0</div><div class="label">Dogs rescued</div></div>
+        <div class="hero-stat"><div class="num" data-count="191">0</div><div class="label">Adopted out</div></div>
+        <div class="hero-stat"><div class="num" data-count="57">0</div><div class="label">Currently in care</div></div>
+      </div>
+    </div>
+
+    <div class="hero-media reveal">
+      <div class="frame"><img src="../frontend/public/hero-dog.jpg" alt="A rescued Aspin at the shelter" /></div>
+      <div class="frame-2">🐕</div>
+      <div class="hero-badge"><span class="dot"></span> 12 ready to meet you</div>
+    </div>
+  </div>
+</header>
+
+<!-- ============================== PATHWAYS =============================== -->
+<section id="how" class="section">
+  <div class="shell">
+    <div class="section-head reveal">
+      <span class="eyebrow">Three ways to help</span>
+      <h2>Pick the one that fits you today</h2>
+      <p>Whether you have a spare room, a spare peso, or just a phone and a moment — there's a way in.</p>
+    </div>
+    <div class="pathways reveal-group">
+      <article class="pathway reveal-item" style="--i:0">
+        <div class="ico">🏠</div>
+        <h3>Adopt</h3>
+        <p>Browse profiles of vaccinated, vetted Aspins ready for a forever home.</p>
+        <a href="#animals" class="tlink">View adoptable dogs →</a>
+      </article>
+      <article class="pathway reveal-item" style="--i:1">
+        <div class="ico">🐾</div>
+        <h3>Donate</h3>
+        <p>Fund food, vaccines, and medical care for dogs currently in intake. Every peso is tracked and reported.</p>
+        <a href="#donate" class="tlink">Support the shelter →</a>
+      </article>
+      <article class="pathway reveal-item" style="--i:2">
+        <div class="ico">📍</div>
+        <h3>Report a stray</h3>
+        <p>Spotted an Aspin in need? Submit a rescue report with location and photos so our team can respond quickly.</p>
+        <a href="#report" class="tlink">File a report →</a>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ================================ DOGS ================================= -->
+<section id="animals" class="section" style="background:var(--bg-soft)">
+  <div class="shell">
+    <div class="section-head center reveal">
+      <span class="eyebrow">Meet the dogs</span>
+      <h2>Currently looking for homes</h2>
+      <p>A few of the Aspins waiting in our shelter right now.</p>
+    </div>
+    <div class="dogs reveal-group">
+      <article class="dog reveal-item" style="--i:0">
+        <img src="../frontend/public/hero-dog.jpg" alt="Bantay" />
+        <div class="scrim"></div>
+        <span class="tag">Ready</span>
+        <div class="meta"><h3>Bantay</h3><span>2 years · Male · Gentle</span></div>
+      </article>
+      <article class="dog reveal-item" style="--i:1">
+        <div class="scrim"></div>
+        <span class="tag">Ready</span>
+        <div class="meta"><h3>Tala</h3><span>1 year · Female · Playful</span></div>
+      </article>
+      <article class="dog reveal-item" style="--i:2">
+        <div class="scrim"></div>
+        <span class="tag">In care</span>
+        <div class="meta"><h3>Kidlat</h3><span>3 years · Male · Loyal</span></div>
+      </article>
+      <article class="dog reveal-item" style="--i:3">
+        <div class="scrim"></div>
+        <span class="tag">Ready</span>
+        <div class="meta"><h3>Maya</h3><span>8 months · Female · Curious</span></div>
+      </article>
+    </div>
+    <div class="dogs-more reveal"><a href="#" class="btn btn-ghost">See all available Aspins</a></div>
+  </div>
+</section>
+
+<!-- =============================== IMPACT ================================ -->
+<section id="impact" class="section">
+  <div class="shell">
+    <div class="impact-band reveal">
+      <div class="impact-grid">
+        <div class="impact-stat"><div class="num" data-count="248">0</div><div class="label">Rescued</div></div>
+        <div class="impact-stat"><div class="num" data-count="191">0</div><div class="label">Adopted</div></div>
+        <div class="impact-stat"><div class="num" data-count="1420">0</div><div class="label">Vaccinations</div></div>
+        <div class="impact-stat"><div class="num" data-count="86">0</div><div class="label">Volunteers</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================== PROCESS =============================== -->
+<section class="section">
+  <div class="shell">
+    <div class="section-head reveal">
+      <span class="eyebrow">The process</span>
+      <h2>How a rescue becomes a homecoming</h2>
+    </div>
+    <div class="steps reveal-group">
+      <div class="step reveal-item" style="--i:0"><span class="n">1</span><h3>Intake</h3><p>A stray is reported or surrendered and brought in for a health and temperament assessment.</p></div>
+      <div class="step reveal-item" style="--i:1"><span class="n">2</span><h3>Care</h3><p>Vaccination, deworming, and recovery time with our volunteer-run medical team.</p></div>
+      <div class="step reveal-item" style="--i:2"><span class="n">3</span><h3>Matching</h3><p>Profile goes live for adoption, matched against applicant lifestyle and home setup.</p></div>
+      <div class="step reveal-item" style="--i:3"><span class="n">4</span><h3>Homecoming</h3><p>Home check, adoption agreement, and a follow-up visit within the first month.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================== REPORT ================================ -->
+<section id="report" class="section" style="background:var(--bg-soft)">
+  <div class="shell">
+    <div class="section-head reveal">
+      <span class="eyebrow">Rescue response</span>
+      <h2>Report a stray</h2>
+      <p>Tell us where the animal is and our team will respond as quickly as we can.</p>
+    </div>
+    <div class="report-grid">
+      <div class="report-card reveal">
+        <div class="field"><label for="rname">Your name</label><input id="rname" placeholder="Juan Dela Cruz" /></div>
+        <div class="field"><label for="rcontact">Contact number</label><input id="rcontact" placeholder="09XX XXX XXXX" /></div>
+        <div class="field"><label for="rloc">Where is the animal?</label><input id="rloc" placeholder="House no. / street, landmark, barangay, city" /></div>
+        <div class="field"><label for="rcond">Condition</label>
+          <select id="rcond"><option>Injured or sick</option><option>Healthy but stray</option><option>Abandoned litter</option><option>Aggressive / unsafe to approach</option></select>
+        </div>
+        <div class="field"><label for="rdetails">Anything else we should know?</label><textarea id="rdetails" placeholder="Describe the animal, how long it's been there, whether it's approachable…"></textarea></div>
+        <div class="geo-row">
+          <button class="btn btn-ghost btn-sm">📍 Use my current location</button>
+          <span style="font-size:13px;color:var(--muted)">No pin yet — tap the map</span>
+        </div>
+        <div style="margin-top:22px"><button class="btn btn-primary" style="width:100%">Send report</button></div>
+      </div>
+      <div class="reveal">
+        <div class="map-placeholder">
+          <div>
+            <div class="pin">📍</div>
+            <p><strong>Tap to pin the exact spot</strong><br />The live page renders an interactive map here.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================= SUPPORTERS =============================== -->
+<section class="section">
+  <div class="shell">
+    <div class="section-head center reveal">
+      <span class="eyebrow">Community Impact</span>
+      <h2>Our Top Supporters</h2>
+      <p>Donors who've gone above and beyond for our rescues.</p>
+    </div>
+  </div>
+  <div class="marquee reveal">
+    <div class="marquee-track">
+      <div class="donor"><div class="rank">★ TOP</div><div class="name">Maria Santos</div><div class="donor-amt">₱24,500</div></div>
+      <div class="donor"><div class="rank">02</div><div class="name">Jose Ramos</div><div class="donor-amt">₱18,200</div></div>
+      <div class="donor"><div class="rank">03</div><div class="name">Ana Reyes</div><div class="donor-amt">₱15,000</div></div>
+      <div class="donor"><div class="rank">04</div><div class="name">Paolo Cruz</div><div class="donor-amt">₱12,750</div></div>
+      <div class="donor"><div class="rank">05</div><div class="name">Liza Mendoza</div><div class="donor-amt">₱9,400</div></div>
+      <div class="donor"><div class="rank">06</div><div class="name">Carlo Bautista</div><div class="donor-amt">₱8,100</div></div>
+      <!-- duplicated set so the -50% translate loops seamlessly -->
+      <div class="donor"><div class="rank">★ TOP</div><div class="name">Maria Santos</div><div class="donor-amt">₱24,500</div></div>
+      <div class="donor"><div class="rank">02</div><div class="name">Jose Ramos</div><div class="donor-amt">₱18,200</div></div>
+      <div class="donor"><div class="rank">03</div><div class="name">Ana Reyes</div><div class="donor-amt">₱15,000</div></div>
+      <div class="donor"><div class="rank">04</div><div class="name">Paolo Cruz</div><div class="donor-amt">₱12,750</div></div>
+      <div class="donor"><div class="rank">05</div><div class="name">Liza Mendoza</div><div class="donor-amt">₱9,400</div></div>
+      <div class="donor"><div class="rank">06</div><div class="name">Carlo Bautista</div><div class="donor-amt">₱8,100</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================== DONATE ================================ -->
+<section id="donate" class="section">
+  <div class="shell">
+    <div class="donate-band reveal">
+      <h2>Help us rescue the next Aspin off the street.</h2>
+      <p>Your donation funds food, vaccines, and shelter for dogs waiting for their second chance.</p>
+      <div class="amounts">
+        <button class="amt">₱100</button>
+        <button class="amt active">₱300</button>
+        <button class="amt">₱500</button>
+        <button class="amt">₱1,000</button>
+        <button class="amt">₱2,500</button>
+      </div>
+      <a href="#" class="btn btn-light">Donate now</a>
+    </div>
+  </div>
+</section>
+
+<!-- =============================== FOOTER ================================ -->
+<footer class="footer">
+  <div class="shell">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="#" class="logo"><span class="logo-mark">🐾</span> SECASPI Shelter</a>
+        <p>Rescuing and rehoming the Philippines' native Aspin dogs.</p>
+      </div>
+      <div class="footer-col"><h4>Shelter</h4><ul><li><a href="#animals">Adopt</a></li><li><a href="#donate">Donate</a></li><li><a href="#how">How it works</a></li></ul></div>
+      <div class="footer-col"><h4>Get involved</h4><ul><li><a href="#">Volunteer</a></li><li><a href="#report">Report a stray</a></li><li><a href="#">Foster a dog</a></li></ul></div>
+      <div class="footer-col"><h4>Contact</h4><ul><li><a href="#">hello@secaspi.org</a></li><li>0917 000 0000</li><li>Calamba, Laguna, Philippines</li></ul></div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 SECASPI Shelter. All rights reserved.</span>
+      <span>Built with care for Aspins everywhere.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* --- nav condense ------------------------------------------------------ */
+  var navWrap = document.getElementById('navWrap');
+  var onScroll = function () { navWrap.classList.toggle('scrolled', window.scrollY > 8); };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  /* --- mobile menu ------------------------------------------------------- */
+  var burger = document.getElementById('burger');
+  var menu = document.getElementById('mobileMenu');
+  burger.addEventListener('click', function () {
+    var open = menu.classList.toggle('open');
+    burger.classList.toggle('open', open);
+    burger.setAttribute('aria-expanded', String(open));
+    document.body.style.overflow = open ? 'hidden' : '';
+  });
+  menu.addEventListener('click', function (e) {
+    if (e.target.tagName !== 'A') return;
+    menu.classList.remove('open');
+    burger.classList.remove('open');
+    burger.setAttribute('aria-expanded', 'false');
+    document.body.style.overflow = '';
+  });
+
+  /* --- count-up ----------------------------------------------------------
+     Eased toward the target so the numbers settle rather than stopping dead. */
+  function countUp(el) {
+    var target = parseInt(el.dataset.count, 10) || 0;
+    if (reduced) { el.textContent = target.toLocaleString(); return; }
+    var start = performance.now(), dur = 1500;
+    (function tick(now) {
+      var p = Math.min((now - start) / dur, 1);
+      var eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(target * eased).toLocaleString();
+      if (p < 1) requestAnimationFrame(tick);
+    })(start);
+  }
+
+  /* --- reveal ------------------------------------------------------------
+     One observer for every reveal target; unobserve after firing so nothing
+     re-animates on the way back up. Same class contract as the React page. */
+  var targets = document.querySelectorAll('.reveal, .reveal-group');
+  if (!('IntersectionObserver' in window)) {
+    targets.forEach(function (t) { t.classList.add('is-visible'); });
+    document.querySelectorAll('[data-count]').forEach(countUp);
+    return;
+  }
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add('is-visible');
+      entry.target.querySelectorAll('[data-count]').forEach(countUp);
+      io.unobserve(entry.target);
+    });
+  }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+  targets.forEach(function (t) { io.observe(t); });
+})();
+</script>
+
+</body>
+</html>
