@@ -1,5 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import useInView from "../../lib/useInView";
+import usePrefersReducedMotion from "../../lib/usePrefersReducedMotion";
 import { MapContainer, TileLayer, CircleMarker, useMapEvents, useMap } from "react-leaflet";
 import { Home, PawPrint, MapPin, Check } from "lucide-react";
 import "leaflet/dist/leaflet.css";
@@ -75,38 +76,95 @@ function animalPhotoSrc(photo) {
 // The nav that used to live here is now components/SiteNav.jsx, shared with every other
 // public page — same bar, plus a highlight on the current page's link.
 
-export function Hero({ eyebrow, heroTitle, heroSubtitle, bannerImage, stats, onMeetDogs, onReportStray }) {
+/**
+ * Full-bleed hero. The background is the shelter's most recent arrivals, cross-fading every
+ * five seconds — the dogs are the argument the page is making, so they are the page rather
+ * than a picture beside it.
+ *
+ * `slides` is already filtered to animals that have a photo; when none do it falls back to a
+ * single banner image, and the component behaves as a plain static hero.
+ */
+export function Hero({ slides, eyebrow, heroTitle, heroSubtitle, stats, onMeetDogs, onReportStray, onSelectAnimal }) {
   const [textRef, textIn] = useInView();
-  const [cardRef, cardIn] = useInView();
+  const reduceMotion = usePrefersReducedMotion();
+  const [index, setIndex] = useState(0);
+
+  const count = slides.length;
+  // Modulo at read time so a shrinking slide list can never leave the index out of range.
+  const active = count ? index % count : 0;
+  const current = slides[active];
+
+  // A self-restarting timeout rather than an interval: picking a dot restarts the five
+  // seconds too, instead of letting a tick land immediately after a manual choice.
+  useEffect(() => {
+    if (count < 2 || reduceMotion) return undefined;
+    const id = setTimeout(() => setIndex((i) => (i + 1) % count), 5000);
+    return () => clearTimeout(id);
+  }, [count, index, reduceMotion]);
 
   return (
     <section className="lp-hero">
-      <div ref={textRef} className={`lp-reveal${textIn ? " is-visible" : ""}`}>
-        <span className="lp-eyebrow">{eyebrow}</span>
-        <h1>{heroTitle}</h1>
-        <p className="lead">{heroSubtitle}</p>
-        <div className="lp-hero-actions">
-          <button className="lp-btn lp-btn-primary" onClick={onMeetDogs}>Browse adoptable Aspins</button>
-          <button className="lp-btn lp-btn-ghost" onClick={onReportStray}>Report a stray</button>
-        </div>
-        <div className="lp-hero-stats">
-          {stats.map((s) => (
-            <div className="lp-hero-stat" key={s.label}>
-              <div className="num">{s.value}</div>
-              <div className="label">{s.label}</div>
-            </div>
-          ))}
-        </div>
+      <div className="lp-hero-slides" aria-hidden="true">
+        {slides.map((slide, i) => (
+          <div key={slide.key} className={`lp-hero-slide${i === active ? " is-active" : ""}`}>
+            {/* Only the first is eager: it is the largest thing above the fold, and the
+                rest are not visible for at least five seconds. */}
+            <img src={slide.photo} alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />
+          </div>
+        ))}
       </div>
+      <div className="lp-hero-scrim" aria-hidden="true" />
 
-      <div
-        ref={cardRef}
-        className={`lp-hero-card lp-reveal${cardIn ? " is-visible" : ""}`}
-        style={{ "--reveal-delay": "0.12s" }}
-      >
-        <div className="photo-block">
-          {bannerImage ? <img src={bannerImage} alt="SECASPI Shelter logo" /> : "Photo placeholder — Aspin portrait"}
+      <div className="lp-hero-inner">
+        <div ref={textRef} className={`lp-hero-copy lp-reveal${textIn ? " is-visible" : ""}`}>
+          <span className="lp-eyebrow">{eyebrow}</span>
+          <h1>{heroTitle}</h1>
+          <p className="lead">{heroSubtitle}</p>
+          <div className="lp-hero-actions">
+            <button className="lp-btn lp-btn-primary" onClick={onMeetDogs}>Browse adoptable Aspins</button>
+            <button className="lp-btn lp-btn-ghost" onClick={onReportStray}>Report a stray</button>
+          </div>
+          <div className="lp-hero-stats">
+            {stats.map((s) => (
+              <div className="lp-hero-stat" key={s.label}>
+                <div className="num">{s.value}</div>
+                <div className="label">{s.label}</div>
+              </div>
+            ))}
+          </div>
         </div>
+
+        {count > 1 && (
+          <div className="lp-hero-slidebar">
+            {/* Naming whoever is on screen turns the rotation into an introduction rather
+                than decoration, and gives a way through to that dog. */}
+            {current?.id ? (
+              <button
+                type="button"
+                className="lp-hero-caption"
+                onClick={() => onSelectAnimal(current.id)}
+              >
+                <span className="lp-hero-caption-name">{current.name}</span>
+                {current.age ? <span className="lp-hero-caption-meta">{current.age}</span> : null}
+                <span className="lp-hero-caption-cta">Meet them →</span>
+              </button>
+            ) : <span />}
+
+            <div className="lp-hero-dots" role="tablist" aria-label="Recent arrivals">
+              {slides.map((slide, i) => (
+                <button
+                  key={slide.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={i === active}
+                  aria-label={slide.name ? `Show ${slide.name}` : `Show photo ${i + 1}`}
+                  className={`lp-hero-dot${i === active ? " is-active" : ""}`}
+                  onClick={() => setIndex(i)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );

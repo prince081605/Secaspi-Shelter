@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { getFeaturedAnimals, getImpactStats } from "../../lib/publicHomeApi.js";
 import { createReport } from "../../lib/rescueApi.js";
@@ -104,6 +104,24 @@ export default function LandingPage() {
   const address = settings.address || "Calamba, Laguna, Philippines";
   const eyebrow = address.split(",").slice(0, 2).join(",").trim() || "Calamba, Laguna";
 
+  // The hero background: the four most recent arrivals that actually have a photograph.
+  // /api/home/featured-animals already returns newest-first and excludes archived/adopted,
+  // so this is a filter and a slice rather than a second request.
+  //
+  // Animals without a photo are dropped — an empty frame in a rotation reads as a broken
+  // image, not as a dog. If none of them have one, the shelter's banner stands in and the
+  // hero is simply static.
+  const heroSlides = useMemo(() => {
+    const withPhotos = animals
+      .filter((a) => a.photo)
+      .slice(0, 4)
+      .map((a) => ({ key: `animal-${a.id}`, id: a.id, name: a.name, age: a.age, photo: a.photo }));
+
+    return withPhotos.length
+      ? withPhotos
+      : [{ key: "banner", id: null, name: "", age: "", photo: bannerImage }];
+  }, [animals, bannerImage]);
+
   // Derived "currently in care" = rescued minus already-adopted, since the public API
   // doesn't expose a literal in-care count. Used for both the hero and impact band.
   const inCare = impact ? Math.max(0, (impact.animals_rescued ?? 0) - (impact.animals_adopted ?? 0)) : null;
@@ -158,13 +176,14 @@ export default function LandingPage() {
 
       <main id="main">
         <Hero
+          slides={heroSlides}
           eyebrow={eyebrow}
           heroTitle={heroTitle}
           heroSubtitle={heroSubtitle}
-          bannerImage={bannerImage}
           stats={heroStats}
           onMeetDogs={() => scrollTo("animals")}
           onReportStray={() => scrollTo("report")}
+          onSelectAnimal={(id) => navigate(`/adopt/${id}`)}
         />
         <Pathways onNavigateTo={(id) => scrollTo(id)} />
         <FeaturedAnimals animals={animals} onAdopt={() => navigate("/adopt")} />
