@@ -110,13 +110,54 @@ html { scroll-behavior: smooth; }
 .lp-hero-slides { position: absolute; inset: 0; z-index: -2; }
 .lp-hero-slide { position: absolute; inset: 0; opacity: 0; transition: opacity 1.1s var(--ease); }
 .lp-hero-slide.is-active { opacity: 1; }
-/* Biased above centre: on a portrait of a dog the face sits in the upper third, and
-   centring crops it out at wide aspect ratios. */
-.lp-hero-slide img { width: 100%; height: 100%; object-fit: cover; object-position: center 32%; }
-/* A slow drift keeps a still photograph from reading as a dead background. Starts above 1
-   so the scaling never exposes an edge. */
-@keyframes lpHeroDrift { from { transform: scale(1.05); } to { transform: scale(1.13); } }
-.lp-hero-slide.is-active img { animation: lpHeroDrift 14s var(--ease) forwards; }
+
+/* Every photo is shown whole. Shelter intake photos are shot on phones in whatever
+   orientation was to hand, so cropping them to a wide hero reliably cut the dog's head
+   off. Two layers make that work without letterboxing:
+
+   1. .lp-hero-fill  — the same file, blown up and blurred, covering the frame. It gives
+      the area beside a portrait the photo's own colour instead of a flat void.
+   2. .lp-hero-shot  — the photograph itself, contained, never cropped.
+
+   Same src for both, so it is one download. */
+.lp-hero-fill,
+.lp-hero-shot { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+.lp-hero-fill {
+  object-fit: cover;
+  filter: blur(42px) saturate(1.15) brightness(.4);
+  /* Blur samples past the element's edge and leaves it translucent; scaling up pushes
+     that soft border outside the frame. */
+  transform: scale(1.2);
+}
+
+.lp-hero-shot { object-fit: contain; }
+
+/* A slow drift keeps the background from reading as a dead still. It rides the blurred
+   layer only — drifting the sharp one would crop the photograph at the edges of its
+   travel, undoing the point of containing it. */
+@keyframes lpHeroDrift { from { transform: scale(1.2); } to { transform: scale(1.3); } }
+.lp-hero-slide.is-active .lp-hero-fill { animation: lpHeroDrift 16s var(--ease) forwards; }
+
+/* Portrait shots leave bare frame down both sides. Fading those to dark stops the photo
+   ending on a hard vertical seam — it reads as the image falling off into shadow rather
+   than as a picture pasted onto a background. Landscape shots fill the width, so they get
+   nothing here; the same treatment on them would just be a vignette on the photo itself. */
+.lp-hero-slide.is-portrait::after {
+  content: "";
+  position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(
+    to right,
+    rgba(20,15,12,.94) 0%,
+    rgba(20,15,12,.70) 10%,
+    rgba(20,15,12,.22) 22%,
+    transparent 34%,
+    transparent 66%,
+    rgba(20,15,12,.22) 78%,
+    rgba(20,15,12,.70) 90%,
+    rgba(20,15,12,.94) 100%
+  );
+}
 
 /* Weighted to the left, where the copy is, so the right side of the photograph stays
    readable as a photograph instead of being uniformly dimmed. */
@@ -402,6 +443,26 @@ html { scroll-behavior: smooth; }
   .lp-hero-actions { justify-content: center; }
   .lp-hero-stats { justify-content: center; }
   .lp-hero-slidebar { justify-content: center; }
+
+  /* The mirror of the portrait case, and only here: in the tall frame a phone gives the
+     hero, a landscape photo fills the width and strands a band above and below it instead
+     of down the sides. Same gradual falloff, rotated. Left out on desktop, where a
+     landscape shot nearly fills the frame and this would only vignette the photograph. */
+  .lp-hero-slide.is-landscape::after {
+    content: "";
+    position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(
+      to bottom,
+      rgba(20,15,12,.94) 0%,
+      rgba(20,15,12,.70) 9%,
+      rgba(20,15,12,.22) 20%,
+      transparent 32%,
+      transparent 68%,
+      rgba(20,15,12,.22) 80%,
+      rgba(20,15,12,.70) 91%,
+      rgba(20,15,12,.94) 100%
+    );
+  }
   .lp-pathways { grid-template-columns: 1fr; }
   .lp-featured-grid { grid-template-columns: repeat(2,1fr); }
   .lp-impact-inner { grid-template-columns: repeat(2,1fr); }

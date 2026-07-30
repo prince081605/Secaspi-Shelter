@@ -94,6 +94,17 @@ export function Hero({ slides, eyebrow, heroTitle, heroSubtitle, stats, onMeetDo
   const active = count ? index % count : 0;
   const current = slides[active];
 
+  // Which way each photo is oriented, measured from the file once it decodes. A portrait
+  // shown whole leaves bare frame down both sides, and only those get the edge treatment —
+  // applying it to a landscape shot would just vignette the photograph itself.
+  const [orientations, setOrientations] = useState({});
+  const handleImageLoad = (key) => (e) => {
+    const { naturalWidth: w, naturalHeight: h } = e.currentTarget;
+    if (!w || !h) return;
+    const orientation = w >= h ? "landscape" : "portrait";
+    setOrientations((prev) => (prev[key] === orientation ? prev : { ...prev, [key]: orientation }));
+  };
+
   // A self-restarting timeout rather than an interval: picking a dot restarts the five
   // seconds too, instead of letting a tick land immediately after a manual choice.
   useEffect(() => {
@@ -106,10 +117,24 @@ export function Hero({ slides, eyebrow, heroTitle, heroSubtitle, stats, onMeetDo
     <section className="lp-hero">
       <div className="lp-hero-slides" aria-hidden="true">
         {slides.map((slide, i) => (
-          <div key={slide.key} className={`lp-hero-slide${i === active ? " is-active" : ""}`}>
-            {/* Only the first is eager: it is the largest thing above the fold, and the
-                rest are not visible for at least five seconds. */}
-            <img src={slide.photo} alt="" loading={i === 0 ? "eager" : "lazy"} decoding="async" />
+          <div
+            key={slide.key}
+            className={`lp-hero-slide is-${orientations[slide.key] || "landscape"}${i === active ? " is-active" : ""}`}
+          >
+            {/* Two copies of the one file — the browser fetches it once. The blurred layer
+                fills the frame so a photo that doesn't match the hero's proportions never
+                sits in flat empty bars; the sharp layer sits on top uncropped. */}
+            <img className="lp-hero-fill" src={slide.photo} alt="" aria-hidden="true" decoding="async" />
+            <img
+              className="lp-hero-shot"
+              src={slide.photo}
+              alt=""
+              /* Only the first is eager: it is the largest thing above the fold, and the
+                 rest are not visible for at least five seconds. */
+              loading={i === 0 ? "eager" : "lazy"}
+              decoding="async"
+              onLoad={handleImageLoad(slide.key)}
+            />
           </div>
         ))}
       </div>
