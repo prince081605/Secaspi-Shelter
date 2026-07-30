@@ -7,12 +7,73 @@ use App\Models\User;
 use App\Notifications\ReminderDue;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+/**
+ * Create an admin, or promote and unlock an existing account. The way back in when a
+ * database has no admin and you would rather not redeploy to change ADMIN_* env vars.
+ *
+ * The password is prompted for, never passed as an argument — arguments end up in shell
+ * history and in the process list, where other users on the host can read them.
+ *
+ * Usage: php artisan secaspi:make-admin you@example.com
+ */
+Artisan::command('secaspi:make-admin {email} {--name=Shelter Admin}', function (string $email) {
+    $password = $this->secret('New password (min 8 characters, input hidden)');
+
+    if (strlen((string) $password) < 8) {
+        $this->error('Password must be at least 8 characters.');
+        return 1;
+    }
+
+    if ($password !== $this->secret('Confirm password')) {
+        $this->error('Passwords do not match.');
+        return 1;
+    }
+
+    $user = User::where('email', $email)->first();
+
+    if ($user) {
+        // forceFill because role and status are deliberately not mass-assignable on the
+        // User model — the same escalation guard UserController::adminUpdate works around.
+        $user->forceFill([
+            'password' => Hash::make($password),
+            'role' => 'admin',
+            'status' => 'active',
+            'suspension_reason' => null,
+            'email_verified' => 1,
+        ])->save();
+
+        $user->tokens()->delete();   // old sessions should not survive a password reset
+
+        $this->info("Promoted {$email} to admin, reset the password, and revoked existing sessions.");
+
+        return 0;
+    }
+
+    $name = $this->option('name');
+
+    User::insert([[
+        'full_name' => $name,
+        'username' => User::generateUsername($name),
+        'email' => $email,
+        'password' => Hash::make($password),
+        'role' => 'admin',
+        'status' => 'active',
+        'email_verified' => 1,
+        'created_at' => now(),
+    ]]);
+
+    $this->info("Created admin {$email}.");
+
+    return 0;
+})->purpose('Create an admin account, or promote and unlock an existing one');
 
 /**
  * Prove the MAIL_* settings actually work, without having to trigger a real password
