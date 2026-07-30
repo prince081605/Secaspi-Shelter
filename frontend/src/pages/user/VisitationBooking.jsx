@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { createVisitation, listVisitations } from '../../lib/visitationsApi';
+import SiteNav from '../../components/SiteNav';
+import useLoginGate from '../../lib/useLoginGate';
 
 const styles = `
   .visitBody { max-width: 640px; margin: 0 auto; padding: 3rem 1.5rem; }
@@ -36,15 +38,20 @@ function toDateInput(d) {
 
 export default function VisitationBooking() {
   const navigate = useNavigate();
+  const gate = useLoginGate('/visit');
 
   const now = new Date();
   const minDate = toDateInput(new Date(now.getTime() + 86400000)); // tomorrow
   const maxDate = toDateInput(new Date(now.getTime() + 30 * 86400000)); // +30 days
 
-  const [requestedDate, setRequestedDate] = useState(minDate);
-  const [timeSlot, setTimeSlot] = useState('morning');
-  const [numVisitors, setNumVisitors] = useState(1);
-  const [notes, setNotes] = useState('');
+  // A draft only exists when this page sent the visitor off to log in; it restores the form they
+  // were filling when they land back here.
+  const draft = gate.draft;
+
+  const [requestedDate, setRequestedDate] = useState(draft?.requested_date || minDate);
+  const [timeSlot, setTimeSlot] = useState(draft?.time_slot || 'morning');
+  const [numVisitors, setNumVisitors] = useState(draft?.num_visitors || 1);
+  const [notes, setNotes] = useState(draft?.notes || '');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
@@ -58,24 +65,37 @@ export default function VisitationBooking() {
   };
 
   useEffect(() => {
-    loadVisits();
-  }, []);
+    // "Your visit requests" is per-account, so there is nothing to fetch for a visitor who is
+    // only browsing — and asking would just be a guaranteed 401.
+    if (gate.isAuthed) loadVisits();
+  }, [gate.isAuthed]);
+
+  const formValues = () => ({
+    requested_date: requestedDate,
+    time_slot: timeSlot,
+    num_visitors: Number(numVisitors) || 1,
+    notes: notes || undefined,
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Booking a visit puts a request in the shelter's queue under someone's name, so this is the
+    // point that needs an account. The form itself stays open to everyone.
+    if (!gate.isAuthed) {
+      gate.askToLogin(formValues());
+      return;
+    }
+
     setSubmitting(true);
     setError('');
     try {
-      await createVisitation({
-        requested_date: requestedDate,
-        time_slot: timeSlot,
-        num_visitors: Number(numVisitors) || 1,
-        notes: notes || undefined,
-      });
+      await createVisitation(formValues());
       setDone(true);
       setNotes('');
       loadVisits();
     } catch (err) {
+      if (gate.handleAuthError(err, formValues())) return;
       setError(err?.message || 'Failed to submit your visit request. Please try again.');
     } finally {
       setSubmitting(false);
@@ -86,10 +106,7 @@ export default function VisitationBooking() {
     <div className="ui-page">
       <style>{styles}</style>
 
-      <nav className="ui-nav">
-        <div className="ui-logo">SECASPI <span>Shelter</span></div>
-        <button className="ui-btn-secondary" onClick={() => navigate('/')}>← Back to Home</button>
-      </nav>
+      <SiteNav />
 
       <div className="visitBody">
         {done ? (
@@ -108,6 +125,13 @@ export default function VisitationBooking() {
             <p className="ui-muted" style={{ marginBottom: '2rem' }}>
               Pick a date and time, and our team will confirm your visit to the shelter.
             </p>
+
+            {!gate.isAuthed && (
+              <div className="ui-notice">
+                Fill this in now — you'll just need to <Link to="/login" state={{ from: '/visit' }}>log in</Link>{' '}
+                to send it, and we'll bring you straight back with your details kept.
+              </div>
+            )}
 
             {error && <div className="ui-error">{error}</div>}
 
@@ -167,7 +191,7 @@ export default function VisitationBooking() {
               </div>
 
               <button className="ui-btn-primary" style={{ width: '100%' }} type="submit" disabled={submitting}>
-                {submitting ? 'Submitting…' : 'Request visit'}
+                {submitting ? 'Submitting…' : gate.isAuthed ? 'Request visit' : 'Log in to request visit'}
               </button>
             </form>
 

@@ -7,7 +7,19 @@ import DashCard from '../../components/DashCard';
 import useIsMobile from '../../lib/useIsMobile';
 import { labelFor } from '../../lib/donationCategories';
 
-const STATUSES = ['pending', 'verified', 'rejected'];
+const STATUSES = ['pending', 'verified', 'rejected', 'awaiting_payment', 'cancelled'];
+
+// How the money reached us. Gateway donations verify themselves at settlement, so they
+// never appear in the pending queue — this label is why a verified row has no proof
+// screenshot attached to it.
+function SettlementTag({ settlement }) {
+  const online = settlement === 'gateway';
+  return (
+    <span className={`badge ${online ? 'badgeGreen' : 'badgeSky'}`}>
+      {online ? 'online' : 'manual'}
+    </span>
+  );
+}
 
 // Fixed layout at 100% width so all columns fit the panel with no horizontal scroll: columns take
 // their assigned share, and long values (emails, category labels, references) wrap inside their
@@ -45,6 +57,14 @@ function StatsCards() {
     { key: 'verified', label: 'Verified total', value: money(stats.verified_total), sub: `${stats.counts.verified} donations` },
     { key: 'pending', label: 'Pending review', value: money(stats.pending_total), sub: `${stats.counts.pending} donations` },
     { key: 'rejected', label: 'Rejected', value: stats.counts.rejected, sub: 'donations' },
+    // Started an online checkout and never finished it. Nothing for staff to do here —
+    // shown so the status counts add up to the number of rows in the table.
+    {
+      key: 'unpaid',
+      label: 'Unpaid checkouts',
+      value: (stats.counts.awaiting_payment || 0) + (stats.counts.cancelled || 0),
+      sub: 'started online, never completed',
+    },
     ...Object.entries(stats.by_method || {}).map(([method, total]) => ({
       key: method,
       label: `Verified via ${method.replace('_', ' ')}`,
@@ -142,6 +162,7 @@ export default function DonationsAdmin({ isAdmin = false }) {
                 { label: 'Amount', value: money(d.amount) },
                 { label: 'Category', value: labelFor(d.category) },
                 { label: 'Method', value: d.payment_method },
+                { label: 'Paid', value: <SettlementTag settlement={d.settlement} /> },
                 { label: 'Proof', value: d.proof_image ? <a href={fileSrc(d.proof_image)} target="_blank" rel="noreferrer">View</a> : '—' },
                 { label: 'Status', value: <StatusBadge status={d.status} /> },
                 d.donor?.email && { label: 'Email', value: d.donor.email },
@@ -160,14 +181,15 @@ export default function DonationsAdmin({ isAdmin = false }) {
           <table className="dashTable donAdminTable">
             <thead>
               <tr>
-                <th style={{ width: '12%' }}>Reference</th>
-                <th style={{ width: '20%' }}>Donor</th>
-                <th style={{ width: '10%' }}>Amount</th>
-                <th style={{ width: '15%' }}>Category</th>
-                <th style={{ width: '9%' }}>Method</th>
-                <th style={{ width: '8%' }}>Proof</th>
+                <th style={{ width: '11%' }}>Reference</th>
+                <th style={{ width: '18%' }}>Donor</th>
+                <th style={{ width: '9%' }}>Amount</th>
+                <th style={{ width: '14%' }}>Category</th>
+                <th style={{ width: '8%' }}>Method</th>
+                <th style={{ width: '8%' }}>Paid</th>
+                <th style={{ width: '7%' }}>Proof</th>
                 <th style={{ width: '11%' }}>Status</th>
-                {isAdmin && <th style={{ width: '15%' }}>Actions</th>}
+                {isAdmin && <th style={{ width: '14%' }}>Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -178,6 +200,7 @@ export default function DonationsAdmin({ isAdmin = false }) {
                   <td>{money(d.amount)}</td>
                   <td>{labelFor(d.category)}</td>
                   <td>{d.payment_method}</td>
+                  <td><SettlementTag settlement={d.settlement} /></td>
                   <td>
                     {d.proof_image ? (
                       <a href={fileSrc(d.proof_image)} target="_blank" rel="noreferrer">View</a>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getTransparency } from '../../lib/publicHomeApi';
 import { labelFor } from '../../lib/donationCategories';
 import Reveal from '../../components/Reveal';
+import SiteNav from '../../components/SiteNav';
 
 const styles = `
   .tpBody { max-width: 920px; margin: 0 auto; padding: 3rem 1.5rem 4rem; }
@@ -85,10 +86,7 @@ export default function Transparency() {
     <div className="ui-page">
       <style>{styles}</style>
 
-      <nav className="ui-nav">
-        <div className="ui-logo">SECASPI <span>Shelter</span></div>
-        <button className="ui-btn-secondary" onClick={() => navigate('/')}>← Back to Home</button>
-      </nav>
+      <SiteNav />
 
       <div className="tpBody">
         <div className="tpHead">

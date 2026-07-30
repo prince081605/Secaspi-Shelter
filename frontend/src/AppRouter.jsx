@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 
 import { auth } from './lib/auth';
 import AiAssistant from './components/AiAssistant';
@@ -24,14 +24,25 @@ const VisitationBooking = lazy(() => import('./pages/user/VisitationBooking'));
 const VolunteerApply = lazy(() => import('./pages/user/VolunteerApply'));
 const DonationHistory = lazy(() => import('./pages/user/DonationHistory'));
 const Receipt = lazy(() => import('./pages/user/Receipt'));
+const Checkout = lazy(() => import('./pages/user/Checkout'));
 const NotFound = lazy(() => import('./pages/user/NotFound'));
 
 function RouteFallback() {
   return <div style={{ padding: 24, color: 'var(--muted)' }}>Loading…</div>;
 }
 
+// Retrying a declined payment navigates from one /pay/:token to another. Same route, so
+// React would keep the component mounted and carry the old checkout's in-flight state
+// (and its disabled buttons) into the new one. Keying on the token makes a new payment
+// session a genuinely new mount, which is what it is.
+function CheckoutRoute() {
+  const { token } = useParams();
+  return <Checkout key={token} />;
+}
+
 function RequireAuth({ children }) {
   const [ok, setOk] = useState(null);
+  const { pathname } = useLocation();
 
   useEffect(() => {
     let mounted = true;
@@ -50,7 +61,9 @@ function RequireAuth({ children }) {
   }, []);
 
   if (ok === null) return <div style={{ padding: 24 }}>Checking session...</div>;
-  if (!ok) return <Navigate to="/login" replace />;
+  // Hand the login page the route that was asked for, so a deep link (an adoption application,
+  // a receipt) resumes after logging in instead of landing on the dashboard.
+  if (!ok) return <Navigate to="/login" state={{ from: pathname }} replace />;
   return children;
 }
 
@@ -92,30 +105,13 @@ export default function AppRouter() {
               </RequireAuth>
             }
           />
-          <Route
-            path="/donate"
-            element={
-              <RequireAuth>
-                <Donate />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/visit"
-            element={
-              <RequireAuth>
-                <VisitationBooking />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/volunteer"
-            element={
-              <RequireAuth>
-                <VolunteerApply />
-              </RequireAuth>
-            }
-          />
+          {/* Visit, Volunteer and Donate are public: the nav offers them to every visitor, so
+              the page has to be readable without an account. Each gates its own submit instead
+              (see useLoginGate) — you can read and fill the form anonymously, but the write that
+              creates the request needs a login. */}
+          <Route path="/donate" element={<Donate />} />
+          <Route path="/visit" element={<VisitationBooking />} />
+          <Route path="/volunteer" element={<VolunteerApply />} />
           <Route
             path="/donations"
             element={
@@ -129,6 +125,17 @@ export default function AppRouter() {
             element={
               <RequireAuth>
                 <Receipt />
+              </RequireAuth>
+            }
+          />
+          {/* The simulated payment gateway (AspinPay). A real hosted checkout lives on the
+              processor's own domain; this one is a route here, so it still needs a session —
+              the backend re-checks that the token's donation belongs to the caller. */}
+          <Route
+            path="/pay/:token"
+            element={
+              <RequireAuth>
+                <CheckoutRoute />
               </RequireAuth>
             }
           />

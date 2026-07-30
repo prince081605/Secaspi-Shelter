@@ -1,11 +1,17 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { auth } from '../../lib/auth';
 import AuthLayout from '../../components/AuthLayout';
 import PasswordInput from '../../components/PasswordInput';
 
 export default function Register() {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Someone gated out of a form may register rather than log in; carry the page they were headed
+  // for through to the login step so the detour still ends where it started.
+  const from = location.state?.from;
+
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -46,7 +52,7 @@ export default function Register() {
       <AuthLayout
         title="Account created!"
         subtitle="Your account is ready. Use your email and password to log in."
-        footer={<>Ready to go? <Link to="/login">Log in</Link></>}
+        footer={<>Ready to go? <Link to="/login" state={{ from }}>Log in</Link></>}
       >
         <div className="ui-field">
           <label className="ui-label">Your username</label>
@@ -55,7 +61,7 @@ export default function Register() {
             This is your unique display name. You log in with your email.
           </p>
         </div>
-        <button className="ui-btn-primary" style={{ width: '100%' }} onClick={() => navigate('/login', { replace: true })}>
+        <button className="ui-btn-primary" style={{ width: '100%' }} onClick={() => navigate('/login', { replace: true, state: { from } })}>
           Continue to login
         </button>
       </AuthLayout>
@@ -66,7 +72,7 @@ export default function Register() {
     <AuthLayout
       title="Create an account"
       subtitle="Join us to adopt, foster, or support rescued Aspins."
-      footer={<>Already have an account? <Link to="/login">Log in</Link></>}
+      footer={<>Already have an account? <Link to="/login" state={{ from }}>Log in</Link></>}
     >
       {error ? <div className="ui-error">{error}</div> : null}
       <form onSubmit={onSubmit}>

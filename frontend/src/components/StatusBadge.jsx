@@ -10,6 +10,7 @@ const STATUS_VARIANTS = {
   adopted: 'badgeGreen',
   // in progress / waiting
   pending: 'badgeSky',
+  awaiting_payment: 'badgeSky',
   scheduled: 'badgeSky',
   not_scheduled: 'badgeSky',
   assigned: 'badgeSky',
@@ -20,6 +21,8 @@ const STATUS_VARIANTS = {
   // needs attention / negative
   rejected: 'badgeOrange',
   declined: 'badgeOrange',
+  cancelled: 'badgeOrange',
+  failed: 'badgeOrange',
   suspended: 'badgeOrange',
   medical: 'badgeOrange',
   quarantine: 'badgeOrange',

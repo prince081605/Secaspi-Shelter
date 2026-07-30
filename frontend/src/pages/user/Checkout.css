@@ -1,0 +1,279 @@
+/*
+  AspinPay checkout.
+
+  Deliberately styled *unlike* the rest of the site: cool slate instead of the shelter's
+  warm cream, its own wordmark, no site nav. A donor being handed off to a payment
+  processor should be able to tell they left the shelter's pages — that visual break is
+  part of what makes a real checkout feel trustworthy, so the simulation reproduces it.
+
+  Every colour is scoped under .apay rather than pulled from theme.css for the same
+  reason: this page is meant to look like somebody else's property.
+*/
+
+.apay {
+  --apay-ink: #0f172a;
+  --apay-ink-soft: #475569;
+  --apay-muted: #94a3b8;
+  --apay-line: #e2e8f0;
+  --apay-bg: #f1f5f9;
+  --apay-brand: #1d4ed8;
+  --apay-brand-dark: #1e40af;
+  --apay-ok: #047857;
+  --apay-ok-soft: #d1fae5;
+  --apay-bad: #b91c1c;
+  --apay-bad-soft: #fee2e2;
+  --apay-warn: #92400e;
+  --apay-warn-soft: #fef3c7;
+
+  min-height: 100vh;
+  background: var(--apay-bg);
+  color: var(--apay-ink);
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2.5rem 1rem 3rem;
+}
+
+/* ---- simulation ribbon ---- */
+/* Non-negotiable and never dismissible: nobody should be able to mistake this page for
+   a live payment form, whether they are a donor, a panelist, or a screenshot. */
+.apaySim {
+  width: 100%;
+  max-width: 440px;
+  background: var(--apay-warn-soft);
+  color: var(--apay-warn);
+  border: 1px solid #fcd34d;
+  border-radius: 10px;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.apayDemo {
+  width: 100%;
+  max-width: 440px;
+  margin-bottom: 1rem;
+  font-size: 0.8rem;
+  color: var(--apay-ink-soft);
+}
+
+.apayDemo summary {
+  cursor: pointer;
+  color: var(--apay-brand);
+  font-weight: 600;
+  padding: 0.35rem 0;
+}
+
+.apayDemo table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
+.apayDemo td { padding: 0.3rem 0.5rem 0.3rem 0; border-bottom: 1px solid var(--apay-line); }
+.apayDemo td:first-child { font-family: ui-monospace, 'Cascadia Code', Consolas, monospace; white-space: nowrap; }
+
+/* ---- brand bar ---- */
+.apayBrand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  font-weight: 800;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+
+.apayBrandMark {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: var(--apay-brand);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 0.85rem;
+}
+
+.apayBrandSub { font-weight: 500; color: var(--apay-muted); font-size: 0.85rem; }
+
+/* ---- card ---- */
+.apayCard {
+  width: 100%;
+  max-width: 440px;
+  background: #fff;
+  border: 1px solid var(--apay-line);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.07);
+  overflow: hidden;
+}
+
+.apayOrder {
+  padding: 1.3rem 1.5rem;
+  border-bottom: 1px solid var(--apay-line);
+  background: linear-gradient(180deg, #f8fafc, #fff);
+}
+
+.apayMerchant { font-size: 0.78rem; color: var(--apay-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.apayMerchantName { font-weight: 700; margin-top: 0.15rem; }
+.apayAmount { font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; margin-top: 0.5rem; }
+.apayRef { font-size: 0.78rem; color: var(--apay-muted); font-family: ui-monospace, Consolas, monospace; margin-top: 0.2rem; }
+
+.apayTimer {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.7rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--apay-ink-soft);
+  background: var(--apay-bg);
+  border: 1px solid var(--apay-line);
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+}
+
+.apayTimerLow { color: var(--apay-bad); border-color: #fca5a5; background: var(--apay-bad-soft); }
+
+.apayBody { padding: 1.5rem; }
+
+.apayStep { font-size: 0.78rem; color: var(--apay-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.3rem; }
+.apayTitle { font-size: 1.15rem; font-weight: 700; margin-bottom: 1.2rem; }
+
+/* ---- form ---- */
+.apayField { margin-bottom: 1rem; }
+
+.apayLabel {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--apay-ink-soft);
+  margin-bottom: 0.35rem;
+}
+
+.apayInput {
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font-size: 1rem;
+  color: var(--apay-ink);
+  background: #fff;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.apayInput:focus {
+  outline: none;
+  border-color: var(--apay-brand);
+  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.15);
+}
+
+.apayOtpInput {
+  text-align: center;
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 0.5em;
+  text-indent: 0.5em; /* re-centres text that letter-spacing pushes left */
+  padding: 0.8rem 0.5rem;
+}
+
+.apayBtn {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border: none;
+  border-radius: 10px;
+  background: var(--apay-brand);
+  color: #fff;
+  font-size: 0.98rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .15s ease, transform .1s ease;
+}
+
+.apayBtn:hover:not(:disabled) { background: var(--apay-brand-dark); }
+.apayBtn:active:not(:disabled) { transform: scale(0.99); }
+.apayBtn:disabled { opacity: 0.55; cursor: default; }
+
+.apayBtnGhost {
+  background: #fff;
+  color: var(--apay-ink);
+  border: 1px solid #cbd5e1;
+}
+
+.apayBtnGhost:hover:not(:disabled) { background: var(--apay-bg); }
+
+.apayBtnRow { display: flex; flex-direction: column; gap: 0.6rem; }
+
+.apayError {
+  background: var(--apay-bad-soft);
+  color: var(--apay-bad);
+  border: 1px solid #fca5a5;
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.88rem;
+  margin-bottom: 1rem;
+}
+
+.apayHint { font-size: 0.8rem; color: var(--apay-muted); margin-top: 0.4rem; }
+
+.apayLink {
+  background: none;
+  border: none;
+  color: var(--apay-brand);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.apayLink:hover { text-decoration: underline; }
+
+/* ---- result ---- */
+.apayResult { text-align: center; padding: 0.5rem 0 0.2rem; }
+
+.apayResultMark {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 1.9rem;
+  margin: 0 auto 1rem;
+}
+
+.apayResultOk { background: var(--apay-ok-soft); color: var(--apay-ok); }
+.apayResultBad { background: var(--apay-bad-soft); color: var(--apay-bad); }
+
+.apayResultTitle { font-size: 1.2rem; font-weight: 700; margin-bottom: 0.4rem; }
+.apayResultText { font-size: 0.9rem; color: var(--apay-ink-soft); margin-bottom: 1.4rem; }
+
+/* ---- footer ---- */
+.apayFoot {
+  width: 100%;
+  max-width: 440px;
+  margin-top: 1.1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.78rem;
+  color: var(--apay-muted);
+}
+
+.apayCancel {
+  background: none;
+  border: none;
+  color: var(--apay-muted);
+  font-size: 0.78rem;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.apayCancel:hover { color: var(--apay-bad); }
+
+@media (max-width: 480px) {
+  .apay { padding: 1.5rem 0.9rem 2.5rem; }
+  .apayBody, .apayOrder { padding: 1.2rem; }
+  .apayAmount { font-size: 1.75rem; }
+}

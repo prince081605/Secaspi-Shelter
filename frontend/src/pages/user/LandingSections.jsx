@@ -72,49 +72,8 @@ function animalPhotoSrc(photo) {
   return photo.startsWith("http") ? photo : `${import.meta.env.VITE_API_BASE_URL}/storage/${photo}`;
 }
 
-export function Navbar({ shelterName, isLoggedIn, menuOpen, scrolled, onToggleMenu, onNavigate }) {
-  return (
-    <header className={`lp-header${scrolled ? " scrolled" : ""}`}>
-      <nav className="lp-nav" aria-label="Primary">
-        <a href="/" className="lp-logo">
-          <span className="lp-logo-mark" aria-hidden="true"><PawPrint size={20} /></span>
-          {shelterName}
-        </a>
-        <ul className="lp-nav-links">
-          <li><a href="/adopt">Adopt</a></li>
-          <li><a href="/visit">Visit</a></li>
-          <li><a href="/volunteer">Volunteer</a></li>
-          <li><a href="/transparency">Transparency</a></li>
-          <li><a href="#donate">Donate</a></li>
-        </ul>
-        <div className="lp-nav-actions">
-          <button className="lp-nav-ghost" onClick={() => onNavigate(isLoggedIn ? "/dashboard" : "/login")}>
-            {isLoggedIn ? "Dashboard" : "Login"}
-          </button>
-          <a href="#report" className="lp-nav-cta">Report a stray</a>
-          <button
-            className={`lp-hamburger${menuOpen ? " open" : ""}`}
-            onClick={onToggleMenu}
-            aria-label="Toggle menu"
-            aria-expanded={menuOpen}
-          >
-            <span></span><span></span><span></span>
-          </button>
-        </div>
-      </nav>
-
-      <div className={`lp-mobile-menu${menuOpen ? " open" : ""}`}>
-        <a href="/adopt" onClick={onToggleMenu}>Adopt</a>
-        <a href="/visit" onClick={onToggleMenu}>Visit</a>
-        <a href="/volunteer" onClick={onToggleMenu}>Volunteer</a>
-        <a href="/transparency" onClick={onToggleMenu}>Transparency</a>
-        <a href="#donate" onClick={onToggleMenu}>Donate</a>
-        <a href="#report" onClick={onToggleMenu}>Report a stray</a>
-        <a href={isLoggedIn ? "/dashboard" : "/login"} onClick={onToggleMenu}>{isLoggedIn ? "Dashboard" : "Login"}</a>
-      </div>
-    </header>
-  );
-}
+// The nav that used to live here is now components/SiteNav.jsx, shared with every other
+// public page — same bar, plus a highlight on the current page's link.
 
 export function Hero({ eyebrow, heroTitle, heroSubtitle, bannerImage, stats, onMeetDogs, onReportStray }) {
   const [textRef, textIn] = useInView();
@@ -415,7 +374,8 @@ export function SiteFooter({ shelterName, settings, address }) {
       <div className="lp-container">
         <div className="lp-footer-grid">
           <div className="lp-footer-brand">
-            <a href="/" className="lp-logo"><span className="lp-logo-mark" aria-hidden="true"><PawPrint size={20} /></span>{shelterName}</a>
+            {/* Same wordmark classes as the nav, so the header and footer marks stay in step. */}
+            <a href="/" className="site-logo"><span className="site-logo-mark" aria-hidden="true"><PawPrint size={20} /></span>{shelterName}</a>
             <p>{settings.about_us_content || "Rescuing and rehoming the Philippines' native Aspin dogs."}</p>
             {(settings.social_facebook || settings.social_instagram || settings.social_twitter) && (
               <div style={{ display: "flex", gap: 14, marginTop: 16 }}>

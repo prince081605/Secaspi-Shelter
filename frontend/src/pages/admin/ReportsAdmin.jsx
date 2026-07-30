@@ -100,47 +100,71 @@ export default function ReportsAdmin({ isAdmin = false }) {
       <h2 className="dashSectionTitle"><BarChart3 size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />Reports</h2>
 
       <div className="dashFilterBar">
-        <select className="ui-input" style={{ maxWidth: 220 }} aria-label="Report type" value={type} onChange={(e) => setType(e.target.value)}>
-          {reportTypes.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
-        </select>
+        <label className="dashFilterField">
+          <span className="dashFilterLabel">Report type</span>
+          <select className="ui-input" style={{ maxWidth: 220 }} value={type} onChange={(e) => setType(e.target.value)}>
+            {reportTypes.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
+          </select>
+        </label>
 
         {config.dateRange && (
           <>
-            <input className="ui-input" style={{ maxWidth: 170 }} type="date" aria-label="From date" value={filters.from} onChange={setField('from')} />
-            <input className="ui-input" style={{ maxWidth: 170 }} type="date" aria-label="To date" value={filters.to} onChange={setField('to')} />
+            <label className="dashFilterField">
+              <span className="dashFilterLabel">From date</span>
+              <input className="ui-input" style={{ maxWidth: 170 }} type="date" value={filters.from} onChange={setField('from')} />
+            </label>
+            <label className="dashFilterField">
+              <span className="dashFilterLabel">To date</span>
+              <input className="ui-input" style={{ maxWidth: 170 }} type="date" value={filters.to} onChange={setField('to')} />
+            </label>
           </>
         )}
 
         {config.status && (
-          <select className="ui-input" style={{ maxWidth: 160 }} aria-label="Filter by status" value={filters.status} onChange={setField('status')}>
-            <option value="">All statuses</option>
-            {config.status.map((s) => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
-          </select>
+          <label className="dashFilterField">
+            <span className="dashFilterLabel">Status</span>
+            <select className="ui-input" style={{ maxWidth: 160 }} value={filters.status} onChange={setField('status')}>
+              <option value="">All statuses</option>
+              {config.status.map((s) => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
+            </select>
+          </label>
         )}
 
         {config.species && (
-          <input className="ui-input" style={{ maxWidth: 160 }} placeholder="Species" value={filters.species} onChange={setField('species')} />
+          <label className="dashFilterField">
+            <span className="dashFilterLabel">Species</span>
+            <input className="ui-input" style={{ maxWidth: 160 }} placeholder="Any species" value={filters.species} onChange={setField('species')} />
+          </label>
         )}
 
         {config.paymentMethod && (
-          <select className="ui-input" style={{ maxWidth: 160 }} aria-label="Filter by payment method" value={filters.payment_method} onChange={setField('payment_method')}>
-            <option value="">All methods</option>
-            {config.paymentMethod.map((m) => <option key={m} value={m}>{m}</option>)}
-          </select>
+          <label className="dashFilterField">
+            <span className="dashFilterLabel">Payment method</span>
+            <select className="ui-input" style={{ maxWidth: 160 }} value={filters.payment_method} onChange={setField('payment_method')}>
+              <option value="">All methods</option>
+              {config.paymentMethod.map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </label>
         )}
 
         {config.urgency && (
-          <select className="ui-input" style={{ maxWidth: 160 }} aria-label="Filter by urgency" value={filters.urgency} onChange={setField('urgency')}>
-            <option value="">All urgency levels</option>
-            {config.urgency.map((u) => <option key={u} value={u}>{u}</option>)}
-          </select>
+          <label className="dashFilterField">
+            <span className="dashFilterLabel">Urgency</span>
+            <select className="ui-input" style={{ maxWidth: 160 }} value={filters.urgency} onChange={setField('urgency')}>
+              <option value="">All urgency levels</option>
+              {config.urgency.map((u) => <option key={u} value={u}>{u}</option>)}
+            </select>
+          </label>
         )}
 
         {config.recordType && (
-          <select className="ui-input" style={{ maxWidth: 160 }} aria-label="Filter by record type" value={filters.record_type} onChange={setField('record_type')}>
-            <option value="">All record types</option>
-            {config.recordType.map((t) => <option key={t} value={t}>{t}</option>)}
-          </select>
+          <label className="dashFilterField">
+            <span className="dashFilterLabel">Record type</span>
+            <select className="ui-input" style={{ maxWidth: 160 }} value={filters.record_type} onChange={setField('record_type')}>
+              <option value="">All record types</option>
+              {config.recordType.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </label>
         )}
 
         <button className="dashBtn dashBtnPrimary" onClick={() => handleExport('csv')} disabled={exporting === 'csv'}>

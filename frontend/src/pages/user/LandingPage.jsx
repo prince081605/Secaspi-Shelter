@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { getFeaturedAnimals, getImpactStats } from "../../lib/publicHomeApi.js";
 import { createReport } from "../../lib/rescueApi.js";
-import { auth } from "../../lib/auth.js";
 import { getPublicSettings, settingImageUrl } from "../../lib/settingsApi.js";
+import SiteNav from "../../components/SiteNav.jsx";
 import {
-  Navbar,
   Hero,
   Pathways,
   FeaturedAnimals,
@@ -36,23 +35,27 @@ const URGENCY_BY_CONDITION = {
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const { hash } = useLocation();
   const [amt, setAmt] = useState(donationAmounts[1]);
   const [animals, setAnimals] = useState(animalsFallback);
   const [impact, setImpact] = useState(null);
   const [settings, setSettings] = useState({});
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [form, setForm] = useState({ name: "", contact: "", location: "", condition: "Injured or sick", details: "", latitude: null, longitude: null });
   const [reportPhoto, setReportPhoto] = useState(null);
   const [reportState, setReportState] = useState({ status: "idle", error: "" });
-  const [scrolled, setScrolled] = useState(false);
 
+  // Arriving from another page's nav — "Report a stray" sends you to /#report — lands here
+  // with a hash. The browser only resolves a hash against markup that already exists, and
+  // these sections mount with this component, so the scroll is done on the next frame once
+  // the sections are in the document.
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+    if (!hash) return;
+    const id = hash.slice(1);
+    const frame = requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [hash]);
 
   useEffect(() => {
     let mounted = true;
@@ -76,19 +79,6 @@ export default function LandingPage() {
         if (mounted) setImpact(data);
       } catch (err) {
         console.error("Failed to load impact stats:", err);
-      }
-    })();
-    return () => { mounted = false; };
-  }, []);
-
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        await auth.me();
-        if (mounted) setIsLoggedIn(true);
-      } catch {
-        if (mounted) setIsLoggedIn(false);
       }
     })();
     return () => { mounted = false; };
@@ -164,14 +154,7 @@ export default function LandingPage() {
     <div className="landingPage">
       <a href="#main" className="skip-link">Skip to content</a>
 
-      <Navbar
-        shelterName={shelterName}
-        isLoggedIn={isLoggedIn}
-        menuOpen={menuOpen}
-        scrolled={scrolled}
-        onToggleMenu={() => setMenuOpen((open) => !open)}
-        onNavigate={(path) => { setMenuOpen(false); navigate(path); }}
-      />
+      <SiteNav shelterName={shelterName} />
 
       <main id="main">
         <Hero

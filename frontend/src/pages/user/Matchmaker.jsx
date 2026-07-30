@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { findMatches } from '../../lib/matchmakerApi';
 import { PawPrint, Sparkles, Dog, Check, AlertTriangle } from 'lucide-react';
+import SiteNav from '../../components/SiteNav';
 
 const styles = `
   .mmGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: 1.4rem; }
@@ -52,10 +53,7 @@ export default function Matchmaker() {
     <div className="ui-page">
       <style>{styles}</style>
 
-      <nav className="ui-nav">
-        <div className="ui-logo">SECASPI <span>Shelter</span></div>
-        <button className="ui-btn-secondary" onClick={() => navigate('/adopt')}>← Back to Adoption</button>
-      </nav>
+      <SiteNav />
 
       <div className="ui-container" style={{ padding: '3rem 6vw' }}>
         <p className="ui-eyebrow" style={{ marginBottom: '1rem' }}>Smart Adoption Matchmaker</p>

@@ -13,6 +13,7 @@ use App\Http\Controllers\IntakeController;
 use App\Http\Controllers\MedicalRecordController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PaymentSessionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReminderController;
 use App\Http\Controllers\ReportController;
@@ -52,6 +53,16 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('/donations', [DonationController::class, 'store']);
     Route::get('/donations/{donation}', [DonationController::class, 'show']);
     Route::post('/donations/{donation}/verify', [DonationController::class, 'verify'])->middleware('admin');
+    // Simulated checkout (AspinPay). Reissuing a link and paying are the donor's own
+    // actions on their own donation, so ownership is enforced inside the controllers
+    // rather than by role middleware. authorize/confirm are throttled for the same
+    // reason /login is: they take a secret (an MPIN, a 6-digit code) and must not be
+    // brute-forceable.
+    Route::post('/donations/{donation}/checkout', [DonationController::class, 'checkout']);
+    Route::get('/payments/{token}', [PaymentSessionController::class, 'show']);
+    Route::post('/payments/{token}/authorize', [PaymentSessionController::class, 'authorize'])->middleware('throttle:20,1');
+    Route::post('/payments/{token}/confirm', [PaymentSessionController::class, 'confirm'])->middleware('throttle:20,1');
+    Route::post('/payments/{token}/cancel', [PaymentSessionController::class, 'cancel']);
     Route::get('/admin/donations', [DonationController::class, 'adminIndex'])->middleware('role:staff');
     Route::get('/admin/donations/stats', [DonationController::class, 'adminStats'])->middleware('role:staff');
     Route::post('/animals/{animal}/adopt', [AdoptionApplicationController::class, 'store']);

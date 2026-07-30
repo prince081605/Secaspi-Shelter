@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { PawPrint, PartyPopper } from 'lucide-react';
+import SiteNav from '../../components/SiteNav';
+import useLoginGate from '../../lib/useLoginGate';
 import {
   submitVolunteerApplication,
   listMyVolunteerApplications,
@@ -28,13 +30,20 @@ const styles = `
 
 export default function VolunteerApply() {
   const navigate = useNavigate();
+  const gate = useLoginGate('/volunteer');
 
-  const [loading, setLoading] = useState(true);
+  // Anonymous visitors have no volunteer record or applications to wait on, so the page starts
+  // rendered rather than in its loading state.
+  const [loading, setLoading] = useState(gate.isAuthed);
   const [volunteer, setVolunteer] = useState(null);
   const [applications, setApplications] = useState([]);
 
-  // application form
-  const [form, setForm] = useState({ availability: '', experience: '', reason: '' });
+  // application form — restored from the draft when this page sent the visitor off to log in
+  const [form, setForm] = useState({
+    availability: gate.draft?.availability || '',
+    experience: gate.draft?.experience || '',
+    reason: gate.draft?.reason || '',
+  });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
@@ -58,13 +67,23 @@ export default function VolunteerApply() {
   };
 
   useEffect(() => {
-    load();
-  }, []);
+    // Both endpoints are per-account; a visitor who is only reading the page gets the plain
+    // application form, not two guaranteed 401s.
+    if (gate.isAuthed) load();
+  }, [gate.isAuthed]);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // The application is reviewed and approved against an account, so submitting is where the
+    // login is required — reading the page and writing the answers is not.
+    if (!gate.isAuthed) {
+      gate.askToLogin(form);
+      return;
+    }
+
     setSubmitting(true);
     setError('');
     try {
@@ -72,6 +91,7 @@ export default function VolunteerApply() {
       setDone(true);
       load();
     } catch (err) {
+      if (gate.handleAuthError(err, form)) return;
       setError(err?.message || 'Failed to submit your application. Please try again.');
     } finally {
       setSubmitting(false);
@@ -99,10 +119,7 @@ export default function VolunteerApply() {
     <div className="ui-page">
       <style>{styles}</style>
 
-      <nav className="ui-nav">
-        <div className="ui-logo">SECASPI <span>Shelter</span></div>
-        <button className="ui-btn-secondary" onClick={() => navigate('/')}>← Back to Home</button>
-      </nav>
+      <SiteNav />
 
       <div className="volBody">
         {loading ? (
@@ -175,6 +192,14 @@ export default function VolunteerApply() {
               Tell us a little about yourself and how you'd like to help our rescues.
             </p>
 
+            {!gate.isAuthed && (
+              <div className="ui-notice">
+                Tell us about yourself now — you'll just need to{' '}
+                <Link to="/login" state={{ from: '/volunteer' }}>log in</Link> to send the
+                application, and we'll bring you straight back with your answers kept.
+              </div>
+            )}
+
             {error && <div className="ui-error">{error}</div>}
 
             <form onSubmit={handleSubmit}>
@@ -210,7 +235,7 @@ export default function VolunteerApply() {
                 />
               </div>
               <button className="ui-btn-primary" style={{ width: '100%' }} type="submit" disabled={submitting}>
-                {submitting ? 'Submitting…' : 'Submit application'}
+                {submitting ? 'Submitting…' : gate.isAuthed ? 'Submit application' : 'Log in to submit application'}
               </button>
             </form>
 

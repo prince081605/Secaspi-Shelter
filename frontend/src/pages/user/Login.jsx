@@ -1,11 +1,18 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { auth } from '../../lib/auth';
 import AuthLayout from '../../components/AuthLayout';
 import PasswordInput from '../../components/PasswordInput';
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Where to go after logging in. Pages that gate an action — a visit request, a volunteer
+  // application, a donation — send the route they were on, so the visitor resumes the form they
+  // started rather than being dropped on the dashboard. Plain visits to /login have no state.
+  const from = location.state?.from;
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,7 +24,7 @@ export default function Login() {
     setError('');
     try {
       await auth.login(email, password);
-      navigate('/dashboard', { replace: true });
+      navigate(from || '/dashboard', { replace: true });
     } catch (err) {
       setError(err.message || 'Login failed');
     } finally {
@@ -29,7 +36,7 @@ export default function Login() {
     <AuthLayout
       title="Welcome back"
       subtitle="Log in to manage your adoptions and donations."
-      footer={<>Don't have an account? <Link to="/register">Create one</Link></>}
+      footer={<>Don't have an account? <Link to="/register" state={{ from }}>Create one</Link></>}
     >
       {error ? <div className="ui-error">{error}</div> : null}
       <form onSubmit={onSubmit}>

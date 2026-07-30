@@ -30,7 +30,7 @@ html { scroll-behavior: smooth; }
   --ease-reveal: cubic-bezier(.16,1,.3,1);
 
   /* `clip`, not `hidden`. Both stop sideways overflow, but `hidden` makes this element a
-     scroll container, which silently broke `position: sticky` on .lp-header — the nav
+     scroll container, which silently broke `position: sticky` on .site-header — the nav
      scrolled away with the page instead of pinning. `clip` creates no scrollport, so
      sticky descendants resolve against the viewport as intended. */
   overflow-x: clip;
@@ -84,62 +84,10 @@ html { scroll-behavior: smooth; }
 .landingPage .ui-success-msg { background: var(--cream-2); border-color: var(--lp-line); color: var(--terracotta-dark); }
 
 /* ---------- Header ---------- */
-/* The header itself is now just a transparent sticky rail — the visible chrome moved to
-   .lp-nav so it can round into a floating pill on scroll. Kept `position: sticky` (not
-   fixed) so the header still occupies layout space and the hero needs no top offset;
-   sticky is also a positioned value, so it remains the containing block for the
-   absolutely-positioned .lp-mobile-menu below even though backdrop-filter moved off it. */
-/* Padding is static and no longer transitions. Animating it ran a layout pass on every
-   scroll-state toggle, and the 4px it was worth is not visible next to the pill's
-   background/border/shadow fade, which carries the whole condense effect. */
-.lp-header { position: sticky; top: 0; z-index: 50; padding: var(--space-2) var(--space-3); }
-.lp-nav {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: var(--space-3) var(--space-4); max-width: 1180px; margin: 0 auto;
-  border: 1px solid transparent; border-radius: 999px; background: transparent;
-  /* backdrop-filter is deliberately NOT in this list: transitioning a backdrop blur re-blurs
-     everything behind the nav every frame, which is among the most expensive things to
-     animate. It switches instantly while the background and border fade around it — the
-     change is imperceptible and the scroll stays smooth. */
-  transition: background .35s var(--ease), border-color .35s var(--ease),
-              box-shadow .35s var(--ease);
-}
-/* The nav earns its background only once there is content scrolling behind it. */
-.lp-header.scrolled .lp-nav {
-  background: rgba(255,252,246,0.82);
-  backdrop-filter: blur(14px);
-  border-color: var(--lp-line);
-  box-shadow: 0 10px 30px -20px rgba(43,36,32,0.5);
-}
-.lp-logo { display: flex; align-items: center; gap: 10px; font-family: 'Fraunces', serif; font-weight: 700; font-size: 20px; }
-.lp-logo-mark { width: 34px; height: 34px; border-radius: 8px; background: var(--terracotta); display: flex; align-items: center; justify-content: center; color: var(--cream); font-size: 18px; flex-shrink: 0; }
-.lp-nav-links { display: flex; gap: var(--space-5); list-style: none; font-size: 15px; font-weight: 500; }
-.lp-nav-links a { position: relative; padding: 4px 0; color: var(--lp-ink-soft); transition: color .15s var(--ease); }
-/* Underline wipes in from the left rather than appearing all at once. */
-.lp-nav-links a::after { content: ''; position: absolute; left: 0; bottom: 0; width: 0; height: 1.5px; background: var(--terracotta); transition: width .25s var(--ease); }
-.lp-nav-links a:hover { color: var(--terracotta-dark); }
-.lp-nav-links a:hover::after { width: 100%; }
-.lp-nav-actions { display: flex; align-items: center; gap: var(--space-3); }
-.lp-nav-cta { display: inline-flex; align-items: center; gap: 8px; background: var(--terracotta); color: #fff; padding: 10px 20px; border-radius: 999px; font-weight: 600; font-size: 14px; border: none; cursor: pointer; transition: background .15s var(--ease), transform .15s var(--ease); will-change: transform; }
-.lp-nav-cta:hover { background: var(--terracotta-dark); transform: translateY(-1px); }
-.lp-nav-cta:active { transform: translateY(0) scale(.97); }
-.lp-nav-ghost { background: transparent; color: var(--lp-ink); border: 1px solid var(--lp-line); padding: 9px 19px; border-radius: 999px; font-weight: 600; font-size: 14px; cursor: pointer; transition: border-color .15s var(--ease); }
-.lp-nav-ghost:hover { border-color: var(--lp-ink); }
-.lp-hamburger { display: none; flex-direction: column; justify-content: center; gap: 4px; width: 36px; height: 36px; background: none; border: none; cursor: pointer; padding: 0; }
-.lp-hamburger span { display: block; width: 100%; height: 2px; background: var(--lp-ink); border-radius: 2px; transition: transform .25s var(--ease), opacity .25s var(--ease); }
-.lp-hamburger.open span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
-.lp-hamburger.open span:nth-child(2) { opacity: 0; }
-.lp-hamburger.open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
-/* Anchored with top:100% to the header's bottom edge (the header is the containing block
-   because `position: sticky` is a positioned value), so it always sits exactly below the
-   header regardless of header height — no magic pixel offset that can overlap or leave a
-   gap. The backdrop-filter that used to sit on the header moved to .lp-nav for the
-   floating-pill treatment; containment survives that, since sticky alone is enough. */
-.lp-mobile-menu { display: flex; flex-direction: column; gap: var(--space-4); position: absolute; top: 100%; left: 0; right: 0; height: 100vh; overflow-y: auto; background: var(--paper); padding: var(--space-5); z-index: 49; border-top: 1px solid var(--lp-line); opacity: 0; transform: translateY(-8px); pointer-events: none; transition: opacity .2s var(--ease), transform .2s var(--ease); }
-.lp-mobile-menu.open { opacity: 1; transform: translateY(0); pointer-events: auto; }
-.lp-mobile-menu a { font-size: 20px; font-weight: 600; transition: color .15s var(--ease); }
-.lp-mobile-menu a:hover { color: var(--terracotta-dark); }
-.lp-mobile-menu .lp-nav-cta { width: fit-content; margin-top: var(--space-2); }
+/* The .lp-header / .lp-nav rules that used to live here moved to the .site-* block in
+   styles/theme.css, unchanged in look. The landing page now renders the same <SiteNav /> as
+   every other public page, so the styles have to be global — scoped under .landingPage they
+   would only dress the nav on this one route. */
 
 /* ---------- Hero ---------- */
 .lp-hero { padding: var(--space-8) var(--space-5) var(--space-7); max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 1.05fr 0.95fr; gap: var(--space-7); align-items: center; }
@@ -290,7 +238,7 @@ html { scroll-behavior: smooth; }
 .lp-map-frame { flex: 1 1 auto; min-height: 380px; border-radius: 20px; overflow: hidden; border: 1px solid var(--lp-line); position: relative; z-index: 0; }
 /* `position: relative; z-index: 0` above is what stops the map painting over the sticky
    header. Leaflet gives its internal panes and controls very high z-indexes (400 for panes,
-   up to 1000 for controls) which would otherwise compete directly with .lp-header's z-index
+   up to 1000 for controls) which would otherwise compete directly with .site-header's z-index
    of 50 in the root stacking context. Declaring z-index on a positioned ancestor creates a
    stacking context, so all of Leaflet's layering is resolved *inside* this frame and the
    whole thing sits at level 0 relative to the header. */
@@ -389,9 +337,6 @@ html { scroll-behavior: smooth; }
   .lp-process { grid-template-columns: repeat(2,1fr); }
   .lp-donors { grid-template-columns: repeat(2,1fr); }
   .lp-footer-grid { grid-template-columns: 1fr 1fr; }
-  .lp-nav-links { display: none; }
-  .lp-nav-actions .lp-nav-cta, .lp-nav-actions .lp-nav-ghost { display: none; }
-  .lp-hamburger { display: flex; }
   /* Map above the form once stacked: pinning the location is the first thing you do, and
      `sticky` has nothing to stick to in a single column. */
   .lp-report-grid { grid-template-columns: 1fr; }
@@ -403,7 +348,7 @@ html { scroll-behavior: smooth; }
   .lp-step:not(:last-child)::after { display: none; }
 }
 @media (max-width: 560px) {
-  .lp-container, .lp-nav, .lp-hero { padding-left: var(--space-4); padding-right: var(--space-4); }
+  .lp-container, .lp-hero { padding-left: var(--space-4); padding-right: var(--space-4); }
   .lp-featured-grid { grid-template-columns: 1fr 1fr; gap: var(--space-3); }
   .lp-impact-inner { grid-template-columns: 1fr 1fr; }
   .lp-process { grid-template-columns: 1fr; }

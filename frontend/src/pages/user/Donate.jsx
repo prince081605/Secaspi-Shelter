@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { createDonation } from '../../lib/donationsApi';
 import { getTransparency } from '../../lib/publicHomeApi';
 import { DONATION_CATEGORIES, NEEDED_MOST_LABEL, NEEDED_MOST_VALUE } from '../../lib/donationCategories';
+import SiteNav from '../../components/SiteNav';
+import useLoginGate from '../../lib/useLoginGate';
 
 const peso = (n) => `₱${Number(n || 0).toLocaleString()}`;
 
@@ -18,6 +20,13 @@ const styles = `
   .donateGoalTop { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.6rem; font-size: 0.92rem; }
   .donateGoalTrack { height: 12px; border-radius: 999px; background: var(--brand-soft); overflow: hidden; }
   .donateGoalFill { height: 100%; border-radius: 999px; background: var(--brand); transition: width .6s ease; }
+  .donateSettle { display: grid; gap: 0.6rem; }
+  .donateSettleOpt { display: flex; gap: 0.65rem; align-items: flex-start; padding: 0.85rem 1rem; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; transition: border-color .15s ease, background .15s ease; }
+  .donateSettleOpt:hover { border-color: var(--brand-light); }
+  .donateSettleOptOn { border-color: var(--brand); background: var(--brand-soft); }
+  .donateSettleOpt input { margin-top: 0.25rem; }
+  .donateSettleTitle { font-weight: 600; font-size: 0.94rem; }
+  .donateSettleNote { font-size: 0.82rem; color: var(--muted); margin-top: 0.15rem; }
   .donateUsage { margin-top: 2.4rem; }
   .donateUsageImg { width: 100%; border-radius: 12px; border: 1px solid var(--line); display: block; }
   .donateUsageLink { display: inline-block; margin-top: 0.7rem; color: var(--brand-2); font-size: 0.9rem; font-weight: 600; }
@@ -29,22 +38,36 @@ const styles = `
 
 const PRESET_AMOUNTS = [100, 300, 500, 1000, 2500];
 
+// Which methods AspinPay can settle instantly. Cash is handed over in person, so it has
+// no online rail — mirrors config('payments.gateway_rails') on the backend.
+const GATEWAY_RAILS = ['gcash', 'bank'];
+
 export default function Donate() {
   const navigate = useNavigate();
   const location = useLocation();
-  const preselected = location.state?.amount;
+  const [searchParams] = useSearchParams();
+  const gate = useLoginGate('/donate');
+
+  // A draft only exists when this page sent the visitor off to log in, and it outranks the
+  // landing page's preselected amount: it is the choice they made most recently.
+  const draft = gate.draft;
+  const initialAmount = draft?.amount ?? location.state?.amount;
 
   const [amount, setAmount] = useState(
-    PRESET_AMOUNTS.includes(preselected) ? preselected : (preselected || PRESET_AMOUNTS[1])
+    PRESET_AMOUNTS.includes(initialAmount) ? initialAmount : (initialAmount || PRESET_AMOUNTS[1])
   );
   const [customAmount, setCustomAmount] = useState(
-    preselected && !PRESET_AMOUNTS.includes(preselected) ? String(preselected) : ''
+    initialAmount && !PRESET_AMOUNTS.includes(initialAmount) ? String(initialAmount) : ''
   );
-  const [paymentMethod, setPaymentMethod] = useState('gcash');
-  const [category, setCategory] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState(draft?.payment_method || 'gcash');
+  // 'gateway' = pay through the AspinPay checkout now; 'manual' = send it yourself and
+  // upload a screenshot for staff to verify. Online is the default because it settles
+  // instantly and costs the donor nothing extra.
+  const [settlement, setSettlement] = useState(draft?.settlement || 'gateway');
+  const [category, setCategory] = useState(draft?.category || '');
   const [proofImage, setProofImage] = useState(null);
   const [proofPreviewUrl, setProofPreviewUrl] = useState('');
-  const [listPublicly, setListPublicly] = useState(false);
+  const [listPublicly, setListPublicly] = useState(Boolean(draft?.list_publicly));
   const [transparency, setTransparency] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -68,9 +91,19 @@ export default function Donate() {
     return () => { mounted = false; };
   }, []);
 
+  // Cash changes hands at the shelter, so there is nothing for the gateway to settle.
+  const canPayOnline = GATEWAY_RAILS.includes(paymentMethod);
+  const viaGateway = canPayOnline && settlement === 'gateway';
+
   const handlePreset = (value) => {
     setAmount(value);
     setCustomAmount('');
+  };
+
+  const handleMethodChange = (value) => {
+    setPaymentMethod(value);
+    // Switching to cash forces the manual route; switching back offers online again.
+    setSettlement(GATEWAY_RAILS.includes(value) ? settlement : 'manual');
   };
 
   const handleCustomChange = (e) => {
@@ -78,15 +111,35 @@ export default function Donate() {
     setAmount(Number(e.target.value) || 0);
   };
 
+  // Everything the draft can carry across the login trip. The proof screenshot is a File and
+  // cannot be serialised, which is why the upload step only appears once signed in.
+  const draftValues = () => ({
+    amount,
+    category,
+    payment_method: paymentMethod,
+    settlement,
+    list_publicly: listPublicly,
+  });
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // A donation is recorded against an account — it produces a receipt and shows up in the
+    // donor's history — so this is the step that needs a login. Choosing an amount does not.
+    if (!gate.isAuthed) {
+      gate.askToLogin(draftValues());
+      return;
+    }
+
     setSubmitting(true);
     setError('');
     try {
       const formData = new FormData();
       formData.append('amount', amount);
       formData.append('payment_method', paymentMethod);
-      if (proofImage) formData.append('proof_image', proofImage);
+      formData.append('settlement', viaGateway ? 'gateway' : 'manual');
+      // Only the manual route carries a screenshot — a gateway payment proves itself.
+      if (!viaGateway && proofImage) formData.append('proof_image', proofImage);
       // A real category is sent as-is; the explicit "needed most" choice sends nothing so the
       // backend records it as null (and the spillover logic pools it toward the neediest category).
       if (category && category !== NEEDED_MOST_VALUE) formData.append('category', category);
@@ -94,8 +147,18 @@ export default function Donate() {
       formData.append('is_anonymous', listPublicly ? '0' : '1');
 
       const data = await createDonation(formData);
+
+      // The gateway path hands back a checkout link. Leaving the site for the payment
+      // processor is the whole point, so go there rather than showing a success card
+      // for money that has not arrived yet.
+      if (data?.checkout_url) {
+        navigate(data.checkout_url);
+        return;
+      }
+
       setResult(data?.donation || null);
     } catch (err) {
+      if (gate.handleAuthError(err, draftValues())) return;
       setError(err?.message || 'Failed to submit donation. Please try again.');
     } finally {
       setSubmitting(false);
@@ -106,10 +169,7 @@ export default function Donate() {
     <div className="ui-page">
       <style>{styles}</style>
 
-      <nav className="ui-nav">
-        <div className="ui-logo">SECASPI <span>Shelter</span></div>
-        <button className="ui-btn-secondary" onClick={() => navigate('/')}>← Back to Home</button>
-      </nav>
+      <SiteNav />
 
       <div className="donateBody">
         {result ? (
@@ -117,9 +177,15 @@ export default function Donate() {
             <h2 className="ui-h2" style={{ marginBottom: '0.6rem' }}>Thank you for your donation!</h2>
             <p className="ui-muted">Your support helps us rescue and care for more Aspins.</p>
             <p style={{ marginTop: '0.8rem' }}>Reference number: <strong style={{ color: 'var(--brand)' }}>{result.reference_no}</strong></p>
+            <p className="ui-muted" style={{ fontSize: '0.85rem', marginTop: '0.6rem' }}>
+              Our team will verify your transfer within 24 hours — you'll get a notification once it's confirmed.
+            </p>
             <div style={{ display: 'flex', gap: '0.7rem', justifyContent: 'center', marginTop: '1.5rem', flexWrap: 'wrap' }}>
-              <button className="ui-btn-primary" onClick={() => navigate('/donations')}>
-                View Donation History
+              <button className="ui-btn-primary" onClick={() => navigate(`/donations/${result.id}`)}>
+                View Receipt
+              </button>
+              <button className="ui-btn-secondary" onClick={() => navigate('/donations')}>
+                Donation History
               </button>
               <button className="ui-btn-secondary" onClick={() => navigate('/')}>
                 Back to Website
@@ -143,6 +209,23 @@ export default function Donate() {
                 <div className="donateGoalTrack">
                   <div className="donateGoalFill" style={{ width: `${Math.min(100, transparency.progress_pct)}%` }} />
                 </div>
+              </div>
+            )}
+
+            {/* Sent here by the checkout's Cancel button. Says plainly that no money moved,
+                because "cancelled" on its own reads as "did something go wrong?". */}
+            {searchParams.get('cancelled') === '1' && (
+              <div className="ui-notice">
+                Payment cancelled — nothing was charged. Your donation is saved, and you can finish
+                paying it any time from your <Link to="/donations">donation history</Link>.
+              </div>
+            )}
+
+            {!gate.isAuthed && (
+              <div className="ui-notice">
+                Pick your amount and where it goes — you'll{' '}
+                <Link to="/login" state={{ from: '/donate' }}>log in</Link> next for the payment
+                details, and we'll bring you straight back with these choices kept.
               </div>
             )}
 
@@ -205,14 +288,60 @@ export default function Donate() {
 
               <div className="ui-field">
                 <label className="ui-label">Payment method</label>
-                <select className="ui-select" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
+                <select className="ui-select" value={paymentMethod} onChange={(e) => handleMethodChange(e.target.value)}>
                   <option value="gcash">GCash</option>
                   <option value="cash">Cash</option>
                   <option value="bank">Bank Transfer</option>
                 </select>
               </div>
 
-              {paymentMethod !== 'cash' && (
+              {/* Two ways to settle the same gift. Paying online confirms itself, so it skips
+                  both the screenshot and the wait for a staff member; sending it by hand keeps
+                  the original flow for donors who would rather not use the checkout. */}
+              {canPayOnline && (
+                <div className="ui-field">
+                  <label className="ui-label">How would you like to pay?</label>
+                  <div className="donateSettle">
+                    <label className={'donateSettleOpt' + (settlement === 'gateway' ? ' donateSettleOptOn' : '')}>
+                      <input
+                        type="radio"
+                        name="settlement"
+                        value="gateway"
+                        checked={settlement === 'gateway'}
+                        onChange={() => setSettlement('gateway')}
+                      />
+                      <span>
+                        <span className="donateSettleTitle">Pay now through secure checkout</span>
+                        <span className="donateSettleNote">
+                          Confirmed instantly — no screenshot, no waiting for staff to verify.
+                        </span>
+                      </span>
+                    </label>
+
+                    <label className={'donateSettleOpt' + (settlement === 'manual' ? ' donateSettleOptOn' : '')}>
+                      <input
+                        type="radio"
+                        name="settlement"
+                        value="manual"
+                        checked={settlement === 'manual'}
+                        onChange={() => setSettlement('manual')}
+                      />
+                      <span>
+                        <span className="donateSettleTitle">I'll send it myself</span>
+                        <span className="donateSettleNote">
+                          Transfer to our account and upload a screenshot. Staff verify it within 24 hours.
+                        </span>
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {/* Where to send the money, and the screenshot proving you did — the manual route
+                  only. Held back until the visitor is signed in: a File cannot ride along in the
+                  draft, so anyone who attached proof before logging in would silently lose it on
+                  the way back. */}
+              {gate.isAuthed && paymentMethod !== 'cash' && !viaGateway && (
                 <>
                   <a href="/payment-gateway.jpg" target="_blank" rel="noopener noreferrer" className="donatePaymentSheetLink">
                     <img
@@ -256,7 +385,13 @@ export default function Donate() {
               </div>
 
               <button className="ui-btn-primary" style={{ width: '100%' }} type="submit" disabled={submitting || !amount || !category}>
-                {submitting ? 'Submitting…' : `Donate ₱${Number(amount || 0).toLocaleString()}`}
+                {submitting
+                  ? (viaGateway ? 'Opening checkout…' : 'Submitting…')
+                  : !gate.isAuthed
+                    ? `Log in to donate ₱${Number(amount || 0).toLocaleString()}`
+                    : viaGateway
+                      ? `Continue to payment · ₱${Number(amount || 0).toLocaleString()}`
+                      : `Donate ₱${Number(amount || 0).toLocaleString()}`}
               </button>
             </form>
 

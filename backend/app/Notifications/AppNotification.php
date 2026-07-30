@@ -6,6 +6,7 @@ use App\Models\Notification as NotificationRecord;
 use App\Models\User;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Single source of truth for an event's title/message/data, sent over both channels: a row in
@@ -46,10 +47,19 @@ abstract class AppNotification extends Notification
             ->action('View on SECASPI Shelter', rtrim(config('app.frontend_url'), '/').'/dashboard');
     }
 
+    /**
+     * The in-app record is written first and the email is attempted second, inside a
+     * try/catch. Both orderings matter: notifications send synchronously (see above), so
+     * an SMTP outage throws right here — mailing first meant the bell record was never
+     * created and, worse, the exception propagated into whatever business action
+     * triggered it (verifying a donation would 500 *after* committing the status, leaving
+     * the admin's screen disagreeing with the database).
+     *
+     * A notification is a side effect of an action, never the thing that decides whether
+     * the action succeeded.
+     */
     public function sendTo(User $user): void
     {
-        $user->notify($this);
-
         NotificationRecord::create([
             'user_id' => $user->id,
             'type' => $this->type(),
@@ -57,5 +67,15 @@ abstract class AppNotification extends Notification
             'message' => $this->message(),
             'data' => $this->data(),
         ]);
+
+        try {
+            $user->notify($this);
+        } catch (\Throwable $e) {
+            Log::error('Notification email could not be delivered', [
+                'user_id' => $user->id,
+                'type' => $this->type(),
+                'exception' => $e,
+            ]);
+        }
     }
 }

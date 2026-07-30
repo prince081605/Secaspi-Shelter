@@ -368,10 +368,25 @@
 /* Shared filter/search bar row sitting under a module's section title and above its table. */
 .dashFilterBar {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 10px;
   flex-wrap: wrap;
   margin-bottom: 12px;
+}
+
+/* A single labeled control in a filter bar: caption stacked above the input/select. */
+.dashFilterField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dashFilterLabel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  font-family: 'Work Sans', sans-serif;
 }
 
 /* Shared admin-table pager (see components/Pagination.jsx). */

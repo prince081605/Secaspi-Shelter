@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { browseAnimals } from '../../lib/animalsApi';
 import { Sparkles, Dog } from 'lucide-react';
 import Reveal from '../../components/Reveal';
+import SiteNav from '../../components/SiteNav';
 
 const styles = `
   .adoptGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
@@ -151,10 +152,7 @@ export default function Adoption() {
     <div className="ui-page">
       <style>{styles}</style>
 
-      <nav className="ui-nav">
-        <div className="ui-logo">SECASPI <span>Shelter</span></div>
-        <button className="ui-btn-secondary" onClick={() => navigate('/')}>← Back to Home</button>
-      </nav>
+      <SiteNav />
 
       <div className="ui-container" style={{ padding: '3rem 6vw' }}>
         <p className="ui-eyebrow" style={{ marginBottom: '1rem' }}>Available for Adoption</p>

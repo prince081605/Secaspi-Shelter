@@ -244,6 +244,150 @@ body {
   border-bottom: 1px solid var(--line);
 }
 
+/* ---- site nav (the one floating pill) ----
+   These are the landing page's nav styles, moved here from LandingPage.css so they apply on
+   every route: that file is imported by the landing page alone, so a user landing directly
+   on /adopt would otherwise get an unstyled nav. Used by components/SiteNav.jsx, which the
+   landing page renders too — the bar below is the default state everywhere, and the only
+   thing another page adds is the current-page highlight further down.
+
+   Metrics are in px rather than the landing page's --space-* tokens: those are scoped to
+   .landingPage, so they resolve to nothing on the pages this nav is now shared with.
+
+   The header is a transparent sticky rail; the pill chrome sits on .site-nav so it can round
+   and gain a background on scroll. Sticky (not fixed) keeps it in layout flow so pages need
+   no top offset — and sticky is a positioned value, so it still contains any absolutely
+   positioned descendant such as the mobile menu. */
+/* The app has no global border-box reset — only `.landingPage *` declares one — so the pill
+   measured 50px wider on every other page than on the landing page it was copied from, its
+   padding landing outside the 1180px cap. Declared here so the nav is the same box wherever
+   it renders. */
+.site-header, .site-header * { box-sizing: border-box; }
+/* No underlines on any of the nav's links. The app has no global anchor reset — the only
+   `text-decoration: none` is `.landingPage a`, scoped to the landing page — so every link in
+   this bar picked up the browser default on all the other pages it now renders on. */
+.site-header a { text-decoration: none; }
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  padding: 8px 16px;
+}
+.site-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 16px 24px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  /* backdrop-filter is deliberately not transitioned — re-blurring the backdrop every frame
+     is among the most expensive things to animate. It switches instantly while the
+     background and border fade around it. */
+  transition: background .35s var(--ease), border-color .35s var(--ease), box-shadow .35s var(--ease);
+}
+.site-header.scrolled .site-nav {
+  background: rgba(255, 252, 246, 0.82);
+  backdrop-filter: blur(14px);
+  border-color: var(--line);
+  box-shadow: 0 10px 30px -20px rgba(43, 36, 32, 0.5);
+}
+
+.site-logo { display: inline-flex; align-items: center; gap: 10px; font-family: 'Fraunces', serif; font-weight: 700; font-size: 20px; color: var(--ink); white-space: nowrap; }
+.site-logo-mark { width: 34px; height: 34px; border-radius: 8px; background: var(--brand); color: var(--paper); display: grid; place-items: center; flex-shrink: 0; }
+.site-logo-accent { color: var(--brand); }
+
+/* The resting link colour is set on the list, not the links: the landing page's own
+   `.landingPage a { color: inherit }` has the same specificity as `.site-nav-links a` and
+   loads after this file, so a colour declared on the anchor would lose there and the landing
+   nav's links would come out darker than every other page's. Inheriting from the list is a
+   value both rules agree on. */
+.site-nav-links { display: flex; gap: 32px; list-style: none; margin: 0; padding: 0; font-size: 15px; font-weight: 500; color: var(--ink-soft); }
+.site-nav-links a { padding: 4px 0; color: inherit; transition: color .15s var(--ease); }
+/* Hover darkens to full ink rather than to the brand, so it stays clearly a step below the
+   current page's terracotta instead of competing with it. */
+.site-nav-links a:hover { color: var(--ink); }
+/* The current page is marked by the link itself — terracotta and a shade heavier — with no
+   rule under it. Weight as well as colour, so the mark does not rest on colour alone. */
+.site-nav-links a.is-current { color: var(--brand); font-weight: 600; }
+
+.site-nav-actions { display: flex; align-items: center; gap: 16px; }
+.site-nav-cta {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: var(--btn-h-sm); padding: 0 20px; border-radius: 999px;
+  background: var(--brand); color: #fff; border: none; cursor: pointer;
+  font-family: inherit; font-size: 14px; font-weight: 600; white-space: nowrap;
+  transition: background .15s var(--ease), transform .15s var(--ease);
+}
+.site-nav-ghost {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: var(--btn-h-sm); padding: 0 19px; border-radius: 999px;
+  background: transparent; color: var(--ink); border: 1px solid var(--line); cursor: pointer;
+  font-family: inherit; font-size: 14px; font-weight: 600; white-space: nowrap;
+  transition: border-color .15s var(--ease);
+}
+.site-nav-ghost:hover { border-color: var(--ink); }
+.site-nav-back { gap: 6px; padding: 0 16px; flex-shrink: 0; }
+.site-nav-cta:active, .site-nav-ghost:active { transform: scale(0.97); }
+/* Hover lift is gated: touch devices fire a sticky emulated hover on tap, which would leave
+   the button stuck in its raised state after a press. */
+@media (hover: hover) and (pointer: fine) {
+  .site-nav-cta:hover { background: var(--brand-2); transform: translateY(-1px); }
+}
+
+.site-hamburger { display: none; width: var(--btn-h-min); height: var(--btn-h-min); border: 0; background: none; cursor: pointer; flex-direction: column; align-items: center; justify-content: center; gap: 5px; }
+.site-hamburger span { display: block; width: 20px; height: 2px; background: var(--ink); border-radius: 2px; transition: transform .25s var(--ease), opacity .2s var(--ease); }
+.site-hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.site-hamburger.open span:nth-child(2) { opacity: 0; }
+.site-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* Anchored to the header's bottom edge, so it sits below the pill whatever its height. */
+.site-mobile-menu {
+  position: absolute; top: 100%; left: 0; right: 0;
+  display: flex; flex-direction: column; gap: 0.4rem;
+  height: 100vh; overflow-y: auto;
+  background: var(--paper); padding: 1.5rem; color: var(--ink);
+  border-top: 1px solid var(--line);
+  opacity: 0; transform: translateY(-8px); pointer-events: none;
+  transition: opacity .2s var(--ease), transform .2s var(--ease);
+}
+.site-mobile-menu.open { opacity: 1; transform: translateY(0); pointer-events: auto; }
+.site-mobile-menu a, .site-mobile-link {
+  font-family: inherit; font-size: 20px; font-weight: 600; color: inherit;
+  padding: 0.6rem 0; text-align: left;
+  background: none; border: 0; cursor: pointer;
+  transition: color .15s var(--ease);
+}
+.site-mobile-menu a:hover, .site-mobile-link:hover { color: var(--ink-soft); }
+/* Same highlight as the bar: terracotta and heavier, nothing drawn under it. */
+.site-mobile-menu a.is-current { color: var(--brand); font-weight: 700; }
+
+/* 1000px is where the five links, the wordmark and the two buttons stop fitting inside the
+   pill — below it they overflowed rather than folding into the menu. (The landing page used
+   to collapse at 900px and carried that 100px of overflow with it.) A page with a back
+   button spends another ~160px on the bar, so it has to fold that much sooner. */
+@media (max-width: 1160px) {
+  .site-header.has-back .site-nav-links { display: none; }
+  .site-header.has-back .site-hamburger { display: flex; }
+}
+@media (max-width: 1000px) {
+  .site-nav-links { display: none; }
+  .site-hamburger { display: flex; }
+  /* The site-wide destinations move into the menu at this width, as on the landing page.
+     A page's own back button is the exception: it is that page's escape hatch, not a
+     destination, so it stays on the bar where it is one tap away. */
+  .site-nav-cta, .site-nav-ghost:not(.site-nav-back) { display: none; }
+}
+@media (max-width: 560px) {
+  .site-header { padding: 8px 10px; }
+  .site-nav { padding: 12px 16px; }
+  .site-logo { font-size: 17px; }
+  .site-logo-mark { width: 30px; height: 30px; }
+}
+
 .ui-logo {
   font-family: 'Fraunces', serif;
   font-size: 1.35rem;
@@ -442,6 +586,25 @@ body {
   border-radius: var(--radius-sm);
   margin-bottom: 1rem;
   font-size: 0.9rem;
+}
+
+/* Neutral counterpart to .ui-error / .ui-success-msg: a heads-up that nothing has gone wrong.
+   Used on the public pages that gate their submit (Visit / Volunteer / Donate) to say a login is
+   coming before the visitor fills the form in, rather than after. */
+.ui-notice {
+  background: var(--brand-soft);
+  border: 1px solid var(--brand-light);
+  color: var(--brand-2);
+  padding: 0.8rem 1rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+}
+
+.ui-notice a {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
 }
 
 .ui-empty {

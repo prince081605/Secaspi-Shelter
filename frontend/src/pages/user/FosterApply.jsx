@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { applyForFoster } from '../../lib/animalsApi';
+import SiteNav from '../../components/SiteNav';
 
 const styles = `
   .applyBody { max-width: 640px; margin: 0 auto; padding: 3rem 1.5rem; }
@@ -15,7 +16,6 @@ const styles = `
 
 export default function FosterApply() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [form, setForm] = useState({
     full_name: '', address: '', occupation: '', housing_type: '', pet_experience: '', reason: '',
     start_date: '', end_date: '', notes: '',
@@ -44,10 +44,7 @@ export default function FosterApply() {
     <div className="ui-page">
       <style>{styles}</style>
 
-      <nav className="ui-nav">
-        <div className="ui-logo">SECASPI <span>Shelter</span></div>
-        <button className="ui-btn-secondary" onClick={() => navigate(`/adopt/${id}`)}>← Back to Animal</button>
-      </nav>
+      <SiteNav back={{ to: `/adopt/${id}`, label: 'Back to Animal' }} />
 
       <div className="applyBody">
         {result ? (
