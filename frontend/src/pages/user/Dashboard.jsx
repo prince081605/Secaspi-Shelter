@@ -10,12 +10,13 @@ import {
   Clock, Heart, User, Pencil, Lock, ClipboardList, Dog, Trophy, LayoutDashboard,
   ArrowLeft, Menu, X, LogOut, MessageSquare, PawPrint, Bell, Inbox, HeartHandshake,
   Siren, Calendar, Wrench, HandCoins, BarChart3, Users, UsersRound, Brain, Settings,
-  ChevronRight,
+  ChevronRight, Receipt,
 } from 'lucide-react';
 import AnimalsAdmin from '../admin/AnimalsAdmin';
 import AdoptionRequestsAdmin from '../admin/AdoptionRequestsAdmin';
 import RescueReportsAdmin from '../admin/RescueReportsAdmin';
 import DonationsAdmin from '../admin/DonationsAdmin';
+import ExpensesAdmin from '../admin/ExpensesAdmin';
 import UsersAdmin from '../admin/UsersAdmin';
 import { adminGetOverview, adminGetPendingCounts } from '../../lib/dashboardApi';
 import { getMyVolunteer, requestVolunteerTask } from '../../lib/volunteersApi';
@@ -40,7 +41,7 @@ const fallbackRole = 'user';
 const ITEM_CATEGORY = {
   animals: 'cat_animals', reminders: 'cat_animals',
   requests: 'cat_requests', rescues: 'cat_requests', visitations: 'cat_requests', messages: 'cat_requests',
-  donations: 'cat_ops', reports: 'cat_ops', users: 'cat_ops', settings: 'cat_ops', volunteers: 'cat_ops', faqs: 'cat_ops',
+  donations: 'cat_ops', expenses: 'cat_ops', reports: 'cat_ops', users: 'cat_ops', settings: 'cat_ops', volunteers: 'cat_ops', faqs: 'cat_ops',
 };
 const NAV_CATEGORY_KEYS = ['cat_animals', 'cat_requests', 'cat_ops'];
 
@@ -55,7 +56,9 @@ const atLeast = (r, min) => rankOf(r) >= rankOf(min);
 const ITEM_MIN_ROLE = {
   animals: 'staff', reminders: 'staff',
   requests: 'staff', rescues: 'staff', visitations: 'staff', messages: 'staff',
-  donations: 'staff', reports: 'staff', volunteers: 'staff',
+  // Staff can read the expense ledger; writing to it is admin-only and gated inside the panel
+  // (and on the server), the same split as Donations.
+  donations: 'staff', expenses: 'staff', reports: 'staff', volunteers: 'staff',
   users: 'admin', settings: 'admin', faqs: 'admin',
 };
 
@@ -675,6 +678,7 @@ export default function Dashboard() {
       key: 'cat_ops', label: 'Operations', icon: Wrench,
       items: [
         { key: 'donations', label: 'Donations', icon: HandCoins, badge: pendingDonationCount },
+        { key: 'expenses', label: 'Expenses', icon: Receipt },
         { key: 'reports', label: 'Reports', icon: BarChart3 },
         { key: 'users', label: 'Users', icon: Users },
         { key: 'volunteers', label: 'Personnel', icon: UsersRound, badge: pendingVolunteerCount },
@@ -912,6 +916,7 @@ export default function Dashboard() {
               {activeNav === 'messages' ? <Messages staff /> : null}
               {activeNav === 'reminders' ? <RemindersAdmin onChanged={fetchPendingCounts} /> : null}
               {activeNav === 'donations' ? <DonationsAdmin isAdmin={isAdminRole} /> : null}
+              {activeNav === 'expenses' ? <ExpensesAdmin isAdmin={isAdminRole} /> : null}
               {activeNav === 'volunteers' ? <VolunteersAdmin /> : null}
               {activeNav === 'reports' ? <ReportsAdmin isAdmin={isAdminRole} /> : null}
               {/* Users & Settings are admin-only — guarded here too so a forced nav can't mount them. */}

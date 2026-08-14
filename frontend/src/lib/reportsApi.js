@@ -5,6 +5,7 @@ export const REPORT_TYPES = [
   { key: 'animals', label: 'Animals' },
   { key: 'medical', label: 'Medical & Vaccinations' },
   { key: 'donations', label: 'Donations' },
+  { key: 'expenses', label: 'Expenses' },
   { key: 'volunteers', label: 'Volunteers' },
   { key: 'staff', label: 'Staff' },
   { key: 'rescue', label: 'Rescue Reports' },

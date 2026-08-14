@@ -6,6 +6,7 @@ use App\Http\Controllers\AnimalController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DonationController;
+use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\FaqController;
 use App\Http\Controllers\FosterApplicationController;
 use App\Http\Controllers\ImpactController;
@@ -65,6 +66,18 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('/payments/{token}/cancel', [PaymentSessionController::class, 'cancel']);
     Route::get('/admin/donations', [DonationController::class, 'adminIndex'])->middleware('role:staff');
     Route::get('/admin/donations/stats', [DonationController::class, 'adminStats'])->middleware('role:staff');
+
+    // ---- Expense ledger ----
+    // Staff can read the ledger (they need to know what the shelter is spending), but writing to
+    // it is admin-only — the same line drawn at donation verification and the financial report.
+    // "stats" precedes {expense} so it isn't bound as an id, as with /admin/animals/stats.
+    // Update is POST, not PUT (the convention elsewhere here): it accepts a receipt upload, and
+    // PHP only populates $_FILES for POST — a multipart PUT arrives with an empty file bag.
+    Route::get('/admin/expenses', [ExpenseController::class, 'adminIndex'])->middleware('role:staff');
+    Route::get('/admin/expenses/stats', [ExpenseController::class, 'adminStats'])->middleware('role:staff');
+    Route::post('/admin/expenses', [ExpenseController::class, 'store'])->middleware('admin');
+    Route::post('/admin/expenses/{expense}', [ExpenseController::class, 'update'])->middleware('admin');
+    Route::delete('/admin/expenses/{expense}', [ExpenseController::class, 'destroy'])->middleware('admin');
     Route::post('/animals/{animal}/adopt', [AdoptionApplicationController::class, 'store']);
     Route::post('/animals/{animal}/foster', [FosterApplicationController::class, 'store']);
     Route::get('/adoption-applications', [AdoptionApplicationController::class, 'index']);
@@ -184,6 +197,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('/admin/reports/animals', [ReportController::class, 'animals'])->middleware('role:staff');
     Route::get('/admin/reports/medical', [ReportController::class, 'medical'])->middleware('role:staff');
     Route::get('/admin/reports/donations', [ReportController::class, 'donations'])->middleware('admin');
+    Route::get('/admin/reports/expenses', [ReportController::class, 'expenses'])->middleware('admin');
     Route::get('/admin/reports/volunteers', [ReportController::class, 'volunteers'])->middleware('role:staff');
     Route::get('/admin/reports/staff', [ReportController::class, 'staff'])->middleware('role:staff');
     Route::get('/admin/reports/rescue', [ReportController::class, 'rescue'])->middleware('role:staff');
