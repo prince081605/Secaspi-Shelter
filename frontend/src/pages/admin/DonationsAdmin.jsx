@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { adminListDonations, adminGetDonationStats, adminVerifyDonation } from '../../lib/donationsApi';
 import { HandCoins } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
+import useConfirm from '../../lib/useConfirm';
 import Pagination from '../../components/Pagination';
 import DashCard from '../../components/DashCard';
 import useIsMobile from '../../lib/useIsMobile';
@@ -86,6 +87,7 @@ function StatsCards() {
 }
 
 export default function DonationsAdmin({ isAdmin = false }) {
+  const confirm = useConfirm();
   const isMobile = useIsMobile();
   const [donations, setDonations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -125,6 +127,20 @@ export default function DonationsAdmin({ isAdmin = false }) {
   const refresh = () => setRefreshKey((k) => k + 1);
 
   const handleVerify = async (donation, newStatus) => {
+    const verifying = newStatus === 'verified';
+    const ok = await confirm({
+      title: verifying ? 'Verify this donation?' : 'Reject this donation?',
+      message: verifying
+        ? 'The donation is counted as received and the donor gets their receipt.'
+        : 'The donor is told the donation could not be verified, and it stays out of the totals.',
+      confirmLabel: verifying ? 'Verify donation' : 'Reject donation',
+      tone: verifying ? 'default' : 'danger',
+      summary: [
+        { label: 'Donor', value: donation.donor?.full_name },
+        { label: 'Amount', value: money(donation.amount) },
+      ],
+    });
+    if (!ok) return;
     try {
       await adminVerifyDonation(donation.id, newStatus);
       refresh();

@@ -9,7 +9,7 @@ import {
 } from '../../lib/expensesApi';
 import Pagination from '../../components/Pagination';
 import DashCard from '../../components/DashCard';
-import ConfirmButton from '../../components/ConfirmButton';
+import useConfirm from '../../lib/useConfirm';
 import useIsMobile from '../../lib/useIsMobile';
 import { DONATION_CATEGORIES, labelFor } from '../../lib/donationCategories';
 
@@ -78,6 +78,7 @@ function StatsCards({ stats }) {
  * into state: React remounts, and the state starts correct.
  */
 function ExpenseForm({ editing, onCancel, onSaved, onError }) {
+  const confirm = useConfirm();
   const [form, setForm] = useState(() => (editing
     ? {
       category: editing.category,
@@ -97,6 +98,18 @@ function ExpenseForm({ editing, onCancel, onSaved, onError }) {
 
   const submit = async (e) => {
     e.preventDefault();
+    const ok = await confirm({
+      title: editing ? 'Save changes to this expense?' : 'Record this expense?',
+      message: 'The ledger and the public transparency report both pick this up straight away.',
+      confirmLabel: editing ? 'Save expense' : 'Record expense',
+      summary: [
+        { label: 'Category', value: labelFor(form.category) },
+        { label: 'Amount', value: form.amount === '' ? '' : money(form.amount) },
+        { label: 'Date', value: form.spent_at },
+        { label: 'Receipt', value: form.receipt ? form.receipt.name : '' },
+      ],
+    });
+    if (!ok) return;
     setSaving(true);
     setFieldErrors({});
 
@@ -195,6 +208,7 @@ function ExpenseForm({ editing, onCancel, onSaved, onError }) {
 const EMPTY_RESULT = { key: null, expenses: [], stats: null, meta: { current_page: 1, last_page: 1 }, error: '' };
 
 export default function ExpensesAdmin({ isAdmin = false }) {
+  const confirm = useConfirm();
   const isMobile = useIsMobile();
   const [category, setCategory] = useState('');
   const [from, setFrom] = useState('');
@@ -267,6 +281,18 @@ export default function ExpensesAdmin({ isAdmin = false }) {
   };
 
   const handleDelete = async (expense) => {
+    const ok = await confirm({
+      title: 'Delete this expense?',
+      message: 'It comes off the ledger and the transparency totals, and cannot be recovered.',
+      confirmLabel: 'Delete expense',
+      tone: 'danger',
+      summary: [
+        { label: 'Category', value: labelFor(expense.category) },
+        { label: 'Amount', value: money(expense.amount) },
+        { label: 'Date', value: expense.spent_at },
+      ],
+    });
+    if (!ok) return;
     try {
       setActionError('');
       await adminDeleteExpense(expense.id);
@@ -279,7 +305,7 @@ export default function ExpensesAdmin({ isAdmin = false }) {
   const rowActions = (e) => (
     <>
       <button className="dashBtn" onClick={() => startEdit(e)}>Edit</button>
-      <ConfirmButton confirmLabel="Delete?" onConfirm={() => handleDelete(e)}>Delete</ConfirmButton>
+      <button className="dashBtn dashBtnDanger" onClick={() => handleDelete(e)}>Delete</button>
     </>
   );
 

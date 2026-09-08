@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
+import './ConfirmDialog.css';
 
 const REQUIRED_WORD = 'DELETE';
 
-// Layout/positioning lives here since it's structural; colors and fonts are left to
-// whatever page wraps this (currently only AnimalsAdmin.css, the sole consumer).
+// Shares the .confirm-* panel styles with ConfirmDialog, so this two-step delete and the
+// one-step confirmation every other admin action goes through read as the same dialog.
 export default function TypeToConfirmButton({
   onConfirm,
   children,

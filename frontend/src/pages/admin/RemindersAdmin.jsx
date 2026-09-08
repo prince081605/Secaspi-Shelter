@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { adminListReminders, adminUpdateReminder } from '../../lib/remindersApi';
 import { Bell, PartyPopper } from 'lucide-react';
 import DashCard from '../../components/DashCard';
+import useConfirm from '../../lib/useConfirm';
 import useIsMobile from '../../lib/useIsMobile';
 
 export default function RemindersAdmin({ onChanged }) {
+  const confirm = useConfirm();
   const isMobile = useIsMobile();
   const [reminders, setReminders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -30,10 +32,20 @@ export default function RemindersAdmin({ onChanged }) {
     return () => { mounted = false; };
   }, [refreshKey]);
 
-  const markDone = async (id) => {
+  const markDone = async (reminder) => {
+    const ok = await confirm({
+      title: 'Mark this reminder done?',
+      message: 'It clears out of the reminder queue and stops counting as due.',
+      confirmLabel: 'Mark done',
+      summary: [
+        { label: 'Reminder', value: reminder.title },
+        { label: 'Animal', value: reminder.animal?.name },
+      ],
+    });
+    if (!ok) return;
     setError('');
     try {
-      await adminUpdateReminder(id, 'completed');
+      await adminUpdateReminder(reminder.id, 'completed');
       setRefreshKey((k) => k + 1);
       onChanged?.();
     } catch (err) {
@@ -65,7 +77,7 @@ export default function RemindersAdmin({ onChanged }) {
                 { label: 'Due date', value: <>{r.reminder_date}{r.is_overdue && <span className="badge badgeOrange" style={{ marginLeft: 8 }}>overdue</span>}</> },
                 { label: 'Status', value: <span className="badge badgeSky">{r.status}</span> },
               ]}
-              actions={<button className="dashBtn dashBtnPrimary" onClick={() => markDone(r.id)}>Mark done</button>}
+              actions={<button className="dashBtn dashBtnPrimary" onClick={() => markDone(r)}>Mark done</button>}
             />
           ))}
         </div>
@@ -93,7 +105,7 @@ export default function RemindersAdmin({ onChanged }) {
                   <td><span className="badge badgeSky">{r.status}</span></td>
                   <td className="dashActionsCell">
                     <span className="dashActionsRow">
-                      <button className="dashBtn dashBtnPrimary" onClick={() => markDone(r.id)}>Mark done</button>
+                      <button className="dashBtn dashBtnPrimary" onClick={() => markDone(r)}>Mark done</button>
                     </span>
                   </td>
                 </tr>

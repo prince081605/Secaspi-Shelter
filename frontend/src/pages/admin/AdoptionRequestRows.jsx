@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { adminUpdateAdoptionApplication, adminMarkAdoptionApplicationRead } from '../../lib/animalsApi';
 import { settingImageUrl } from '../../lib/settingsApi';
 import StatusBadge from '../../components/StatusBadge';
+import useConfirm from '../../lib/useConfirm';
 import DashCard from '../../components/DashCard';
 import useIsMobile from '../../lib/useIsMobile';
 
@@ -146,12 +147,23 @@ function printAdoptionContract(application, settings = {}) {
 }
 
 function HomeVisitPanel({ application, onSaved }) {
+  const confirm = useConfirm();
   const [status, setStatus] = useState(application.home_visit_status || 'not_scheduled');
   const [date, setDate] = useState(application.home_visit_date || '');
   const [notes, setNotes] = useState(application.home_visit_notes || '');
   const [state, setState] = useState({ status: 'idle', error: '' });
 
   const handleSave = async () => {
+    const ok = await confirm({
+      title: 'Save the home visit?',
+      message: 'The applicant sees the updated home visit status on their dashboard.',
+      confirmLabel: 'Save home visit',
+      summary: [
+        { label: 'Status', value: status?.replace('_', ' ') },
+        { label: 'Date', value: date },
+      ],
+    });
+    if (!ok) return;
     setState({ status: 'loading', error: '' });
     try {
       await adminUpdateAdoptionApplication(application.id, {
@@ -192,7 +204,29 @@ function HomeVisitPanel({ application, onSaved }) {
   );
 }
 
+// Copy for each status an adoption application can be moved to. These all email the applicant,
+// so the wording says what the decision does rather than just naming the new status.
+const ADOPTION_STATUS_PROMPTS = {
+  approved: {
+    title: 'Approve this adoption?',
+    message: 'The applicant is notified that they have been approved, and the adoption moves to Ongoing.',
+    confirmLabel: 'Approve',
+  },
+  declined: {
+    title: 'Reject this adoption request?',
+    message: 'The applicant is notified that their request was declined.',
+    confirmLabel: 'Reject request',
+    tone: 'danger',
+  },
+  completed: {
+    title: 'Mark this adoption completed?',
+    message: 'The animal is recorded as adopted and the application moves to Completed.',
+    confirmLabel: 'Mark completed',
+  },
+};
+
 export function ApplicationRow({ application, onChanged, onUnreadChanged }) {
+  const confirm = useConfirm();
   const isMobile = useIsMobile();
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState('');
@@ -219,6 +253,18 @@ export function ApplicationRow({ application, onChanged, onUnreadChanged }) {
   };
 
   const setStatus = async (status) => {
+    const prompt = ADOPTION_STATUS_PROMPTS[status] ?? {
+      title: `Set this request to ${status}?`,
+      confirmLabel: 'Update status',
+    };
+    const ok = await confirm({
+      ...prompt,
+      summary: [
+        { label: 'Applicant', value: application.full_name || application.applicant?.full_name },
+        { label: 'Animal', value: application.animal?.name },
+      ],
+    });
+    if (!ok) return;
     setError('');
     try {
       await adminUpdateAdoptionApplication(application.id, { status });
@@ -318,11 +364,21 @@ export function ApplicationRow({ application, onChanged, onUnreadChanged }) {
 }
 
 export function OngoingApprovedRow({ application, onChanged }) {
+  const confirm = useConfirm();
   const isMobile = useIsMobile();
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState('');
 
   const markDone = async () => {
+    const ok = await confirm({
+      ...ADOPTION_STATUS_PROMPTS.completed,
+      confirmLabel: 'Mark as done',
+      summary: [
+        { label: 'Applicant', value: application.full_name || application.applicant?.full_name },
+        { label: 'Animal', value: application.animal?.name },
+      ],
+    });
+    if (!ok) return;
     setError('');
     try {
       await adminUpdateAdoptionApplication(application.id, { status: 'completed' });

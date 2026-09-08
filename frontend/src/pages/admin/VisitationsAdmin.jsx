@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { adminListVisitations, adminUpdateVisitation, adminMarkVisitationRead } from '../../lib/visitationsApi';
 import { Calendar } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
+import useConfirm from '../../lib/useConfirm';
 import Pagination from '../../components/Pagination';
 import DashCard from '../../components/DashCard';
 import useIsMobile from '../../lib/useIsMobile';
@@ -10,10 +11,17 @@ const STATUSES = ['pending', 'approved', 'rejected', 'completed'];
 const SLOT_LABELS = { morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening' };
 
 function NotesPanel({ visitation, onSaved }) {
+  const confirm = useConfirm();
   const [notes, setNotes] = useState(visitation.admin_notes || '');
   const [state, setState] = useState({ status: 'idle', error: '' });
 
   const handleSave = async () => {
+    const ok = await confirm({
+      title: 'Save these notes?',
+      message: 'Admin notes are shared with the visitor when the booking status changes.',
+      confirmLabel: 'Save notes',
+    });
+    if (!ok) return;
     setState({ status: 'loading', error: '' });
     try {
       await adminUpdateVisitation(visitation.id, { admin_notes: notes });
@@ -46,13 +54,47 @@ function NotesPanel({ visitation, onSaved }) {
   );
 }
 
+// Every one of these emails the visitor, so the prompt says so rather than naming the status.
+const VISIT_STATUS_PROMPTS = {
+  approved: {
+    title: 'Approve this visit?',
+    message: 'The visitor is emailed a confirmation for the date and slot below.',
+    confirmLabel: 'Approve visit',
+  },
+  rejected: {
+    title: 'Reject this visit request?',
+    message: 'The visitor is emailed that the booking was not accepted, along with your notes.',
+    confirmLabel: 'Reject request',
+    tone: 'danger',
+  },
+  completed: {
+    title: 'Mark this visit completed?',
+    message: 'The booking is closed out as a visit that took place.',
+    confirmLabel: 'Mark completed',
+  },
+};
+
 function VisitationRow({ visitation, onChanged }) {
+  const confirm = useConfirm();
   const isMobile = useIsMobile();
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState('');
   const isUnread = !visitation.read_at;
 
   const setStatus = async (status) => {
+    const prompt = VISIT_STATUS_PROMPTS[status] ?? {
+      title: `Set this booking to ${status}?`,
+      confirmLabel: 'Update status',
+    };
+    const ok = await confirm({
+      ...prompt,
+      summary: [
+        { label: 'Visitor', value: visitation.visitor?.full_name },
+        { label: 'Date', value: visitation.requested_date },
+        { label: 'Slot', value: SLOT_LABELS[visitation.time_slot] || visitation.time_slot },
+      ],
+    });
+    if (!ok) return;
     setError('');
     try {
       await adminUpdateVisitation(visitation.id, { status });
