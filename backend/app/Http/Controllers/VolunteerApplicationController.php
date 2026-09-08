@@ -9,7 +9,9 @@ use App\Models\VolunteerApplication;
 use App\Notifications\VolunteerApplicationStatusChanged;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class VolunteerApplicationController extends Controller
 {
@@ -17,12 +19,33 @@ class VolunteerApplicationController extends Controller
 
     private const STATUSES = ['pending', 'approved', 'rejected'];
 
+    /**
+     * The IDs an applicant may present. Kept in sync by hand with frontend/src/lib/validIdTypes.js,
+     * the same arrangement donation categories use; the "unknown id type" test is what catches
+     * the two lists drifting apart.
+     */
+    private const ID_TYPES = [
+        'school_id',
+        'national_id',
+        'umid',
+        'drivers_license',
+        'postal_id',
+        'philhealth',
+        'passport',
+        'other',
+    ];
+
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'availability' => ['required', 'string', 'max:150'],
             'experience' => ['nullable', 'string'],
             'reason' => ['required', 'string'],
+            // Volunteers work with the animals and meet the public, so the shelter records who
+            // they are. 5 MB matches every other upload in the app.
+            'valid_id_type' => ['required', Rule::in(self::ID_TYPES)],
+            'valid_id_number' => ['required', 'string', 'max:100'],
+            'valid_id_image' => ['required', 'image', 'max:5120'],
         ]);
 
         if ($validator->fails()) {
@@ -39,13 +62,32 @@ class VolunteerApplicationController extends Controller
             return response()->json(['message' => 'You already have a pending volunteer application.'], 409);
         }
 
+        $data = $validator->validated();
+        // Named explicitly rather than spread: validated() now carries the UploadedFile under
+        // 'valid_id_image', and spreading that into create() would try to mass-assign the file
+        // object itself. Only the stored path belongs on the model.
+        $idPath = null;
+
         try {
+            // Stored after the duplicate guards above, so a rejected application never leaves
+            // an orphaned upload on disk.
+            $idPath = $request->file('valid_id_image')->store('volunteer-ids');
+
             $application = VolunteerApplication::create([
                 'user_id' => $user->id,
                 'status' => 'pending',
-                ...$validator->validated(),
+                'availability' => $data['availability'],
+                'experience' => $data['experience'] ?? null,
+                'reason' => $data['reason'],
+                'valid_id_type' => $data['valid_id_type'],
+                'valid_id_number' => $data['valid_id_number'],
+                'valid_id_path' => $idPath,
             ]);
         } catch (\Throwable $e) {
+            if ($idPath) {
+                Storage::delete($idPath);
+            }
+
             Log::error('Failed to create volunteer application', [
                 'user_id' => $user->id,
                 'exception' => $e,
@@ -151,10 +193,18 @@ class VolunteerApplicationController extends Controller
         ];
     }
 
+    /**
+     * The staff view of an application. The ID lives here and deliberately not in toItem(): that
+     * one answers the applicant's own request, and echoing their ID number and a link to the
+     * photo back over the wire would put it somewhere it does not need to be.
+     */
     private function toAdminItem(VolunteerApplication $a): array
     {
         return [
             ...$this->toItem($a),
+            'valid_id_type' => $a->valid_id_type,
+            'valid_id_number' => $a->valid_id_number,
+            'valid_id_url' => $a->valid_id_path ? Storage::url($a->valid_id_path) : null,
             'read_at' => $a->read_at,
             'applicant' => $a->user ? [
                 'id' => $a->user->id,

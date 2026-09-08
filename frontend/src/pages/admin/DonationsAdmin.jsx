@@ -41,6 +41,141 @@ function money(n) {
   return `₱${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+/*
+ * One donation, as a table row (or card on a phone) that opens into a review panel.
+ *
+ * Verifying a donation means deciding that money actually arrived, which is a judgement about
+ * the proof screenshot — so the screenshot is what the panel leads with, and Verify/Reject sit
+ * underneath it rather than on the row where they could be pressed without it ever being seen.
+ *
+ * Staff can open the panel; only admins get the decision footer (the list is role:staff, the
+ * verify endpoint is admin-only), which is why the Actions column is no longer conditional.
+ */
+function DonationRow({ donation: d, isAdmin, onChanged }) {
+  const confirm = useConfirm();
+  const isMobile = useIsMobile();
+  const [expanded, setExpanded] = useState(false);
+  // Row-local, unlike the page banner it replaced: the failure belongs next to the button that
+  // caused it, and the list's own refetch used to wipe the page banner out from under it.
+  const [error, setError] = useState('');
+
+  const handleVerify = async (newStatus) => {
+    const verifying = newStatus === 'verified';
+    const ok = await confirm({
+      title: verifying ? 'Verify this donation?' : 'Reject this donation?',
+      message: verifying
+        ? 'The donation is counted as received and the donor gets their receipt.'
+        : 'The donor is told the donation could not be verified, and it stays out of the totals.',
+      confirmLabel: verifying ? 'Verify donation' : 'Reject donation',
+      tone: verifying ? 'default' : 'danger',
+      summary: [
+        { label: 'Donor', value: d.donor?.full_name },
+        { label: 'Amount', value: money(d.amount) },
+      ],
+    });
+    if (!ok) return;
+    setError('');
+    try {
+      await adminVerifyDonation(d.id, newStatus);
+      onChanged();
+    } catch (err) {
+      setError(err?.message || 'Failed to update donation.');
+    }
+  };
+
+  const detailsBtn = (
+    <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>
+      {expanded ? 'Hide' : 'View details'}
+    </button>
+  );
+
+  const panel = (
+    <div className="dashReviewCard">
+      {error && <div className="ui-error">{error}</div>}
+
+      <div className="dashReviewSection">
+        <div className="dashReviewSectionTitle">Donor</div>
+        <dl className="dashInfoList">
+          <div><dt>Full name</dt><dd>{d.donor?.full_name || '—'}</dd></div>
+          <div><dt>Email</dt><dd>{d.donor?.email || '—'}</dd></div>
+          <div><dt>Reference</dt><dd>{d.reference_no}</dd></div>
+          <div><dt>Submitted</dt><dd>{(d.donated_at || '').slice(0, 10) || '—'}</dd></div>
+        </dl>
+      </div>
+
+      <div className="dashReviewSection">
+        <div className="dashReviewSectionTitle">Proof of payment</div>
+        {d.proof_image ? (
+          // Shown whole rather than cropped to a thumbnail: the amount and reference on a
+          // transfer screenshot are the point, and objectFit: cover would cut them off.
+          <a href={fileSrc(d.proof_image)} target="_blank" rel="noreferrer" title="Open the full-size screenshot">
+            <img
+              src={fileSrc(d.proof_image)}
+              alt={`Payment proof for ${d.reference_no}`}
+              style={{ maxWidth: 'min(320px, 100%)', borderRadius: 8, border: '1px solid var(--line)', display: 'block' }}
+            />
+          </a>
+        ) : (
+          <div className="ui-muted" style={{ fontSize: '0.85rem' }}>
+            {d.settlement === 'gateway'
+              ? 'Paid through the online checkout, which settles itself — no screenshot needed.'
+              : 'No screenshot was attached to this donation.'}
+          </div>
+        )}
+      </div>
+
+      {isAdmin && d.status === 'pending' && (
+        <div className="dashActionRow">
+          <button className="dashBtn dashBtnDanger" onClick={() => handleVerify('rejected')}>Reject</button>
+          <button className="dashBtn dashBtnPrimary" onClick={() => handleVerify('verified')}>Verify</button>
+        </div>
+      )}
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <>
+        <DashCard
+          title={d.donor?.full_name || '—'}
+          subtitle={d.reference_no}
+          fields={[
+            { label: 'Amount', value: money(d.amount) },
+            { label: 'Category', value: labelFor(d.category) },
+            { label: 'Method', value: d.payment_method },
+            { label: 'Paid', value: <SettlementTag settlement={d.settlement} /> },
+            { label: 'Status', value: <StatusBadge status={d.status} /> },
+          ]}
+          actions={detailsBtn}
+        />
+        {expanded && <div className="dashCardExpand">{panel}</div>}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <tr>
+        <td>{d.reference_no}</td>
+        <td>{d.donor?.full_name || '—'}<br /><span style={{ fontSize: 12, color: 'var(--muted)' }}>{d.donor?.email}</span></td>
+        <td>{money(d.amount)}</td>
+        <td>{labelFor(d.category)}</td>
+        <td>{d.payment_method}</td>
+        <td><SettlementTag settlement={d.settlement} /></td>
+        <td><StatusBadge status={d.status} /></td>
+        <td className="dashActionsCell">
+          <span className="dashActionsRow">{detailsBtn}</span>
+        </td>
+      </tr>
+      {expanded && (
+        <tr>
+          <td colSpan={8} className="dashExpandPanel">{panel}</td>
+        </tr>
+      )}
+    </>
+  );
+}
+
 function StatsCards() {
   const [stats, setStats] = useState(null);
   const [error, setError] = useState('');
@@ -87,7 +222,6 @@ function StatsCards() {
 }
 
 export default function DonationsAdmin({ isAdmin = false }) {
-  const confirm = useConfirm();
   const isMobile = useIsMobile();
   const [donations, setDonations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -126,29 +260,6 @@ export default function DonationsAdmin({ isAdmin = false }) {
   // Keep the current page on refresh (verify/reject); only the status filter resets the page.
   const refresh = () => setRefreshKey((k) => k + 1);
 
-  const handleVerify = async (donation, newStatus) => {
-    const verifying = newStatus === 'verified';
-    const ok = await confirm({
-      title: verifying ? 'Verify this donation?' : 'Reject this donation?',
-      message: verifying
-        ? 'The donation is counted as received and the donor gets their receipt.'
-        : 'The donor is told the donation could not be verified, and it stays out of the totals.',
-      confirmLabel: verifying ? 'Verify donation' : 'Reject donation',
-      tone: verifying ? 'default' : 'danger',
-      summary: [
-        { label: 'Donor', value: donation.donor?.full_name },
-        { label: 'Amount', value: money(donation.amount) },
-      ],
-    });
-    if (!ok) return;
-    try {
-      await adminVerifyDonation(donation.id, newStatus);
-      refresh();
-    } catch (err) {
-      setError(err?.message || 'Failed to update donation.');
-    }
-  };
-
   return (
     <>
       <style>{TABLE_STYLES}</style>
@@ -170,26 +281,7 @@ export default function DonationsAdmin({ isAdmin = false }) {
       ) : isMobile ? (
         <div className="dashCardList">
           {donations.map((d) => (
-            <DashCard
-              key={d.id}
-              title={d.donor?.full_name || '—'}
-              subtitle={d.reference_no}
-              fields={[
-                { label: 'Amount', value: money(d.amount) },
-                { label: 'Category', value: labelFor(d.category) },
-                { label: 'Method', value: d.payment_method },
-                { label: 'Paid', value: <SettlementTag settlement={d.settlement} /> },
-                { label: 'Proof', value: d.proof_image ? <a href={fileSrc(d.proof_image)} target="_blank" rel="noreferrer">View</a> : '—' },
-                { label: 'Status', value: <StatusBadge status={d.status} /> },
-                d.donor?.email && { label: 'Email', value: d.donor.email },
-              ]}
-              actions={isAdmin && d.status === 'pending' ? (
-                <>
-                  <button className="dashBtn dashBtnPrimary" onClick={() => handleVerify(d, 'verified')}>Verify</button>
-                  <button className="dashBtn dashBtnDanger" onClick={() => handleVerify(d, 'rejected')}>Reject</button>
-                </>
-              ) : null}
-            />
+            <DonationRow key={d.id} donation={d} isAdmin={isAdmin} onChanged={refresh} />
           ))}
         </div>
       ) : (
@@ -197,45 +289,23 @@ export default function DonationsAdmin({ isAdmin = false }) {
           <table className="dashTable donAdminTable">
             <thead>
               <tr>
-                <th style={{ width: '11%' }}>Reference</th>
-                <th style={{ width: '18%' }}>Donor</th>
+                {/* Widths must keep summing to 100 — table-layout: fixed divides the panel by
+                    these shares. Proof is gone as a column: the screenshot now opens in the
+                    panel, and a peek from the row was the thing this change set out to stop. */}
+                <th style={{ width: '12%' }}>Reference</th>
+                <th style={{ width: '21%' }}>Donor</th>
                 <th style={{ width: '9%' }}>Amount</th>
-                <th style={{ width: '14%' }}>Category</th>
-                <th style={{ width: '8%' }}>Method</th>
-                <th style={{ width: '8%' }}>Paid</th>
-                <th style={{ width: '7%' }}>Proof</th>
-                <th style={{ width: '11%' }}>Status</th>
-                {isAdmin && <th style={{ width: '14%' }}>Actions</th>}
+                <th style={{ width: '16%' }}>Category</th>
+                <th style={{ width: '9%' }}>Method</th>
+                <th style={{ width: '9%' }}>Paid</th>
+                <th style={{ width: '12%' }}>Status</th>
+                {/* Not gated on isAdmin: staff can read a donation, they just cannot decide it. */}
+                <th style={{ width: '12%' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {donations.map((d) => (
-                <tr key={d.id}>
-                  <td>{d.reference_no}</td>
-                  <td>{d.donor?.full_name || '—'}<br /><span style={{ fontSize: 12, color: 'var(--muted)' }}>{d.donor?.email}</span></td>
-                  <td>{money(d.amount)}</td>
-                  <td>{labelFor(d.category)}</td>
-                  <td>{d.payment_method}</td>
-                  <td><SettlementTag settlement={d.settlement} /></td>
-                  <td>
-                    {d.proof_image ? (
-                      <a href={fileSrc(d.proof_image)} target="_blank" rel="noreferrer">View</a>
-                    ) : '—'}
-                  </td>
-                  <td><StatusBadge status={d.status} /></td>
-                  {isAdmin && (
-                    <td className="dashActionsCell">
-                      <span className="dashActionsRow">
-                        {d.status === 'pending' && (
-                          <>
-                            <button className="dashBtn dashBtnPrimary" onClick={() => handleVerify(d, 'verified')}>Verify</button>
-                            <button className="dashBtn dashBtnDanger" onClick={() => handleVerify(d, 'rejected')}>Reject</button>
-                          </>
-                        )}
-                      </span>
-                    </td>
-                  )}
-                </tr>
+                <DonationRow key={d.id} donation={d} isAdmin={isAdmin} onChanged={refresh} />
               ))}
             </tbody>
           </table>

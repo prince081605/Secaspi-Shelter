@@ -706,11 +706,17 @@
   grid-column: 1 / -1;
 }
 
+/* The decision footer at the bottom of an expanded review panel — where approve/reject/verify
+   live, now that no admin decision is taken straight from a table row. Not to be confused with
+   .dashActionsRow (plural, above), which is the button strip inside a row's own cell.
+   Wraps because a panel on a phone can carry three buttons and .dashReviewCard's padding
+   leaves it under 300px to work with. */
 .dashActionRow {
   display: flex;
   align-items: center;
   gap: 10px;
   justify-content: flex-end;
+  flex-wrap: wrap;
   margin-top: 18px;
   padding-top: 16px;
   border-top: 1px solid var(--line);

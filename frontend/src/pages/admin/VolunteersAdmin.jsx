@@ -18,8 +18,14 @@ import useConfirm from '../../lib/useConfirm';
 import Pagination from '../../components/Pagination';
 import DashCard from '../../components/DashCard';
 import useIsMobile from '../../lib/useIsMobile';
+import { labelForIdType as idLabelFor } from '../../lib/validIdTypes';
 
 const NEXT_TASK_STATUS = { assigned: 'ongoing', ongoing: 'completed' };
+
+function fileSrc(path) {
+  if (!path) return '';
+  return path.startsWith('http') ? path : `${import.meta.env.VITE_API_BASE_URL}/storage/${path}`;
+}
 
 function AddPersonForm({ type, onCancel, onAdded }) {
   const confirm = useConfirm();
@@ -442,30 +448,58 @@ function RequestRow({ application, onChanged }) {
     }
   };
 
+  // The row opens the application; the decision is taken inside. That also closes a gap: the
+  // notes textarea below is what decide() sends as admin_notes, and it used to be possible to
+  // approve from the row without that field ever having been on screen.
   const actions = (
-    <>
-      {application.status === 'pending' && (
-        <>
-          <button className="dashBtn dashBtnPrimary" onClick={() => decide('approved')}>Approve</button>
-          <button className="dashBtn dashBtnDanger" onClick={() => decide('rejected')}>Reject</button>
-        </>
-      )}
-      <button className="dashBtn" onClick={toggleDetails}>{expanded ? 'Hide' : 'Details'}</button>
-    </>
+    <button className="dashBtn" onClick={toggleDetails}>{expanded ? 'Hide' : 'View details'}</button>
   );
+
   const panel = (
-    <>
+    <div className="dashReviewCard">
       {error && <div className="ui-error">{error}</div>}
-      <dl className="dashInfoList">
-        <div><dt>Phone</dt><dd>{application.applicant?.phone || '—'}</dd></div>
-        <div className="dashInfoFull"><dt>Experience</dt><dd>{application.experience || '—'}</dd></div>
-        <div className="dashInfoFull"><dt>Why volunteer?</dt><dd>{application.reason || '—'}</dd></div>
-      </dl>
-      <div className="ui-field" style={{ marginTop: 8 }}>
-        <label className="ui-label">Admin notes (shared with the applicant on decision)</label>
-        <textarea className="ui-input" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+      <div className="dashReviewSection">
+        <div className="dashReviewSectionTitle">Applicant</div>
+        <dl className="dashInfoList">
+          <div><dt>Phone</dt><dd>{application.applicant?.phone || '—'}</dd></div>
+          <div className="dashInfoFull"><dt>Experience</dt><dd>{application.experience || '—'}</dd></div>
+          <div className="dashInfoFull"><dt>Why volunteer?</dt><dd>{application.reason || '—'}</dd></div>
+        </dl>
       </div>
-    </>
+      <div className="dashReviewSection">
+        <div className="dashReviewSectionTitle">Valid ID</div>
+        <dl className="dashInfoList">
+          <div><dt>ID type</dt><dd>{application.valid_id_type ? idLabelFor(application.valid_id_type) : '—'}</dd></div>
+          <div><dt>ID number</dt><dd>{application.valid_id_number || '—'}</dd></div>
+        </dl>
+        {application.valid_id_url ? (
+          <a href={fileSrc(application.valid_id_url)} target="_blank" rel="noreferrer" title="Open the full-size ID">
+            <img
+              src={fileSrc(application.valid_id_url)}
+              alt={`Valid ID submitted by ${application.applicant?.full_name || 'the applicant'}`}
+              style={{ maxWidth: 'min(320px, 100%)', marginTop: 10, borderRadius: 8, border: '1px solid var(--line)', display: 'block' }}
+            />
+          </a>
+        ) : (
+          <div className="ui-muted" style={{ marginTop: 10, fontSize: '0.85rem' }}>
+            No ID photo on file — this application predates the ID requirement.
+          </div>
+        )}
+      </div>
+      <div className="dashReviewSection">
+        <div className="dashReviewSectionTitle">Decision notes</div>
+        <div className="ui-field">
+          <label className="ui-label">Shared with the applicant on decision</label>
+          <textarea className="ui-input" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+        </div>
+      </div>
+      {application.status === 'pending' && (
+        <div className="dashActionRow">
+          <button className="dashBtn dashBtnDanger" onClick={() => decide('rejected')}>Reject</button>
+          <button className="dashBtn dashBtnPrimary" onClick={() => decide('approved')}>Approve</button>
+        </div>
+      )}
+    </div>
   );
 
   if (isMobile) {

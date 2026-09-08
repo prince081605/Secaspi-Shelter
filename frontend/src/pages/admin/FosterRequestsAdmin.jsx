@@ -124,25 +124,17 @@ function ApplicationRow({ application, onChanged }) {
     }
   };
 
+  // The row opens the request; the decision is taken inside, next to the details it rests on.
+  // ("Monitor" became "View details" when the button stopped being only about the monitoring
+  //  form and started being the way into every action on the request.)
   const actions = (
-    <>
-      {application.status === 'pending' && (
-        <button className="dashBtn dashBtnPrimary" onClick={() => setStatus('approved')}>Approve</button>
-      )}
-      {application.status === 'approved' && (
-        <button className="dashBtn dashBtnPrimary" onClick={() => setStatus('active')}>Start fostering</button>
-      )}
-      {application.status === 'active' && (
-        <button className="dashBtn" onClick={() => setStatus('completed')}>Mark completed</button>
-      )}
-      {application.status !== 'declined' && application.status !== 'completed' && (
-        <button className="dashBtn dashBtnDanger" onClick={() => setStatus('declined')}>Decline</button>
-      )}
-      <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Monitor'}</button>
-    </>
+    <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'View details'}</button>
   );
+
+  // Everything except the two terminal states leaves something to decide.
+  const canDecide = application.status !== 'declined' && application.status !== 'completed';
   const panel = (
-    <>
+    <div className="dashReviewCard">
       {error && <div className="ui-error">{error}</div>}
       <div className="dashReviewSection">
         <div className="dashReviewSectionTitle">Applicant Details</div>
@@ -158,7 +150,21 @@ function ApplicationRow({ application, onChanged }) {
         </dl>
       </div>
       <MonitoringPanel application={application} onSaved={onChanged} />
-    </>
+      {canDecide && (
+        <div className="dashActionRow">
+          <button className="dashBtn dashBtnDanger" onClick={() => setStatus('declined')}>Decline</button>
+          {application.status === 'active' && (
+            <button className="dashBtn" onClick={() => setStatus('completed')}>Mark completed</button>
+          )}
+          {application.status === 'approved' && (
+            <button className="dashBtn dashBtnPrimary" onClick={() => setStatus('active')}>Start fostering</button>
+          )}
+          {application.status === 'pending' && (
+            <button className="dashBtn dashBtnPrimary" onClick={() => setStatus('approved')}>Approve</button>
+          )}
+        </div>
+      )}
+    </div>
   );
 
   if (isMobile) {

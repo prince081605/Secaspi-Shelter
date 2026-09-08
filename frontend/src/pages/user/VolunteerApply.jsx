@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { PawPrint, PartyPopper } from 'lucide-react';
 import SiteNav from '../../components/SiteNav';
 import useLoginGate from '../../lib/useLoginGate';
+import { ID_TYPES } from '../../lib/validIdTypes';
 import {
   submitVolunteerApplication,
   listMyVolunteerApplications,
@@ -21,6 +22,7 @@ const styles = `
   .volTag-rejected { background: #ffe0e0; color: #b42318; }
   .volTag-completed { background: var(--line); color: var(--ink-soft); }
   .volSuccess { padding: 2.5rem; text-align: center; }
+  .volIdPreview { display: block; max-width: min(320px, 100%); margin-top: 0.7rem; border: 1px solid var(--line); border-radius: 10px; }
   @media (max-width: 560px) {
     .volBody { padding: 2rem 1rem; }
     .volSuccess { padding: 1.5rem 1.25rem; }
@@ -38,12 +40,22 @@ export default function VolunteerApply() {
   const [volunteer, setVolunteer] = useState(null);
   const [applications, setApplications] = useState([]);
 
-  // application form — restored from the draft when this page sent the visitor off to log in
+  // application form — restored from the draft when this page sent the visitor off to log in.
+  // Strings only: the draft is JSON in sessionStorage (see useLoginGate), so anything here has
+  // to survive JSON.stringify.
   const [form, setForm] = useState({
     availability: gate.draft?.availability || '',
     experience: gate.draft?.experience || '',
     reason: gate.draft?.reason || '',
+    valid_id_type: gate.draft?.valid_id_type || '',
+    valid_id_number: gate.draft?.valid_id_number || '',
   });
+  // The ID photo is a File, which JSON.stringify turns into {} — so it is kept out of `form`
+  // and its input only appears once signed in. Same trick, same reason, as the donation proof
+  // screenshot on the Donate page. A visitor who gets bounced to the login page loses a file
+  // they had already picked, which is why we never ask for one before they are signed in.
+  const [idImage, setIdImage] = useState(null);
+  const [idPreviewUrl, setIdPreviewUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
@@ -74,6 +86,21 @@ export default function VolunteerApply() {
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
+  // Show the chosen ID before it is sent, so a blurry or wrong-side photo is caught here rather
+  // than by a reviewer days later. The URL is minted in the handler and released by the effect
+  // below — doing both in an effect would mean setting state from inside one.
+  const chooseIdImage = (e) => {
+    const file = e.target.files?.[0] || null;
+    setIdImage(file);
+    setIdPreviewUrl(file ? URL.createObjectURL(file) : '');
+  };
+
+  // Cleanup only: runs with the previous URL captured, so it releases the old preview when a
+  // new file is picked and the last one when the page unmounts.
+  useEffect(() => (
+    () => { if (idPreviewUrl) URL.revokeObjectURL(idPreviewUrl); }
+  ), [idPreviewUrl]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -84,15 +111,34 @@ export default function VolunteerApply() {
       return;
     }
 
+    // The file input is only rendered once signed in, so `required` on it cannot cover the
+    // case where someone signs in and submits without picking one.
+    if (!idImage) {
+      setError('Please attach a photo of your ID.');
+      return;
+    }
+
     setSubmitting(true);
     setError('');
     try {
-      await submitVolunteerApplication(form);
+      // FormData rather than JSON now that a file rides along; lib/api.js drops the
+      // Content-Type header for FormData so the browser can set the multipart boundary.
+      const body = new FormData();
+      body.append('availability', form.availability);
+      body.append('experience', form.experience);
+      body.append('reason', form.reason);
+      body.append('valid_id_type', form.valid_id_type);
+      body.append('valid_id_number', form.valid_id_number);
+      body.append('valid_id_image', idImage);
+      await submitVolunteerApplication(body);
       setDone(true);
       load();
     } catch (err) {
       if (gate.handleAuthError(err, form)) return;
-      setError(err?.message || 'Failed to submit your application. Please try again.');
+      // Laravel's 422 puts the useful sentence in `errors`, not `message` — without this an
+      // oversized ID photo would report only "Validation failed".
+      const fieldError = Object.values(err?.data?.errors || {})[0]?.[0];
+      setError(fieldError || err?.message || 'Failed to submit your application. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -234,6 +280,53 @@ export default function VolunteerApply() {
                   required
                 />
               </div>
+              <div className="ui-field">
+                <label className="ui-label ui-label-required">Type of ID</label>
+                <select
+                  className="ui-input"
+                  name="valid_id_type"
+                  value={form.valid_id_type}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="">Select an ID</option>
+                  {ID_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
+              </div>
+              <div className="ui-field">
+                <label className="ui-label ui-label-required">ID number</label>
+                <input
+                  className="ui-input"
+                  name="valid_id_number"
+                  value={form.valid_id_number}
+                  onChange={handleChange}
+                  maxLength={100}
+                  required
+                />
+              </div>
+              {/* Rendered only once signed in — and conditionally, not merely disabled. A
+                  `required` file input on the anonymous form would make the browser block
+                  submission before handleSubmit ran, putting the login gate out of reach. */}
+              {gate.isAuthed ? (
+                <div className="ui-field">
+                  <label className="ui-label ui-label-required">Photo of your ID</label>
+                  <input
+                    className="ui-input"
+                    type="file"
+                    accept="image/*"
+                    onChange={chooseIdImage}
+                    required
+                  />
+                  <p className="ui-muted" style={{ fontSize: '0.82rem', marginTop: '0.4rem' }}>
+                    A clear photo of the ID above, so we can confirm it is yours. JPG or PNG, up to 5 MB.
+                  </p>
+                  {idPreviewUrl && <img src={idPreviewUrl} alt="Your ID, as it will be submitted" className="volIdPreview" />}
+                </div>
+              ) : (
+                <p className="ui-muted" style={{ fontSize: '0.85rem' }}>
+                  You'll attach a photo of this ID after logging in.
+                </p>
+              )}
               <button className="ui-btn-primary" style={{ width: '100%' }} type="submit" disabled={submitting}>
                 {submitting ? 'Submitting…' : gate.isAuthed ? 'Submit application' : 'Log in to submit application'}
               </button>

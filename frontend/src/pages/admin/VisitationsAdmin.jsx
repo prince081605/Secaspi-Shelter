@@ -118,28 +118,40 @@ function VisitationRow({ visitation, onChanged }) {
     }
   };
 
+  // The row opens the booking; it no longer decides it. Approving or rejecting a visit is a
+  // judgement about a person's request, so it belongs behind the details the admin is judging.
   const actions = (
-    <>
-      {visitation.status === 'pending' && (
-        <>
-          <button className="dashBtn dashBtnPrimary" onClick={() => setStatus('approved')}>Approve</button>
-          <button className="dashBtn dashBtnDanger" onClick={() => setStatus('rejected')}>Reject</button>
-        </>
-      )}
-      {visitation.status === 'approved' && (
-        <button className="dashBtn" onClick={() => setStatus('completed')}>Mark completed</button>
-      )}
-      <button className="dashBtn" onClick={toggleDetails}>{expanded ? 'Hide' : 'Details'}</button>
-    </>
+    <button className="dashBtn" onClick={toggleDetails}>{expanded ? 'Hide' : 'View details'}</button>
   );
+
+  const canDecide = visitation.status === 'pending' || visitation.status === 'approved';
+
   const panel = (
-    <>
+    <div className="dashReviewCard">
       {error && <div className="ui-error">{error}</div>}
-      <div className="ui-muted" style={{ fontSize: '0.85rem', marginBottom: 6 }}>
-        {visitation.visitor?.email}{visitation.visitor?.phone ? ` · ${visitation.visitor.phone}` : ''}
+      <div className="dashReviewSection">
+        <div className="dashReviewSectionTitle">Visitor</div>
+        <div className="ui-muted" style={{ fontSize: '0.85rem' }}>
+          {visitation.visitor?.email}{visitation.visitor?.phone ? ` · ${visitation.visitor.phone}` : ''}
+        </div>
+        <NotesPanel visitation={visitation} onSaved={onChanged} />
       </div>
-      <NotesPanel visitation={visitation} onSaved={onChanged} />
-    </>
+      {/* Guarded, not just empty: a rejected or completed booking has no decision left to make,
+          and an empty footer would still draw its divider and padding. */}
+      {canDecide && (
+        <div className="dashActionRow">
+          {visitation.status === 'pending' && (
+            <>
+              <button className="dashBtn dashBtnDanger" onClick={() => setStatus('rejected')}>Reject</button>
+              <button className="dashBtn dashBtnPrimary" onClick={() => setStatus('approved')}>Approve</button>
+            </>
+          )}
+          {visitation.status === 'approved' && (
+            <button className="dashBtn" onClick={() => setStatus('completed')}>Mark completed</button>
+          )}
+        </div>
+      )}
+    </div>
   );
 
   if (isMobile) {
