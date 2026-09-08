@@ -18,6 +18,12 @@ export async function requestVolunteerTask(payload) {
   return api.post('/api/volunteer/tasks', payload);
 }
 
+// Takes FormData (the proof photo, plus an optional note) — api.js drops the Content-Type for
+// FormData so the browser can set the multipart boundary.
+export async function submitTaskProof(taskId, formData) {
+  return api.post(`/api/volunteer/tasks/${taskId}/proof`, formData);
+}
+
 // ---- Admin: volunteer requests ----
 
 export async function adminListVolunteerApplications(params = {}) {

@@ -10,6 +10,7 @@ use App\Models\Reminder;
 use App\Models\RescueReport;
 use App\Models\Visitation;
 use App\Models\VolunteerApplication;
+use App\Models\VolunteerTask;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
@@ -30,7 +31,10 @@ class DashboardController extends Controller
             'foster' => FosterApplication::where('status', 'pending')->count(),
             'donation' => Donation::where('status', 'pending')->count(),
             'visitation' => Visitation::where('status', 'pending')->count(),
-            'volunteer' => VolunteerApplication::where('status', 'pending')->count(),
+            // The Volunteers badge covers both things waiting on staff there: people asking to
+            // join, and finished tasks whose proof needs signing off.
+            'volunteer' => VolunteerApplication::where('status', 'pending')->count()
+                + VolunteerTask::where('status', 'submitted')->count(),
             'reminders_overdue' => Reminder::whereIn('status', ['pending', 'sent'])
                 ->whereDate('reminder_date', '<', $today)
                 ->count(),

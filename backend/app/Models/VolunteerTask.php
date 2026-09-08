@@ -12,6 +12,13 @@ class VolunteerTask extends Model
         'task_name',
         'status',
         'assigned_date',
+        'proof_path',
+        'proof_note',
+        'proof_submitted_at',
+    ];
+
+    protected $casts = [
+        'proof_submitted_at' => 'datetime',
     ];
 
     public function volunteer()

@@ -20,11 +20,38 @@ import DashCard from '../../components/DashCard';
 import useIsMobile from '../../lib/useIsMobile';
 import { labelForIdType as idLabelFor } from '../../lib/validIdTypes';
 
-const NEXT_TASK_STATUS = { assigned: 'ongoing', ongoing: 'completed' };
+// 'submitted' is where a task lands once the volunteer sends proof they finished it, so the
+// step after it is signing that proof off. 'ongoing' still leads straight to completed — not
+// every task produces a photo worth waiting for.
+const NEXT_TASK_STATUS = { assigned: 'ongoing', ongoing: 'completed', submitted: 'completed' };
 
 function fileSrc(path) {
   if (!path) return '';
   return path.startsWith('http') ? path : `${import.meta.env.VITE_API_BASE_URL}/storage/${path}`;
+}
+
+// What the volunteer sent as evidence the task is done. Small enough to sit in a table cell,
+// clickable through to the full photo — a thumbnail is for spotting that proof exists, not for
+// judging it.
+function TaskProof({ task }) {
+  if (!task.proof_url) {
+    return <span className="ui-muted" style={{ fontSize: 12 }}>—</span>;
+  }
+
+  return (
+    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+      <a href={fileSrc(task.proof_url)} target="_blank" rel="noreferrer" title="Open the full-size photo">
+        <img
+          src={fileSrc(task.proof_url)}
+          alt={`Proof of completion for ${task.task_name}`}
+          style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--line)', display: 'block' }}
+        />
+      </a>
+      {task.proof_note && (
+        <span style={{ fontSize: 12, color: 'var(--ink-soft)', maxWidth: 180 }}>{task.proof_note}</span>
+      )}
+    </div>
+  );
 }
 
 function AddPersonForm({ type, onCancel, onAdded }) {
@@ -181,14 +208,21 @@ function TasksPanel({ volunteer, onChanged }) {
   };
 
   const setStatus = async (task, status) => {
+    // Completing a task the volunteer has sent proof for is a sign-off on that proof, not a
+    // status flip — say so, and point at the photo they are signing off.
+    const signingOff = task.status === 'submitted' && status === 'completed';
     const ok = await confirm({
-      title: `Mark this task ${status}?`,
-      message: 'The volunteer sees the new task status on their dashboard.',
-      confirmLabel: `Mark ${status}`,
+      title: signingOff ? 'Sign this task off as completed?' : `Mark this task ${status}?`,
+      message: signingOff
+        ? 'You are accepting the proof the volunteer sent. They are notified that the task is complete.'
+        : 'The volunteer sees the new task status on their dashboard.',
+      confirmLabel: signingOff ? 'Sign off' : `Mark ${status}`,
       summary: [
         { label: 'Task', value: task.task_name },
+        { label: 'Volunteer', value: volunteer.user?.full_name },
         { label: 'From', value: task.status },
         { label: 'To', value: status },
+        { label: 'Note', value: signingOff ? task.proof_note : '' },
       ],
     });
     if (!ok) return;
@@ -237,6 +271,7 @@ function TasksPanel({ volunteer, onChanged }) {
               fields={[
                 { label: 'Status', value: <StatusBadge status={t.status} /> },
                 { label: 'Date', value: t.assigned_date || '—' },
+                t.proof_url && { label: 'Proof', value: <TaskProof task={t} /> },
               ]}
               actions={
                 <>
@@ -255,13 +290,14 @@ function TasksPanel({ volunteer, onChanged }) {
       ) : (
         <div className="dashTableWrap">
           <table className="dashTable">
-            <thead><tr><th>Task</th><th>Status</th><th>Date</th><th></th></tr></thead>
+            <thead><tr><th>Task</th><th>Status</th><th>Date</th><th>Proof</th><th></th></tr></thead>
             <tbody>
               {volunteer.tasks.map((t) => (
                 <tr key={t.id}>
                   <td>{t.task_name}</td>
                   <td><StatusBadge status={t.status} /></td>
                   <td>{t.assigned_date || '—'}</td>
+                  <td><TaskProof task={t} /></td>
                   <td className="dashActionsCell">
                     <span className="dashActionsRow">
                       {t.status === 'requested' && (

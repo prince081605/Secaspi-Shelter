@@ -155,6 +155,9 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('/volunteer-applications', [VolunteerApplicationController::class, 'index']);
     Route::get('/volunteer/me', [VolunteerController::class, 'me']);
     Route::post('/volunteer/tasks', [VolunteerController::class, 'requestTask']);
+    // The volunteer's own task — the controller checks it belongs to them, since any signed-in
+    // user could otherwise put a photo against someone else's work.
+    Route::post('/volunteer/tasks/{task}/proof', [VolunteerController::class, 'submitTaskProof']);
     Route::get('/admin/volunteer-applications', [VolunteerApplicationController::class, 'adminIndex'])->middleware('role:staff');
     Route::put('/admin/volunteer-applications/{application}', [VolunteerApplicationController::class, 'adminUpdate'])->middleware('role:staff');
     Route::post('/admin/volunteer-applications/{application}/read', [VolunteerApplicationController::class, 'adminMarkRead'])->middleware('role:staff');

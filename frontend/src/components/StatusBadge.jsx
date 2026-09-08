@@ -15,6 +15,8 @@ const STATUS_VARIANTS = {
   not_scheduled: 'badgeSky',
   assigned: 'badgeSky',
   ongoing: 'badgeSky',
+  // A volunteer has sent proof a task is done; it waits for an admin to sign it off.
+  submitted: 'badgeSky',
   under_assessment: 'badgeSky',
   in_progress: 'badgeSky',
   fostered: 'badgeSky',
