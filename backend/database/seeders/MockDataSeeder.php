@@ -423,7 +423,6 @@ class MockDataSeeder extends Seeder
                 'experience' => $this->pick(['No prior experience but eager to help.', 'Volunteered at another shelter.', 'Owns several rescue dogs.']),
                 'reason' => 'Want to contribute to animal welfare.',
                 'valid_id_type' => $this->pick(['school_id', 'national_id', 'umid', 'drivers_license']),
-                'valid_id_number' => 'ID-' . mt_rand(100000, 999999),
                 // Left null deliberately: there is no real upload on disk to point at, and it
                 // exercises the same "no ID on file" panel state as the applications that
                 // predate this requirement.

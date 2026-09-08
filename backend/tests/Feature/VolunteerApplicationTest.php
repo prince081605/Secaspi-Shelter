@@ -42,7 +42,6 @@ class VolunteerApplicationTest extends TestCase
             'experience' => 'Fostered two dogs last year.',
             'reason' => 'I want to help the Aspins in the shelter.',
             'valid_id_type' => 'school_id',
-            'valid_id_number' => '2021-00456',
             'valid_id_image' => $this->idPhoto(),
         ], $overrides);
     }
@@ -61,12 +60,11 @@ class VolunteerApplicationTest extends TestCase
 
         $application = VolunteerApplication::sole();
         $this->assertSame('school_id', $application->valid_id_type);
-        $this->assertSame('2021-00456', $application->valid_id_number);
         $this->assertNotNull($application->valid_id_path);
         Storage::assertExists($application->valid_id_path);
     }
 
-    public function test_the_id_type_number_and_photo_are_all_required(): void
+    public function test_the_id_type_and_photo_are_both_required(): void
     {
         Storage::fake();
         Sanctum::actingAs(User::factory()->create());
@@ -75,7 +73,7 @@ class VolunteerApplicationTest extends TestCase
             'availability' => 'Weekends',
             'reason' => 'I want to help.',
         ])->assertStatus(422)
-            ->assertJsonValidationErrors(['valid_id_type', 'valid_id_number', 'valid_id_image']);
+            ->assertJsonValidationErrors(['valid_id_type', 'valid_id_image']);
 
         $this->assertSame(0, VolunteerApplication::count());
     }
@@ -147,13 +145,11 @@ class VolunteerApplicationTest extends TestCase
         // The applicant's own list: no ID echoed back over the wire.
         $mine = $this->getJson('/api/volunteer-applications')->assertOk()->json('applications.0');
         $this->assertArrayNotHasKey('valid_id_url', $mine);
-        $this->assertArrayNotHasKey('valid_id_number', $mine);
 
         // Staff reviewing the queue: the ID is the point.
         Sanctum::actingAs(User::factory()->staff()->create());
         $row = $this->getJson('/api/admin/volunteer-applications')->assertOk()->json('data.0');
         $this->assertSame('school_id', $row['valid_id_type']);
-        $this->assertSame('2021-00456', $row['valid_id_number']);
         $this->assertNotNull($row['valid_id_url']);
     }
 }

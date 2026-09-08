@@ -44,7 +44,6 @@ class VolunteerApplicationController extends Controller
             // Volunteers work with the animals and meet the public, so the shelter records who
             // they are. 5 MB matches every other upload in the app.
             'valid_id_type' => ['required', Rule::in(self::ID_TYPES)],
-            'valid_id_number' => ['required', 'string', 'max:100'],
             'valid_id_image' => ['required', 'image', 'max:5120'],
         ]);
 
@@ -80,7 +79,6 @@ class VolunteerApplicationController extends Controller
                 'experience' => $data['experience'] ?? null,
                 'reason' => $data['reason'],
                 'valid_id_type' => $data['valid_id_type'],
-                'valid_id_number' => $data['valid_id_number'],
                 'valid_id_path' => $idPath,
             ]);
         } catch (\Throwable $e) {
@@ -195,15 +193,14 @@ class VolunteerApplicationController extends Controller
 
     /**
      * The staff view of an application. The ID lives here and deliberately not in toItem(): that
-     * one answers the applicant's own request, and echoing their ID number and a link to the
-     * photo back over the wire would put it somewhere it does not need to be.
+     * one answers the applicant's own request, and handing a link to their ID photo back over
+     * the wire would put it somewhere it does not need to be.
      */
     private function toAdminItem(VolunteerApplication $a): array
     {
         return [
             ...$this->toItem($a),
             'valid_id_type' => $a->valid_id_type,
-            'valid_id_number' => $a->valid_id_number,
             'valid_id_url' => $a->valid_id_path ? Storage::url($a->valid_id_path) : null,
             'read_at' => $a->read_at,
             'applicant' => $a->user ? [

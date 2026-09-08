@@ -13,7 +13,6 @@ class VolunteerApplication extends Model
         'experience',
         'reason',
         'valid_id_type',
-        'valid_id_number',
         'valid_id_path',
         'status',
         'admin_notes',

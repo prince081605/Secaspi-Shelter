@@ -48,7 +48,6 @@ export default function VolunteerApply() {
     experience: gate.draft?.experience || '',
     reason: gate.draft?.reason || '',
     valid_id_type: gate.draft?.valid_id_type || '',
-    valid_id_number: gate.draft?.valid_id_number || '',
   });
   // The ID photo is a File, which JSON.stringify turns into {} — so it is kept out of `form`
   // and its input only appears once signed in. Same trick, same reason, as the donation proof
@@ -128,7 +127,6 @@ export default function VolunteerApply() {
       body.append('experience', form.experience);
       body.append('reason', form.reason);
       body.append('valid_id_type', form.valid_id_type);
-      body.append('valid_id_number', form.valid_id_number);
       body.append('valid_id_image', idImage);
       await submitVolunteerApplication(body);
       setDone(true);
@@ -292,17 +290,6 @@ export default function VolunteerApply() {
                   <option value="">Select an ID</option>
                   {ID_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
-              </div>
-              <div className="ui-field">
-                <label className="ui-label ui-label-required">ID number</label>
-                <input
-                  className="ui-input"
-                  name="valid_id_number"
-                  value={form.valid_id_number}
-                  onChange={handleChange}
-                  maxLength={100}
-                  required
-                />
               </div>
               {/* Rendered only once signed in — and conditionally, not merely disabled. A
                   `required` file input on the anonymous form would make the browser block

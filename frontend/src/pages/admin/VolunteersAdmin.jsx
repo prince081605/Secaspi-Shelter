@@ -470,7 +470,6 @@ function RequestRow({ application, onChanged }) {
         <div className="dashReviewSectionTitle">Valid ID</div>
         <dl className="dashInfoList">
           <div><dt>ID type</dt><dd>{application.valid_id_type ? idLabelFor(application.valid_id_type) : '—'}</dd></div>
-          <div><dt>ID number</dt><dd>{application.valid_id_number || '—'}</dd></div>
         </dl>
         {application.valid_id_url ? (
           <a href={fileSrc(application.valid_id_url)} target="_blank" rel="noreferrer" title="Open the full-size ID">
