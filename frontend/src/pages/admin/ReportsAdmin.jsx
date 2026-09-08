@@ -3,6 +3,10 @@ import { REPORT_TYPES, getReport, exportReport } from '../../lib/reportsApi';
 import { BarChart3, Download } from 'lucide-react';
 import DashCard from '../../components/DashCard';
 import useIsMobile from '../../lib/useIsMobile';
+import { DONATION_CATEGORIES } from '../../lib/donationCategories';
+
+// Mirrors ReportController::FINANCIAL_TYPES — report types that expose shelter finances.
+const FINANCIAL_REPORT_TYPES = ['donations', 'expenses'];
 
 const FILTER_CONFIG = {
   adoption: {
@@ -22,6 +26,12 @@ const FILTER_CONFIG = {
     status: ['pending', 'verified', 'rejected'],
     paymentMethod: ['gcash', 'cash', 'bank'],
   },
+  expenses: {
+    dateRange: true,
+    // Filtering by category necessarily excludes medical costs, which carry no category —
+    // the backend documents this alongside the same behaviour in the medical report.
+    category: true,
+  },
   volunteers: {},
   staff: {},
   rescue: {
@@ -31,7 +41,7 @@ const FILTER_CONFIG = {
   },
 };
 
-const emptyFilters = { from: '', to: '', status: '', species: '', payment_method: '', urgency: '', record_type: '' };
+const emptyFilters = { from: '', to: '', status: '', species: '', payment_method: '', urgency: '', record_type: '', category: '' };
 
 function saveBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
@@ -46,8 +56,12 @@ function saveBlob(blob, filename) {
 
 export default function ReportsAdmin({ isAdmin = false }) {
   const isMobile = useIsMobile();
-  // The donations (financial) report is admin-only; staff see operational types only.
-  const reportTypes = isAdmin ? REPORT_TYPES : REPORT_TYPES.filter((t) => t.key !== 'donations');
+  // The financial reports (donations, expenses) are admin-only; staff see operational types only.
+  // The server enforces this too — ReportController::resolveData() blocks both types below admin,
+  // so hiding them here is convenience, not the access control.
+  const reportTypes = isAdmin
+    ? REPORT_TYPES
+    : REPORT_TYPES.filter((t) => !FINANCIAL_REPORT_TYPES.includes(t.key));
   const [type, setType] = useState('adoption');
   const [filters, setFilters] = useState(emptyFilters);
   const [data, setData] = useState(null);
@@ -153,6 +167,16 @@ export default function ReportsAdmin({ isAdmin = false }) {
             <select className="ui-input" style={{ maxWidth: 160 }} value={filters.urgency} onChange={setField('urgency')}>
               <option value="">All urgency levels</option>
               {config.urgency.map((u) => <option key={u} value={u}>{u}</option>)}
+            </select>
+          </label>
+        )}
+
+        {config.category && (
+          <label className="dashFilterField">
+            <span className="dashFilterLabel">Category</span>
+            <select className="ui-input" style={{ maxWidth: 200 }} value={filters.category} onChange={setField('category')}>
+              <option value="">All categories</option>
+              {DONATION_CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
             </select>
           </label>
         )}

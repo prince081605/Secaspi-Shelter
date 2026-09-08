@@ -3,11 +3,13 @@ import { adminListFaqs, adminCreateFaq, adminUpdateFaq, adminDeleteFaq } from '.
 import { Brain, FlaskConical, Check, X } from 'lucide-react';
 import { sendAssistantMessage } from '../../lib/assistantApi';
 import DashCard from '../../components/DashCard';
+import useConfirm from '../../lib/useConfirm';
 import useIsMobile from '../../lib/useIsMobile';
 
 const EMPTY = { question: '', answer: '', tags: '', enabled: true };
 
 export default function FaqTrainingAdmin() {
+  const confirm = useConfirm();
   const isMobile = useIsMobile();
   const [faqs, setFaqs] = useState([]);
   const [form, setForm] = useState(EMPTY);
@@ -20,6 +22,16 @@ export default function FaqTrainingAdmin() {
 
   const submit = async (e) => {
     e.preventDefault();
+    const ok = await confirm({
+      title: editingId ? 'Save changes to this Q&A?' : 'Add this Q&A?',
+      message: 'The assistant starts answering visitors from this entry right away.',
+      confirmLabel: editingId ? 'Save Q&A' : 'Add Q&A',
+      summary: [
+        { label: 'Question', value: form.question },
+        { label: 'Enabled', value: form.enabled ? 'Yes' : 'No' },
+      ],
+    });
+    if (!ok) return;
     setError('');
     try {
       if (editingId) await adminUpdateFaq(editingId, form);
@@ -29,7 +41,18 @@ export default function FaqTrainingAdmin() {
   };
 
   const edit = (f) => { setEditingId(f.id); setForm({ question: f.question, answer: f.answer, tags: f.tags || '', enabled: !!f.enabled }); };
-  const remove = async (id) => { if (!window.confirm('Delete this Q&A?')) return; await adminDeleteFaq(id); load(); };
+  const remove = async (faq) => {
+    const ok = await confirm({
+      title: 'Delete this Q&A?',
+      message: 'The assistant stops answering from it, and it cannot be recovered.',
+      confirmLabel: 'Delete Q&A',
+      tone: 'danger',
+      summary: [{ label: 'Question', value: faq.question }],
+    });
+    if (!ok) return;
+    await adminDeleteFaq(faq.id);
+    load();
+  };
 
   const runTest = async (e) => {
     e.preventDefault();
@@ -102,7 +125,7 @@ export default function FaqTrainingAdmin() {
                 actions={
                   <>
                     <button className="dashBtn" onClick={() => edit(f)}>Edit</button>
-                    <button className="dashBtn dashBtnDanger" aria-label="Delete FAQ" onClick={() => remove(f.id)}><X size={14} /></button>
+                    <button className="dashBtn dashBtnDanger" aria-label="Delete FAQ" onClick={() => remove(f)}><X size={14} /></button>
                   </>
                 }
               />
@@ -125,7 +148,7 @@ export default function FaqTrainingAdmin() {
                   <td>{f.hits}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>
                     <button className="dashBtn" onClick={() => edit(f)}>Edit</button>
-                    <button className="dashBtn dashBtnDanger" style={{ marginLeft: 6 }} aria-label="Delete FAQ" onClick={() => remove(f.id)}><X size={14} /></button>
+                    <button className="dashBtn dashBtnDanger" style={{ marginLeft: 6 }} aria-label="Delete FAQ" onClick={() => remove(f)}><X size={14} /></button>
                   </td>
                 </tr>
               ))}

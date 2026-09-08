@@ -1,5 +1,7 @@
 # Personal/local tool config — not project content
 .claude/
+.agents/
+skills-lock.json
 .vscode/*
 !.vscode/extensions.json
 

@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { adminListRescueReports, adminMarkRescueReportRead, adminUpdateRescueReport } from '../../lib/rescueApi';
 import StatusBadge from '../../components/StatusBadge';
+import useConfirm from '../../lib/useConfirm';
 import Pagination from '../../components/Pagination';
 import DashCard from '../../components/DashCard';
 import useIsMobile from '../../lib/useIsMobile';
@@ -72,11 +73,28 @@ function DetailPanel({ report }) {
 }
 
 function TriagePanel({ report, onSaved }) {
+  const confirm = useConfirm();
   const [assignedTo, setAssignedTo] = useState(report.assigned_to || '');
   const [notes, setNotes] = useState(report.admin_notes || '');
   const [state, setState] = useState({ status: 'idle', error: '' });
 
   const save = async (extra = {}) => {
+    // The same handler saves triage notes and advances the report's status, so the prompt has
+    // to say which of the two the admin just pressed.
+    const advancing = Boolean(extra.status);
+    const ok = await confirm({
+      title: advancing ? `${NEXT_LABEL[report.status]}?` : 'Save this triage?',
+      message: advancing
+        ? 'The reporter sees the new status on their report, along with anything assigned below.'
+        : 'The assignment and notes below are saved to the report.',
+      confirmLabel: advancing ? NEXT_LABEL[report.status] : 'Save triage',
+      summary: [
+        { label: 'Location', value: report.location },
+        { label: 'Assigned to', value: assignedTo },
+        { label: 'New status', value: advancing ? extra.status.replace('_', ' ') : '' },
+      ],
+    });
+    if (!ok) return;
     setState({ status: 'loading', error: '' });
     try {
       await adminUpdateRescueReport(report.id, {

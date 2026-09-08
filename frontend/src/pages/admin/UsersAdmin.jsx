@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { adminListUsers, adminUpdateUser } from '../../lib/usersApi';
 import { Users } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
+import useConfirm from '../../lib/useConfirm';
 import DashCard from '../../components/DashCard';
 import useIsMobile from '../../lib/useIsMobile';
 
@@ -9,6 +10,7 @@ const ROLES = ['admin', 'staff', 'volunteer', 'user'];
 const STATUSES = ['active', 'suspended', 'pending'];
 
 export default function UsersAdmin({ currentUserId }) {
+  const confirm = useConfirm();
   const isMobile = useIsMobile();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +41,27 @@ export default function UsersAdmin({ currentUserId }) {
 
   const refresh = () => setRefreshKey((k) => k + 1);
 
-  const handleRoleChange = async (user, newRole) => {
+  // `selectEl` is the <select> that fired this. It is controlled by server state, so when the
+  // admin cancels there is no state change for React to re-render from and the dropdown would
+  // sit there showing a role the user does not actually have. Put it back by hand.
+  const handleRoleChange = async (user, newRole, selectEl) => {
+    const ok = await confirm({
+      title: `Change ${user.full_name}’s role?`,
+      message: newRole === 'admin'
+        ? 'Admins can manage every part of the shelter, including other users’ roles.'
+        : 'This changes what they can see and do in the dashboard the next time they load it.',
+      confirmLabel: 'Change role',
+      tone: newRole === 'admin' ? 'danger' : 'default',
+      summary: [
+        { label: 'User', value: user.full_name },
+        { label: 'From', value: user.role },
+        { label: 'To', value: newRole },
+      ],
+    });
+    if (!ok) {
+      if (selectEl) selectEl.value = user.role;
+      return;
+    }
     setError('');
     try {
       await adminUpdateUser(user.id, { role: newRole });
@@ -54,6 +76,13 @@ export default function UsersAdmin({ currentUserId }) {
 
     // Reactivating just flips the status back; the backend clears any stored reason.
     if (user.status === 'suspended') {
+      const ok = await confirm({
+        title: `Reactivate ${user.full_name}?`,
+        message: 'They can log in again, and the suspension reason on their account is cleared.',
+        confirmLabel: 'Reactivate',
+        summary: [{ label: 'User', value: user.full_name }, { label: 'Email', value: user.email }],
+      });
+      if (!ok) return;
       try {
         await adminUpdateUser(user.id, { status: 'active' });
         refresh();
@@ -62,6 +91,15 @@ export default function UsersAdmin({ currentUserId }) {
       }
       return;
     }
+
+    const ok = await confirm({
+      title: `Suspend ${user.full_name}?`,
+      message: 'They are locked out of their account until an admin reactivates them. You will be asked for a reason next.',
+      confirmLabel: 'Suspend account',
+      tone: 'danger',
+      summary: [{ label: 'User', value: user.full_name }, { label: 'Email', value: user.email }],
+    });
+    if (!ok) return;
 
     // Suspending: ask the admin why. Cancelling the prompt aborts the suspension.
     const reason = window.prompt(`Why are you suspending ${user.full_name}? (shown to the user when they try to log in)`, '');
@@ -106,7 +144,7 @@ export default function UsersAdmin({ currentUserId }) {
                 value={u.role}
                 disabled={isSelf}
                 aria-label={`Change role for ${u.full_name}`}
-                onChange={(e) => handleRoleChange(u, e.target.value)}
+                onChange={(e) => handleRoleChange(u, e.target.value, e.target)}
               >
                 {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
               </select>
@@ -174,7 +212,7 @@ export default function UsersAdmin({ currentUserId }) {
                         value={u.role}
                         disabled={isSelf}
                         aria-label={`Change role for ${u.full_name}`}
-                        onChange={(e) => handleRoleChange(u, e.target.value)}
+                        onChange={(e) => handleRoleChange(u, e.target.value, e.target)}
                       >
                         {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
                       </select>

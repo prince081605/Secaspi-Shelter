@@ -1,0 +1,83 @@
+/*
+ * The one confirmation modal for the whole admin dashboard.
+ *
+ * These class names started life inside AnimalsAdmin.css for TypeToConfirmButton's delete
+ * flow. They live here now because every admin action — add, save, approve, convert, delete —
+ * goes through the same dialog, and most of those pages never load the animals stylesheet.
+ * Tokens are the global ones from theme.css rather than the module-scoped --aa-* set, so the
+ * panel looks the same whether it opens over the cream animals module or the plain dashboard.
+ */
+.confirm-overlay {
+  position: fixed; inset: 0; background: rgba(43, 36, 32, 0.45);
+  display: flex; align-items: center; justify-content: center; z-index: 1000;
+  padding: 16px;
+  animation: confirmOverlayIn 0.16s var(--ease, ease) both;
+}
+.confirm-panel {
+  background: var(--paper, #FFFCF6); border: 1px solid var(--line, #DDD0B8); border-radius: var(--radius, 14px);
+  box-shadow: 0 24px 48px -20px rgba(43, 36, 32, 0.4); padding: 28px 24px; width: 90%; max-width: 380px; text-align: center;
+  font-family: 'Work Sans', sans-serif;
+  max-height: calc(100vh - 32px); overflow-y: auto;
+  animation: confirmPanelIn 0.2s var(--ease-out, ease) both;
+}
+.confirm-icon {
+  width: 48px; height: 48px; border-radius: 50%; background: var(--danger-soft, #F4DAD3); color: var(--danger, #B3432F);
+  display: flex; align-items: center; justify-content: center; font-size: 20px; margin: 0 auto 14px;
+}
+/* Adding, approving and saving are ordinary work, not warnings — only destructive actions
+   get the red circle. */
+.confirm-icon.confirm-icon-default { background: var(--brand-soft, #F2DFCB); color: var(--brand-2, #9B4A22); }
+.confirm-panel h2 { font-size: 19px; font-family: 'Fraunces', serif; font-weight: 600; color: var(--ink, #2B2420); margin: 0; }
+.confirm-panel p { color: var(--ink-soft, #5C5246); font-size: 14px; margin-top: 8px; }
+.confirm-type-input { width: 100%; margin-top: 14px; text-align: center; }
+.confirm-actions { display: flex; justify-content: center; gap: 8px; margin-top: 18px; }
+
+/* The dialog is mounted above the router, so it can open over a page that never loaded
+   Dashboard.css and its .dashBtn rules. Restate the button look here (same tokens, same
+   shape) so the panel is never left with two unstyled browser buttons. */
+.confirm-actions .dashBtn {
+  padding: 8px 14px;
+  border-radius: 50px;
+  border: 1px solid var(--line, #DDD0B8);
+  background: var(--paper, #FFFCF6);
+  color: var(--ink, #2B2420);
+  cursor: pointer;
+  font-weight: 600;
+  font-family: 'Work Sans', sans-serif;
+  font-size: 0.85rem;
+  transition: background 0.15s var(--ease, ease), border-color 0.15s var(--ease, ease), color 0.15s var(--ease, ease);
+}
+.confirm-actions .dashBtn:hover { border-color: var(--ink, #2B2420); background: var(--bg-soft, #EFE6D4); }
+.confirm-actions .dashBtnPrimary,
+.confirm-actions .dashBtnPrimary:hover { color: #fff; }
+.confirm-actions .dashBtnPrimary { border-color: var(--brand, #C1612E); background: var(--brand, #C1612E); }
+.confirm-actions .dashBtnPrimary:hover { border-color: var(--brand-2, #9B4A22); background: var(--brand-2, #9B4A22); }
+.confirm-actions .dashBtnDanger { border-color: var(--danger, #B3432F); background: transparent; color: var(--danger, #B3432F); }
+.confirm-actions .dashBtnDanger:hover { background: var(--danger-soft, #F4DAD3); }
+.confirm-actions .dashBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* An optional field/value recap of what is about to be written, so "Add this dog?" can show
+   which dog without the admin having to re-read the form behind the overlay. */
+.confirm-summary {
+  margin-top: 16px; text-align: left; border: 1px solid var(--line, #DDD0B8); border-radius: var(--radius-sm, 10px);
+  background: var(--bg-soft, #EFE6D4); padding: 10px 12px; font-size: 13px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.confirm-summary-row { display: flex; justify-content: space-between; gap: 12px; }
+.confirm-summary-row dt { color: var(--muted, #8C8071); }
+.confirm-summary-row dd { color: var(--ink, #2B2420); font-weight: 600; margin: 0; text-align: right; overflow-wrap: anywhere; }
+
+@keyframes confirmOverlayIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes confirmPanelIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .confirm-overlay, .confirm-panel { animation: none; }
+}
+
+@media (max-width: 560px) {
+  /* The content-box panel (90% + 24px side padding) renders ≈385px on a 375px phone. */
+  .confirm-panel { box-sizing: border-box; width: calc(100vw - 24px); max-width: 380px; padding: 22px 18px; }
+  .confirm-actions { flex-wrap: wrap; }
+}

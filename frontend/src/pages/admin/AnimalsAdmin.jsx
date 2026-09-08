@@ -17,6 +17,7 @@ import {
 } from '../../lib/animalsApi';
 import StatusBadge from '../../components/StatusBadge';
 import TypeToConfirmButton from '../../components/TypeToConfirmButton';
+import useConfirm from '../../lib/useConfirm';
 import Pagination from '../../components/Pagination';
 import DashCard from '../../components/DashCard';
 import useIsMobile from '../../lib/useIsMobile';
@@ -69,6 +70,7 @@ function photoSrc(path) {
 
 function AnimalForm({ initial, onCancel, onSaved }) {
   const isEdit = Boolean(initial?.id);
+  const confirm = useConfirm();
   const [form, setForm] = useState(() => {
     if (!initial) return emptyForm;
     // The API returns null for unset nullable fields (age, breed, gender, ...), but a null
@@ -175,8 +177,24 @@ function AnimalForm({ initial, onCancel, onSaved }) {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    const label = form.name || 'this animal';
+    const ok = await confirm({
+      title: isEdit ? `Save changes to ${label}?` : `Add ${label} to the shelter?`,
+      message: isEdit
+        ? 'The updated details go live on the adoption listing straight away.'
+        : 'This creates the animal record and publishes it to the public adoption listing.',
+      confirmLabel: isEdit ? 'Save changes' : 'Add animal',
+      summary: [
+        { label: 'Name', value: form.name },
+        { label: 'Species', value: form.species },
+        { label: 'Breed', value: form.breed },
+        { label: 'Status', value: form.status },
+        { label: 'Photos', value: photoFiles?.length ? `${photoFiles.length} selected` : '' },
+      ],
+    });
+    if (!ok) return;
     submit(false);
   };
 
@@ -306,6 +324,7 @@ function AnimalForm({ initial, onCancel, onSaved }) {
 }
 
 function PhotoManager({ animalId, onChanged }) {
+  const confirm = useConfirm();
   const [photos, setPhotos] = useState([]);
   const [files, setFiles] = useState(null);
   const [state, setState] = useState({ status: 'loading', error: '' });
@@ -324,6 +343,12 @@ function PhotoManager({ animalId, onChanged }) {
 
   const handleUpload = async () => {
     if (!files || files.length === 0) return;
+    const ok = await confirm({
+      title: files.length === 1 ? 'Upload this photo?' : `Upload these ${files.length} photos?`,
+      message: 'Uploaded photos appear on this animal’s public profile.',
+      confirmLabel: 'Upload',
+    });
+    if (!ok) return;
     setState({ status: 'loading', error: '' });
     try {
       const fd = new FormData();
@@ -338,6 +363,13 @@ function PhotoManager({ animalId, onChanged }) {
   };
 
   const handleDelete = async (photoId) => {
+    const ok = await confirm({
+      title: 'Delete this photo?',
+      message: 'It is removed from the animal profile and cannot be recovered.',
+      confirmLabel: 'Delete photo',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
       await adminDeleteAnimalPhoto(animalId, photoId);
       load();
@@ -409,6 +441,7 @@ const emptyRecordForm = { type: 'checkup', description: '', vet_name: '', cost: 
 const emptyVaccinationForm = { vaccine_name: '', date_given: '', next_due: '' };
 
 function MedicalManager({ animalId, onChanged }) {
+  const confirm = useConfirm();
   const isMobile = useIsMobile();
   const [records, setRecords] = useState([]);
   const [vaccinations, setVaccinations] = useState([]);
@@ -431,6 +464,19 @@ function MedicalManager({ animalId, onChanged }) {
 
   const handleAddRecord = async (e) => {
     e.preventDefault();
+    const ok = await confirm({
+      title: 'Add this medical record?',
+      message: 'It joins the animal’s permanent medical history.',
+      confirmLabel: 'Add record',
+      summary: [
+        { label: 'Type', value: recordForm.type },
+        { label: 'Description', value: recordForm.description },
+        { label: 'Vet', value: recordForm.vet_name },
+        { label: 'Date', value: recordForm.record_date },
+        { label: 'Cost', value: recordForm.cost === '' ? '' : `₱${recordForm.cost}` },
+      ],
+    });
+    if (!ok) return;
     setState((s) => ({ ...s, status: 'loading' }));
     try {
       await adminCreateMedicalRecord(animalId, {
@@ -447,6 +493,13 @@ function MedicalManager({ animalId, onChanged }) {
   };
 
   const handleDeleteRecord = async (id) => {
+    const ok = await confirm({
+      title: 'Delete this medical record?',
+      message: 'It is removed from the animal’s medical history and cannot be recovered.',
+      confirmLabel: 'Delete record',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
       await adminDeleteMedicalRecord(id);
       load();
@@ -458,6 +511,17 @@ function MedicalManager({ animalId, onChanged }) {
 
   const handleAddVaccination = async (e) => {
     e.preventDefault();
+    const ok = await confirm({
+      title: 'Add this vaccination?',
+      message: 'It joins the animal’s vaccination record and drives the next-due reminder.',
+      confirmLabel: 'Add vaccination',
+      summary: [
+        { label: 'Vaccine', value: vaccinationForm.vaccine_name },
+        { label: 'Date given', value: vaccinationForm.date_given },
+        { label: 'Next due', value: vaccinationForm.next_due },
+      ],
+    });
+    if (!ok) return;
     setState((s) => ({ ...s, status: 'loading' }));
     try {
       await adminCreateVaccination(animalId, {
@@ -473,6 +537,13 @@ function MedicalManager({ animalId, onChanged }) {
   };
 
   const handleDeleteVaccination = async (id) => {
+    const ok = await confirm({
+      title: 'Delete this vaccination?',
+      message: 'It is removed from the animal’s vaccination record and cannot be recovered.',
+      confirmLabel: 'Delete vaccination',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
       await adminDeleteVaccination(id);
       load();
@@ -614,6 +685,7 @@ function MedicalManager({ animalId, onChanged }) {
 }
 
 export default function AnimalsAdmin() {
+  const confirm = useConfirm();
   const isMobile = useIsMobile();
   const [animals, setAnimals] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -687,6 +759,12 @@ export default function AnimalsAdmin() {
   };
 
   const handleArchive = async (animal) => {
+    const ok = await confirm({
+      title: `Archive ${animal.name}?`,
+      message: 'The record is kept, but the animal comes off the public adoption listing.',
+      confirmLabel: 'Archive',
+    });
+    if (!ok) return;
     try {
       await adminArchiveAnimal(animal.id);
       refresh();
@@ -696,6 +774,12 @@ export default function AnimalsAdmin() {
   };
 
   const handleRestore = async (animal) => {
+    const ok = await confirm({
+      title: `Restore ${animal.name}?`,
+      message: 'The animal goes back on the public adoption listing as available.',
+      confirmLabel: 'Restore',
+    });
+    if (!ok) return;
     try {
       await adminUpdateAnimal(animal.id, { status: 'available' });
       refresh();

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { adminListFosterApplications, adminUpdateFosterApplication } from '../../lib/animalsApi';
 import { Home } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
+import useConfirm from '../../lib/useConfirm';
 import Pagination from '../../components/Pagination';
 import DashCard from '../../components/DashCard';
 import useIsMobile from '../../lib/useIsMobile';
@@ -14,12 +15,23 @@ function photoSrc(path) {
 }
 
 function MonitoringPanel({ application, onSaved }) {
+  const confirm = useConfirm();
   const [startDate, setStartDate] = useState(application.start_date || '');
   const [endDate, setEndDate] = useState(application.end_date || '');
   const [notes, setNotes] = useState(application.notes || '');
   const [state, setState] = useState({ status: 'idle', error: '' });
 
   const handleSave = async () => {
+    const ok = await confirm({
+      title: 'Save these monitoring details?',
+      message: 'The foster carer sees the updated dates and notes on their dashboard.',
+      confirmLabel: 'Save',
+      summary: [
+        { label: 'Start date', value: startDate },
+        { label: 'End date', value: endDate },
+      ],
+    });
+    if (!ok) return;
     setState({ status: 'loading', error: '' });
     try {
       await adminUpdateFosterApplication(application.id, {
@@ -58,12 +70,51 @@ function MonitoringPanel({ application, onSaved }) {
   );
 }
 
+// Each foster decision emails the applicant, so the prompt says what happens rather than
+// just naming the status it moves to.
+const FOSTER_STATUS_PROMPTS = {
+  approved: {
+    title: 'Approve this foster request?',
+    message: 'The applicant is notified that they have been approved to foster.',
+    confirmLabel: 'Approve',
+  },
+  active: {
+    title: 'Start this foster placement?',
+    message: 'The animal is recorded as fostered and monitoring begins.',
+    confirmLabel: 'Start fostering',
+  },
+  completed: {
+    title: 'Mark this placement completed?',
+    message: 'The foster period is closed out and the animal returns to the shelter’s care.',
+    confirmLabel: 'Mark completed',
+  },
+  declined: {
+    title: 'Decline this foster request?',
+    message: 'The applicant is notified that their request was declined.',
+    confirmLabel: 'Decline request',
+    tone: 'danger',
+  },
+};
+
 function ApplicationRow({ application, onChanged }) {
+  const confirm = useConfirm();
   const isMobile = useIsMobile();
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState('');
 
   const setStatus = async (status) => {
+    const prompt = FOSTER_STATUS_PROMPTS[status] ?? {
+      title: `Set this request to ${status}?`,
+      confirmLabel: 'Update status',
+    };
+    const ok = await confirm({
+      ...prompt,
+      summary: [
+        { label: 'Applicant', value: application.full_name || application.applicant?.full_name },
+        { label: 'Animal', value: application.animal?.name },
+      ],
+    });
+    if (!ok) return;
     setError('');
     try {
       await adminUpdateFosterApplication(application.id, { status });

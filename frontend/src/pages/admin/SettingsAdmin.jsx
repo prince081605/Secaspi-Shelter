@@ -7,6 +7,7 @@ import {
   settingImageUrl,
 } from '../../lib/settingsApi';
 import { DONATION_CATEGORIES, goalSettingKey } from '../../lib/donationCategories';
+import useConfirm from '../../lib/useConfirm';
 
 const CATEGORY_GOAL_FIELDS = Object.fromEntries(
   DONATION_CATEGORIES.map((c) => [goalSettingKey(c.key), '']),
@@ -32,6 +33,7 @@ const FIELDS = {
 };
 
 export default function SettingsAdmin({ onSaved } = {}) {
+  const confirm = useConfirm();
   const [form, setForm] = useState(FIELDS);
   const [images, setImages] = useState({ logo_path: '', banner_image_path: '', fund_usage_image_path: '' });
   const [loading, setLoading] = useState(true);
@@ -61,6 +63,12 @@ export default function SettingsAdmin({ onSaved } = {}) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const ok = await confirm({
+      title: 'Save these settings?',
+      message: 'These are the shelter’s public details — the change shows on the live site immediately.',
+      confirmLabel: 'Save settings',
+    });
+    if (!ok) return;
     setSaveState({ status: 'loading', error: '' });
     try {
       await adminUpdateSettings(form);
@@ -74,6 +82,16 @@ export default function SettingsAdmin({ onSaved } = {}) {
   const handleImageUpload = (key) => async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const ok = await confirm({
+      title: 'Replace this image?',
+      message: 'It goes live on the public site right away, replacing the current one.',
+      confirmLabel: 'Upload image',
+      summary: [{ label: 'File', value: file.name }],
+    });
+    // Clear the picker either way: on cancel so the same file can be chosen again, on accept
+    // because the stored path is what the preview renders from.
+    e.target.value = '';
+    if (!ok) return;
     setImageState({ status: 'loading', error: '', key });
     try {
       const data = await adminUploadSettingImage(key, file);

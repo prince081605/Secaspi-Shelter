@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\AdoptionApplication;
 use App\Models\Animal;
 use App\Models\Donation;
+use App\Models\Expense;
 use App\Models\MedicalRecord;
 use App\Models\RescueReport;
 use App\Models\Vaccination;
 use App\Models\Volunteer;
+use App\Support\DonationCategories;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,17 +18,21 @@ use Illuminate\Support\Facades\Validator;
 
 class ReportController extends Controller
 {
-    private const TYPES = ['adoption', 'animals', 'medical', 'donations', 'volunteers', 'staff', 'rescue'];
+    private const TYPES = ['adoption', 'animals', 'medical', 'donations', 'expenses', 'volunteers', 'staff', 'rescue'];
 
     private const TYPE_LABELS = [
         'adoption' => 'Adoption Applications Report',
         'animals' => 'Animals Report',
         'medical' => 'Medical & Vaccinations Report',
         'donations' => 'Donations Report',
+        'expenses' => 'Expenses Report',
         'volunteers' => 'Volunteers Report',
         'staff' => 'Staff Report',
         'rescue' => 'Rescue Reports Report',
     ];
+
+    /** Report types that expose shelter finances, and so are admin-only wherever they appear. */
+    private const FINANCIAL_TYPES = ['donations', 'expenses'];
 
     public function adoption(Request $request)
     {
@@ -46,6 +52,11 @@ class ReportController extends Controller
     public function donations(Request $request)
     {
         return response()->json($this->donationsData($request));
+    }
+
+    public function expenses(Request $request)
+    {
+        return response()->json($this->expensesData($request));
     }
 
     public function volunteers(Request $request)
@@ -125,9 +136,9 @@ class ReportController extends Controller
         }
 
         // The exports are staff-accessible (route gate), but financial data is admin-only:
-        // block exporting the donations report for anyone below admin. Mirrors the
-        // admin-only gate on GET /admin/reports/donations.
-        if ($request->query('type') === 'donations' && ! $request->user()->hasRoleAtLeast('admin')) {
+        // block exporting the donations and expenses reports for anyone below admin. Mirrors the
+        // admin-only gates on GET /admin/reports/donations and /admin/reports/expenses.
+        if (in_array($request->query('type'), self::FINANCIAL_TYPES, true) && ! $request->user()->hasRoleAtLeast('admin')) {
             abort(403, 'Forbidden');
         }
 
@@ -136,6 +147,7 @@ class ReportController extends Controller
             'animals' => $this->animalsData($request),
             'medical' => $this->medicalData($request),
             'donations' => $this->donationsData($request),
+            'expenses' => $this->expensesData($request),
             'volunteers' => $this->volunteersData($request),
             'staff' => $this->staffData($request),
             'rescue' => $this->rescueData($request),
@@ -343,6 +355,88 @@ class ReportController extends Controller
                 'status' => $d->status,
                 'donated_at' => (string) $d->donated_at,
             ])->values()->all(),
+        ];
+    }
+
+    /**
+     * Everything the shelter spent, from both places spending is recorded: the expense ledger and
+     * the per-treatment `medical_records.cost`.
+     *
+     * Medical costs are merged in at read time rather than copied into `expenses` when a treatment
+     * is logged. Copying would mean two rows for one outlay, and an edit to the treatment silently
+     * disagreeing with its ledger twin — one source per fact, joined where it is needed.
+     */
+    private function expensesData(Request $request): array
+    {
+        $ledgerQuery = Expense::query()->with('recorder');
+        $this->applyDateRange($ledgerQuery, $request, 'spent_at');
+
+        if ($category = $request->query('category')) {
+            $ledgerQuery->where('category', $category);
+        }
+
+        $ledger = $ledgerQuery->get();
+
+        // Medical costs carry no category, so a category filter necessarily excludes them —
+        // the same way medicalData() drops vaccinations when a record_type filter is applied.
+        $medicalQuery = MedicalRecord::query()->with('animal')->whereNotNull('cost')->where('cost', '>', 0);
+        $this->applyDateRange($medicalQuery, $request, 'record_date');
+        $medical = $category ? collect() : $medicalQuery->get();
+
+        $categoryLabels = DonationCategories::labels();
+
+        $merged = collect()
+            ->merge($ledger->map(fn (Expense $e) => [
+                'date' => (string) $e->spent_at?->toDateString(),
+                'category' => $categoryLabels[$e->category] ?? $e->category,
+                'description' => $e->description,
+                // Ledger rows are shelter-wide outlays; only the medical side is per-animal.
+                'animal_name' => '—',
+                'amount' => '₱'.number_format((float) $e->amount, 2),
+                'recorded_by' => $e->recorder->full_name ?? '—',
+            ]))
+            ->merge($medical->map(fn (MedicalRecord $m) => [
+                'date' => (string) $m->record_date,
+                'category' => 'Medical (from treatment record)',
+                'description' => $m->description ?: ($m->type ?: 'Treatment'),
+                'animal_name' => $m->animal->name ?? '—',
+                'amount' => '₱'.number_format((float) $m->cost, 2),
+                'recorded_by' => $m->vet_name ?: '—',
+            ]))
+            ->sortByDesc('date')
+            ->values();
+
+        $ledgerTotal = (float) $ledger->sum('amount');
+        $medicalTotal = (float) $medical->sum('cost');
+
+        $summary = [
+            ['label' => 'Ledger entries', 'value' => $ledger->count()],
+            ['label' => 'Ledger total', 'value' => '₱'.number_format($ledgerTotal, 2)],
+            ['label' => 'Medical costs', 'value' => '₱'.number_format($medicalTotal, 2)],
+            ['label' => 'Total spent', 'value' => '₱'.number_format($ledgerTotal + $medicalTotal, 2)],
+        ];
+
+        $byCategory = $ledger->groupBy('category');
+        foreach (DonationCategories::keys() as $key) {
+            if ($byCategory->has($key)) {
+                $summary[] = [
+                    'label' => $categoryLabels[$key],
+                    'value' => '₱'.number_format((float) $byCategory[$key]->sum('amount'), 2),
+                ];
+            }
+        }
+
+        return [
+            'summary' => $summary,
+            'columns' => [
+                ['key' => 'date', 'label' => 'Date'],
+                ['key' => 'category', 'label' => 'Category'],
+                ['key' => 'description', 'label' => 'Description'],
+                ['key' => 'animal_name', 'label' => 'Animal'],
+                ['key' => 'amount', 'label' => 'Amount'],
+                ['key' => 'recorded_by', 'label' => 'Recorded by'],
+            ],
+            'rows' => $merged->all(),
         ];
     }
 

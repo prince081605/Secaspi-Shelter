@@ -14,7 +14,7 @@ import {
 } from '../../lib/volunteersApi';
 import { adminListUsers } from '../../lib/usersApi';
 import StatusBadge from '../../components/StatusBadge';
-import ConfirmButton from '../../components/ConfirmButton';
+import useConfirm from '../../lib/useConfirm';
 import Pagination from '../../components/Pagination';
 import DashCard from '../../components/DashCard';
 import useIsMobile from '../../lib/useIsMobile';
@@ -22,6 +22,7 @@ import useIsMobile from '../../lib/useIsMobile';
 const NEXT_TASK_STATUS = { assigned: 'ongoing', ongoing: 'completed' };
 
 function AddPersonForm({ type, onCancel, onAdded }) {
+  const confirm = useConfirm();
   const isMobile = useIsMobile();
   const [q, setQ] = useState('');
   const [results, setResults] = useState([]);
@@ -54,6 +55,18 @@ function AddPersonForm({ type, onCancel, onAdded }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selected) return;
+    const label = type === 'staff' ? 'staff member' : 'volunteer';
+    const ok = await confirm({
+      title: `Add ${selected.full_name} as ${type === 'staff' ? 'staff' : 'a volunteer'}?`,
+      message: `Their account is promoted to the ${label} role and they gain the matching dashboard access.`,
+      confirmLabel: `Add ${label}`,
+      summary: [
+        { label: 'Name', value: selected.full_name },
+        { label: 'Email', value: selected.email },
+        { label: 'Availability', value: availability },
+      ],
+    });
+    if (!ok) return;
     setState({ status: 'loading', error: '' });
     try {
       await adminCreateVolunteer({ user_id: selected.id, type, availability, performance_notes: notes });
@@ -132,6 +145,7 @@ function AddPersonForm({ type, onCancel, onAdded }) {
 }
 
 function TasksPanel({ volunteer, onChanged }) {
+  const confirm = useConfirm();
   const isMobile = useIsMobile();
   const [taskName, setTaskName] = useState('');
   const [assignedDate, setAssignedDate] = useState('');
@@ -139,6 +153,16 @@ function TasksPanel({ volunteer, onChanged }) {
 
   const addTask = async (e) => {
     e.preventDefault();
+    const ok = await confirm({
+      title: `Assign this task to ${volunteer.user?.full_name || 'this volunteer'}?`,
+      message: 'It appears on their volunteer dashboard as assigned work.',
+      confirmLabel: 'Assign task',
+      summary: [
+        { label: 'Task', value: taskName },
+        { label: 'Date', value: assignedDate },
+      ],
+    });
+    if (!ok) return;
     setError('');
     try {
       await adminCreateVolunteerTask(volunteer.id, { task_name: taskName, assigned_date: assignedDate || null });
@@ -151,6 +175,17 @@ function TasksPanel({ volunteer, onChanged }) {
   };
 
   const setStatus = async (task, status) => {
+    const ok = await confirm({
+      title: `Mark this task ${status}?`,
+      message: 'The volunteer sees the new task status on their dashboard.',
+      confirmLabel: `Mark ${status}`,
+      summary: [
+        { label: 'Task', value: task.task_name },
+        { label: 'From', value: task.status },
+        { label: 'To', value: status },
+      ],
+    });
+    if (!ok) return;
     setError('');
     try {
       await adminUpdateVolunteerTask(task.id, { status });
@@ -166,6 +201,14 @@ function TasksPanel({ volunteer, onChanged }) {
   };
 
   const deleteTask = async (task) => {
+    const ok = await confirm({
+      title: 'Delete this task?',
+      message: 'It is removed from the volunteer’s task list and cannot be recovered.',
+      confirmLabel: 'Delete task',
+      tone: 'danger',
+      summary: [{ label: 'Task', value: task.task_name }],
+    });
+    if (!ok) return;
     try {
       await adminDeleteVolunteerTask(task.id);
       onChanged();
@@ -244,12 +287,24 @@ function TasksPanel({ volunteer, onChanged }) {
 }
 
 function PersonnelRow({ personnel, onChanged }) {
+  const confirm = useConfirm();
   const isMobile = useIsMobile();
   const [expanded, setExpanded] = useState(false);
   const [hours, setHours] = useState(personnel.hours_rendered);
   const [error, setError] = useState('');
 
   const saveHours = async () => {
+    const ok = await confirm({
+      title: 'Save hours rendered?',
+      message: 'This is the volunteer’s recorded service total, which their certificate is issued from.',
+      confirmLabel: 'Save hours',
+      summary: [
+        { label: 'Person', value: personnel.user?.full_name },
+        { label: 'From', value: String(personnel.hours_rendered ?? 0) },
+        { label: 'To', value: String(Number(hours) || 0) },
+      ],
+    });
+    if (!ok) return;
     setError('');
     try {
       await adminUpdateVolunteer(personnel.id, { hours_rendered: Number(hours) || 0 });
@@ -260,6 +315,17 @@ function PersonnelRow({ personnel, onChanged }) {
   };
 
   const remove = async () => {
+    const ok = await confirm({
+      title: `Remove ${personnel.user?.full_name}?`,
+      message: 'They lose their volunteer access and their assigned tasks go with them. The user account itself stays.',
+      confirmLabel: 'Remove',
+      tone: 'danger',
+      summary: [
+        { label: 'Person', value: personnel.user?.full_name },
+        { label: 'Hours on record', value: String(personnel.hours_rendered ?? 0) },
+      ],
+    });
+    if (!ok) return;
     setError('');
     try {
       await adminDeleteVolunteer(personnel.id);
@@ -278,7 +344,7 @@ function PersonnelRow({ personnel, onChanged }) {
   const actions = (
     <>
       <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Tasks'}</button>
-      <ConfirmButton confirmLabel={`Remove ${personnel.user?.full_name}?`} onConfirm={remove}>Remove</ConfirmButton>
+      <button type="button" className="dashBtn dashBtnDanger" onClick={remove}>Remove</button>
     </>
   );
   const panel = (
@@ -331,6 +397,7 @@ function PersonnelRow({ personnel, onChanged }) {
 }
 
 function RequestRow({ application, onChanged }) {
+  const confirm = useConfirm();
   const isMobile = useIsMobile();
   const [expanded, setExpanded] = useState(false);
   const [notes, setNotes] = useState(application.admin_notes || '');
@@ -338,6 +405,20 @@ function RequestRow({ application, onChanged }) {
   const isUnread = !application.read_at;
 
   const decide = async (status) => {
+    const approving = status === 'approved';
+    const ok = await confirm({
+      title: approving ? 'Approve this volunteer application?' : 'Reject this volunteer application?',
+      message: approving
+        ? 'The applicant is notified and becomes a volunteer with dashboard access.'
+        : 'The applicant is notified that their application was not accepted, along with your notes.',
+      confirmLabel: approving ? 'Approve' : 'Reject application',
+      tone: approving ? 'default' : 'danger',
+      summary: [
+        { label: 'Applicant', value: application.applicant?.full_name },
+        { label: 'Email', value: application.applicant?.email },
+      ],
+    });
+    if (!ok) return;
     setError('');
     try {
       await adminUpdateVolunteerApplication(application.id, { status, admin_notes: notes || null });

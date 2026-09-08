@@ -11,7 +11,7 @@ import {
   adminDeleteIntakeDocument,
 } from '../../lib/intakesApi';
 import StatusBadge from '../../components/StatusBadge';
-import ConfirmButton from '../../components/ConfirmButton';
+import useConfirm from '../../lib/useConfirm';
 import Pagination from '../../components/Pagination';
 import DashCard from '../../components/DashCard';
 import useIsMobile from '../../lib/useIsMobile';
@@ -43,6 +43,7 @@ function photoSrc(path) {
 }
 
 function NewIntakeForm({ onCancel, onCreated }) {
+  const confirm = useConfirm();
   const [form, setForm] = useState(emptyIntakeForm);
   const [files, setFiles] = useState(null);
   const [state, setState] = useState({ status: 'idle', error: '' });
@@ -51,6 +52,19 @@ function NewIntakeForm({ onCancel, onCreated }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const ok = await confirm({
+      title: 'Record this intake?',
+      message: 'It enters the intake queue for assessment before it can become an animal record.',
+      confirmLabel: 'Record intake',
+      summary: [
+        { label: 'Type', value: form.intake_type?.replace('_', ' ') },
+        { label: 'Animal', value: form.animal_name },
+        { label: 'Species', value: form.species },
+        { label: 'Reporter', value: form.reporter_name },
+        { label: 'Location', value: form.location },
+      ],
+    });
+    if (!ok) return;
     setState({ status: 'loading', error: '' });
     try {
       const fd = new FormData();
@@ -133,6 +147,7 @@ function NewIntakeForm({ onCancel, onCreated }) {
 }
 
 function AssessmentPanel({ intake, onChanged }) {
+  const confirm = useConfirm();
   const [detail, setDetail] = useState(null);
   const [status, setStatus] = useState(intake.status);
   const [notes, setNotes] = useState('');
@@ -158,6 +173,17 @@ function AssessmentPanel({ intake, onChanged }) {
   useEffect(load, [intake.id]);
 
   const save = async () => {
+    const ok = await confirm({
+      title: 'Save this assessment?',
+      message: 'The intake record is updated with the assessment below.',
+      confirmLabel: 'Save assessment',
+      summary: [
+        { label: 'Status', value: status?.replace('_', ' ') },
+        { label: 'Assessed by', value: assessedBy },
+        { label: 'Date', value: assessmentDate },
+      ],
+    });
+    if (!ok) return;
     setState((s) => ({ ...s, status: 'loading' }));
     try {
       await adminUpdateIntake(intake.id, {
@@ -174,6 +200,12 @@ function AssessmentPanel({ intake, onChanged }) {
   };
 
   const convert = async () => {
+    const ok = await confirm({
+      title: `Add ${intake.animal_name || 'this intake'} to Animals?`,
+      message: 'This creates an animal record from the intake and publishes it to the adoption listing. The intake is marked converted.',
+      confirmLabel: 'Add to Animals',
+    });
+    if (!ok) return;
     setState((s) => ({ ...s, status: 'loading' }));
     try {
       await adminConvertIntake(intake.id);
@@ -186,6 +218,12 @@ function AssessmentPanel({ intake, onChanged }) {
 
   const uploadDocs = async () => {
     if (!files || files.length === 0) return;
+    const ok = await confirm({
+      title: files.length === 1 ? 'Upload this document?' : `Upload these ${files.length} documents?`,
+      message: 'The files are attached to this intake record.',
+      confirmLabel: 'Upload',
+    });
+    if (!ok) return;
     setState((s) => ({ ...s, status: 'loading' }));
     try {
       const fd = new FormData();
@@ -199,6 +237,13 @@ function AssessmentPanel({ intake, onChanged }) {
   };
 
   const deleteDoc = async (docId) => {
+    const ok = await confirm({
+      title: 'Delete this document?',
+      message: 'It is removed from the intake record and cannot be recovered.',
+      confirmLabel: 'Delete document',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
       await adminDeleteIntakeDocument(intake.id, docId);
       load();
@@ -278,11 +323,19 @@ function AssessmentPanel({ intake, onChanged }) {
 }
 
 function IntakeRow({ intake, onChanged }) {
+  const confirm = useConfirm();
   const isMobile = useIsMobile();
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState('');
 
   const remove = async () => {
+    const ok = await confirm({
+      title: `Delete the intake for ${intake.animal_name || 'this animal'}?`,
+      message: 'The intake and its documents are removed permanently.',
+      confirmLabel: 'Delete intake',
+      tone: 'danger',
+    });
+    if (!ok) return;
     setError('');
     try {
       await adminDeleteIntake(intake.id);
@@ -293,6 +346,17 @@ function IntakeRow({ intake, onChanged }) {
   };
 
   const addToAnimals = async () => {
+    const ok = await confirm({
+      title: `Add ${intake.animal_name || 'this intake'} to Animals?`,
+      message: 'This creates an animal record from the intake and publishes it to the adoption listing. The intake is marked converted.',
+      confirmLabel: 'Add to Animals',
+      summary: [
+        { label: 'Animal', value: intake.animal_name },
+        { label: 'Species', value: intake.species },
+        { label: 'Intake type', value: intake.intake_type?.replace('_', ' ') },
+      ],
+    });
+    if (!ok) return;
     setError('');
     try {
       await adminConvertIntake(intake.id);
@@ -310,9 +374,9 @@ function IntakeRow({ intake, onChanged }) {
           → Animal #{intake.converted_animal_id}
         </span>
       ) : (
-        <ConfirmButton confirmLabel="Add this intake to Animals?" onConfirm={addToAnimals}>Add to Animals</ConfirmButton>
+        <button type="button" className="dashBtn" onClick={addToAnimals}>Add to Animals</button>
       )}
-      <ConfirmButton confirmLabel="Delete intake?" onConfirm={remove}>Delete</ConfirmButton>
+      <button type="button" className="dashBtn dashBtnDanger" onClick={remove}>Delete</button>
     </>
   );
 

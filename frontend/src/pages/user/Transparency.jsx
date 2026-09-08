@@ -42,6 +42,15 @@ const styles = `
   .tpCatFunded { display: inline-block; margin-left: 0.4rem; font-size: 0.72rem; font-weight: 700; color: var(--brand); background: var(--brand-soft); border-radius: 999px; padding: 0.1rem 0.5rem; vertical-align: middle; }
   .tpCatVal { font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
   .tpCatVal strong { color: var(--fg, inherit); }
+  /* Spend rides on its own slimmer track directly under the allocation bar, on the same scale
+     (share of the goal) so the two lengths can be read against each other at a glance. The
+     deeper terracotta is a darker step of --brand; there is no --brand-dark token to reuse. */
+  .tpBarTrackSpend { height: 8px; margin-top: 4px; }
+  .tpSpendFill { height: 100%; border-radius: 999px; background: #7d4a2b; transition: width .6s ease; }
+  .tpCatSpent { margin-top: 0.35rem; font-size: 0.78rem; color: var(--muted); }
+  .tpBarLegend { display: flex; gap: 1.1rem; flex-wrap: wrap; margin-bottom: 1rem; font-size: 0.78rem; color: var(--muted); }
+  .tpBarLegend span { display: inline-flex; align-items: center; gap: 0.4rem; }
+  .tpBarLegend i { width: 14px; height: 8px; border-radius: 999px; display: inline-block; }
   .tpCatNote { display: flex; gap: 0.6rem; align-items: flex-start; margin-top: 1.3rem; padding: 0.9rem 1rem; border-radius: 10px; background: var(--brand-soft); font-size: 0.85rem; line-height: 1.45; }
   .tpUsageImg { width: 100%; border-radius: 12px; border: 1px solid var(--line); display: block; }
   .tpCta { text-align: center; margin-top: 2.5rem; }
@@ -122,8 +131,13 @@ export default function Transparency() {
               <Reveal className="ui-card" style={{ padding: '1.6rem', marginTop: '1rem' }}>
                 <h3 className="ui-h2" style={{ fontSize: '1.1rem', marginBottom: '0.3rem' }}>Fund allocation by category</h3>
                 <p className="ui-muted" style={{ fontSize: '0.85rem', marginBottom: '1.2rem' }}>
-                  How this month's donations are distributed across our expense categories.
+                  How this month's donations are distributed across our expense categories, and how
+                  much of each has actually been spent — {peso(data.this_month_spent)} so far this month.
                 </p>
+                <div className="tpBarLegend">
+                  <span><i style={{ background: 'var(--brand)' }} />Donated / allocated</span>
+                  <span><i style={{ background: '#7d4a2b' }} />Spent</span>
+                </div>
                 {data.categories.map((c) => (
                   <div className="tpCatRow" key={c.key}>
                     <div className="tpCatTop">
@@ -137,6 +151,30 @@ export default function Transparency() {
                     </div>
                     <div className="tpBarTrack">
                       <div className="tpBarFill" style={{ width: `${Math.min(100, c.progress_pct)}%` }} />
+                    </div>
+                    {/* Spend gets its own bar on the same scale (share of the goal) rather than
+                        nesting inside the allocation bar. Two bars on one axis are directly
+                        comparable, and a category with nothing allocated but money spent — which
+                        nesting would have drawn as zero-width — still shows. */}
+                    <div className="tpBarTrack tpBarTrackSpend">
+                      <div
+                        className="tpSpendFill"
+                        style={{ width: `${c.goal > 0 ? Math.min(100, (c.spent / c.goal) * 100) : 0}%` }}
+                      />
+                    </div>
+                    <div className="tpCatSpent">
+                      {c.spent === 0 && <>Nothing spent from this category yet</>}
+                      {/* spent_pct is null when nothing was allocated here — there is no share to
+                          express, but the money still went out and the board should say so. */}
+                      {c.spent > 0 && c.spent_pct === null && (
+                        <>{peso(c.spent)} spent — covered from reserves, as no donations were allocated here this month</>
+                      )}
+                      {c.spent > 0 && c.spent_pct !== null && (
+                        <>
+                          {peso(c.spent)} spent ({c.spent_pct}% of allocated)
+                          {c.overspent && <> — the balance came from reserves</>}
+                        </>
+                      )}
                     </div>
                   </div>
                 ))}

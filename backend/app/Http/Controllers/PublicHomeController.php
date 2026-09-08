@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Animal;
+use App\Models\Expense;
 use App\Support\DonationCategories;
 use App\Support\PublicStats;
 use Illuminate\Support\Carbon;
@@ -170,6 +171,30 @@ class PublicHomeController extends Controller
             }
             $allocation = DonationCategories::allocate($direct, $needyPool);
 
+            // What actually left the bank this month, per category. The allocation above says
+            // where donations were *destined*; this says where pesos went. Merging them onto one
+            // row is the whole point of the ledger — a visitor can see both numbers together
+            // instead of taking the projection on faith.
+            $spentByCategory = Expense::totalsByCategory($monthStart->toDateString());
+            $totalSpent = array_sum($spentByCategory);
+
+            $categories = array_map(function (array $c) use ($spentByCategory) {
+                $spent = (float) ($spentByCategory[$c['key']] ?? 0);
+
+                return $c + [
+                    'spent' => $spent,
+                    // Share of this month's allocation that has gone out. Deliberately uncapped —
+                    // the caller caps the bar, but the number itself must stay true, because
+                    // spending more than a month's donations (from reserves, or on a category
+                    // nobody gave to) is normal and the board should say so rather than round it
+                    // away. null means there is no allocation to express it as a share of.
+                    'spent_pct' => $c['allocated'] > 0
+                        ? (int) round(($spent / $c['allocated']) * 100)
+                        : null,
+                    'overspent' => $spent > $c['allocated'],
+                ];
+            }, $allocation['categories']);
+
             return response()->json([
                 'monthly_goal' => $monthlyGoal,
                 'this_month_raised' => $thisMonthRaised,
@@ -181,9 +206,10 @@ class PublicHomeController extends Controller
                 'monthly_trend' => $monthlyTrend,
                 'recent_donations' => $recentDonations,
                 'fund_usage_image' => $fundUsageImage,
-                'categories' => $allocation['categories'],
+                'categories' => $categories,
                 'category_redistributed' => $allocation['redistributed_total'],
                 'category_surplus' => $allocation['surplus'],
+                'this_month_spent' => $totalSpent,
             ]);
         } catch (\Throwable $e) {
             // Log internally; never leak exception/SQL detail to anonymous clients.
