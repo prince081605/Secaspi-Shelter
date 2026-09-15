@@ -6,6 +6,7 @@ import { listMyAdoptionApplications, listMyFosterApplications, browseAnimals } f
 import { updateProfile, changePassword } from '../../lib/profileApi';
 import { getPublicSettings } from '../../lib/settingsApi';
 import Reveal from '../../components/Reveal';
+import PasswordInput from '../../components/PasswordInput';
 import {
   Clock, Heart, User, Pencil, Lock, ClipboardList, Dog, Trophy, LayoutDashboard,
   ArrowLeft, Menu, X, LogOut, MessageSquare, PawPrint, Bell, Inbox, HeartHandshake,
@@ -302,15 +303,15 @@ function UserProfile({ user, onProfileUpdated }) {
       <form onSubmit={handlePasswordSubmit}>
         <div className="ui-field">
           <label className="ui-label">Current password</label>
-          <input className="ui-input" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
+          <PasswordInput value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} autoComplete="current-password" required />
         </div>
         <div className="ui-field">
           <label className="ui-label">New password</label>
-          <input className="ui-input" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={8} />
+          <PasswordInput value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" required minLength={8} />
         </div>
         <div className="ui-field">
           <label className="ui-label">Confirm new password</label>
-          <input className="ui-input" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={8} />
+          <PasswordInput value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" required minLength={8} />
         </div>
         <button className="ui-btn-primary" type="submit" disabled={passwordState.status === 'loading'}>
           {passwordState.status === 'loading' ? 'Updating…' : 'Change password'}

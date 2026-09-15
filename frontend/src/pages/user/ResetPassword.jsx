@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { auth } from '../../lib/auth';
 import AuthLayout from '../../components/AuthLayout';
+import PasswordInput from '../../components/PasswordInput';
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -77,9 +78,7 @@ export default function ResetPassword() {
         </div>
         <div className="ui-field">
           <label className="ui-label ui-label-required">New password</label>
-          <input
-            className="ui-input"
-            type="password"
+          <PasswordInput
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="new-password"
@@ -89,9 +88,7 @@ export default function ResetPassword() {
         </div>
         <div className="ui-field">
           <label className="ui-label ui-label-required">Confirm new password</label>
-          <input
-            className="ui-input"
-            type="password"
+          <PasswordInput
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             autoComplete="new-password"
