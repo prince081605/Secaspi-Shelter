@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -74,6 +75,27 @@ class AuthTest extends TestCase
         $user->refresh();
         $this->assertTrue((bool) $user->email_verified);
         $this->assertNull($user->email_verification_token, 'the token should be cleared after use');
+    }
+
+    public function test_registration_sends_the_verification_email_via_brevo_when_configured(): void
+    {
+        // In production a Brevo API key is set; the app must send over Brevo's HTTPS API rather
+        // than SMTP (which Render's free tier blocks).
+        config()->set('services.brevo.key', 'test-brevo-key');
+        Http::fake(['api.brevo.com/*' => Http::response(['messageId' => 'abc'], 201)]);
+
+        $this->postJson('/api/register', [
+            'name' => 'Brevo User',
+            'email' => 'brevo@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])->assertCreated();
+
+        Http::assertSent(function ($request) {
+            return str_contains($request->url(), 'api.brevo.com/v3/smtp/email')
+                && $request['to'][0]['email'] === 'brevo@example.com'
+                && $request->hasHeader('api-key', 'test-brevo-key');
+        });
     }
 
     public function test_email_verification_rejects_a_bad_token(): void

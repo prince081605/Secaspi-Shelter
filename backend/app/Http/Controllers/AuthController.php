@@ -3,11 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Support\Mailer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
@@ -226,20 +225,16 @@ class AuthController extends Controller
             .'/verify-email?email='.urlencode($user->email)
             .'&token='.$token;
 
-        try {
-            Mail::raw(
-                "Hi {$user->full_name},\n\n"
-                .'Welcome to SECASPI Shelter! Please confirm your email address by opening the '
-                ."link below (valid for 24 hours):\n\n"
-                ."{$verifyUrl}\n\n"
-                ."If you didn't create this account, you can safely ignore this email.",
-                function ($message) use ($user) {
-                    $message->to($user->email)->subject('Verify your SECASPI Shelter email');
-                }
-            );
-        } catch (\Throwable $e) {
-            Log::error('Failed to send verification email', ['email' => $user->email, 'exception' => $e]);
-        }
+        Mailer::send(
+            $user->email,
+            $user->full_name,
+            'Verify your SECASPI Shelter email',
+            "Hi {$user->full_name},\n\n"
+            .'Welcome to SECASPI Shelter! Please confirm your email address by opening the '
+            ."link below (valid for 24 hours):\n\n"
+            ."{$verifyUrl}\n\n"
+            ."If you didn't create this account, you can safely ignore this email."
+        );
 
         return $verifyUrl;
     }
@@ -265,22 +260,18 @@ class AuthController extends Controller
                 .'/reset-password?email='.urlencode($email)
                 .'&token='.$token;
 
-            // Deliver the reset link by email. Wrapped so a mail-transport failure never
-            // 500s the request or reveals whether the address exists.
-            try {
-                Mail::raw(
-                    "Hi {$user->full_name},\n\n"
-                    .'We received a request to reset your SECASPI Shelter password. '
-                    ."Open the link below to choose a new password (valid for 30 minutes):\n\n"
-                    ."{$resetUrl}\n\n"
-                    ."If you didn't request this, you can safely ignore this email.",
-                    function ($message) use ($email) {
-                        $message->to($email)->subject('Reset your SECASPI Shelter password');
-                    }
-                );
-            } catch (\Throwable $e) {
-                Log::error('Failed to send password reset email', ['email' => $email, 'exception' => $e]);
-            }
+            // Deliver the reset link by email. Best-effort: a mail-transport failure is logged
+            // inside Mailer, never surfaced, so this can't 500 or reveal whether the address exists.
+            Mailer::send(
+                $email,
+                $user->full_name,
+                'Reset your SECASPI Shelter password',
+                "Hi {$user->full_name},\n\n"
+                .'We received a request to reset your SECASPI Shelter password. '
+                ."Open the link below to choose a new password (valid for 30 minutes):\n\n"
+                ."{$resetUrl}\n\n"
+                ."If you didn't request this, you can safely ignore this email."
+            );
 
             // In local dev (mail goes to the log) also return the token directly so the flow
             // can be exercised without a configured mail transport.

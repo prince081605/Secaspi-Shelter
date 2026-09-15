@@ -22,6 +22,13 @@ return [
         'key' => env('RESEND_API_KEY'),
     ],
 
+    // Brevo (formerly Sendinblue) transactional email over its HTTPS API. Used in production
+    // because Render's free tier blocks outbound SMTP ports — see App\Support\Mailer. Leave
+    // BREVO_API_KEY empty to fall back to the SMTP/log mailer (local dev).
+    'brevo' => [
+        'key' => env('BREVO_API_KEY'),
+    ],
+
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),
