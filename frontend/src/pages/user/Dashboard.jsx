@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
 import { auth } from '../../lib/auth';
-import { listMyAdoptionApplications, listMyFosterApplications, browseAnimals } from '../../lib/animalsApi';
+import { listMyAdoptionApplications, listMyFosterApplications } from '../../lib/animalsApi';
 import { updateProfile, changePassword } from '../../lib/profileApi';
 import { getPublicSettings } from '../../lib/settingsApi';
 import Reveal from '../../components/Reveal';
@@ -419,84 +419,6 @@ function VolunteerTasksPanel() {
   );
 }
 
-// Read-only animal roster for volunteers — uses the public browse endpoint (no admin
-// fields, no write controls), so it works without any staff-level permission.
-function ReadOnlyAnimals() {
-  const isMobile = useIsMobile();
-  const [animals, setAnimals] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    let mounted = true;
-    browseAnimals({ per_page: 50 })
-      .then((data) => { if (mounted) setAnimals(Array.isArray(data?.data) ? data.data : []); })
-      .catch((err) => { if (mounted) setError(err?.message || 'Failed to load animals.'); })
-      .finally(() => { if (mounted) setLoading(false); });
-    return () => { mounted = false; };
-  }, []);
-
-  return (
-    <>
-      <h2 className="dashSectionTitle"><Dog size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />Animals</h2>
-      {error && <div className="ui-error">{error}</div>}
-      {loading ? (
-        <div className="ui-empty">Loading…</div>
-      ) : animals.length === 0 ? (
-        <div className="ui-empty">No animals to show.</div>
-      ) : isMobile ? (
-        <div className="dashCardList">
-          {animals.map((a) => (
-            <DashCard
-              key={a.id}
-              media={a.photo ? (
-                <img
-                  src={a.photo.startsWith('http') ? a.photo : `${import.meta.env.VITE_API_BASE_URL}/storage/${a.photo}`}
-                  alt=""
-                  className="dashThumbSm"
-                />
-              ) : null}
-              title={a.name || 'Unnamed'}
-              fields={[
-                { label: 'Species', value: a.species || '—' },
-                { label: 'Breed', value: a.breed || '—' },
-                { label: 'Status', value: <StatusBadge status={a.status} /> },
-              ]}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="dashTableWrap">
-          <table className="dashTable">
-            <thead><tr><th>Name</th><th>Species</th><th>Breed</th><th>Status</th></tr></thead>
-            <tbody>
-              {animals.map((a) => (
-                <tr key={a.id}>
-                  <td>
-                    <div className="dashFlexRow">
-                      {a.photo ? (
-                        <img
-                          src={a.photo.startsWith('http') ? a.photo : `${import.meta.env.VITE_API_BASE_URL}/storage/${a.photo}`}
-                          alt={a.name || 'animal'}
-                          className="dashThumbSm"
-                        />
-                      ) : null}
-                      {a.name || 'Unnamed'}
-                    </div>
-                  </td>
-                  <td>{a.species || '—'}</td>
-                  <td>{a.breed || '—'}</td>
-                  <td><StatusBadge status={a.status} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </>
-  );
-}
-
 export default function Dashboard() {
   const navigate = useNavigate();
   const [role, setRole] = useState('');
@@ -520,7 +442,7 @@ export default function Dashboard() {
   // keep empty when data isn't available
   const isAdminRole = role === 'admin';
   const isStaffPlus = atLeast(role, 'staff'); // staff + admin: operational dashboard
-  const isVolunteer = role === 'volunteer';   // focused tasks + read-only animals view
+  const isVolunteer = role === 'volunteer';   // normal user dashboard + an extra "My Tasks" module
 
   const handleLogout = async () => {
     try {
@@ -540,9 +462,9 @@ export default function Dashboard() {
         setUser(u);
         const r = safeRoleFromUser(data);
         setRole(r);
-        // Land each role on its primary dashboard: staff/admin → operations, volunteer →
-        // their tasks, everyone else → the user dashboard.
-        setTab(atLeast(r, 'staff') ? 'admin' : r === 'volunteer' ? 'volunteer' : 'user');
+        // Land each role on its primary dashboard: staff/admin → operations, everyone else
+        // (users and volunteers) → the user dashboard.
+        setTab(atLeast(r, 'staff') ? 'admin' : 'user');
       } catch {
         if (!mounted) return;
         setRole(fallbackRole);
@@ -649,12 +571,13 @@ export default function Dashboard() {
   }, [applications]);
 
   const dashboardTabs = useMemo(() => {
+    // Volunteers use the normal user dashboard (plus a My Tasks nav item), so there's no
+    // separate volunteer tab — only staff/admin get an extra tab above the user one.
     return [
       { key: 'admin', label: isAdminRole ? 'Admin Dashboard' : 'Staff Dashboard', show: isStaffPlus },
-      { key: 'volunteer', label: 'Volunteer Dashboard', show: isVolunteer },
       { key: 'user', label: 'User Dashboard', show: true },
     ].filter((t) => t.show);
-  }, [isAdminRole, isStaffPlus, isVolunteer]);
+  }, [isAdminRole, isStaffPlus]);
 
   const activeTab = tab;
 
@@ -773,14 +696,12 @@ export default function Dashboard() {
               <ArrowLeft size={16} style={{ verticalAlign: '-3px' }} /> Back to Home
             </button>
 
-            {activeTab !== 'volunteer' && (
-              <button
-                className={'dashNavBtn ' + (activeNav === 'dashboard' ? 'dashNavBtnActive' : '')}
-                onClick={() => setActiveNav('dashboard')}
-              >
-                <LayoutDashboard size={16} style={{ verticalAlign: '-3px' }} /> Dashboard
-              </button>
-            )}
+            <button
+              className={'dashNavBtn ' + (activeNav === 'dashboard' ? 'dashNavBtnActive' : '')}
+              onClick={() => setActiveNav('dashboard')}
+            >
+              <LayoutDashboard size={16} style={{ verticalAlign: '-3px' }} /> Dashboard
+            </button>
 
             {activeTab === 'admin' && visibleNavCategories.map((cat) => {
               const isOpen = !!openCategories[cat.key];
@@ -819,25 +740,16 @@ export default function Dashboard() {
               );
             })}
 
-            {activeTab === 'volunteer' && (
-              <>
-                <button
-                  className={'dashNavBtn ' + (activeNav === 'myanimals' ? '' : 'dashNavBtnActive')}
-                  onClick={() => setActiveNav('mytasks')}
-                >
-                  <ClipboardList size={16} style={{ verticalAlign: '-3px' }} /> My Tasks
-                </button>
-                <button
-                  className={'dashNavBtn ' + (activeNav === 'myanimals' ? 'dashNavBtnActive' : '')}
-                  onClick={() => setActiveNav('myanimals')}
-                >
-                  <Dog size={16} style={{ verticalAlign: '-3px' }} /> Animals
-                </button>
-              </>
-            )}
-
             {activeTab === 'user' && (
               <>
+                {isVolunteer && (
+                  <button
+                    className={'dashNavBtn ' + (activeNav === 'mytasks' ? 'dashNavBtnActive' : '')}
+                    onClick={() => setActiveNav('mytasks')}
+                  >
+                    <ClipboardList size={16} style={{ verticalAlign: '-3px' }} /> My Tasks
+                  </button>
+                )}
                 <button
                   className={'dashNavBtn ' + (activeNav === 'impact' ? 'dashNavBtnActive' : '')}
                   onClick={() => setActiveNav('impact')}
@@ -874,9 +786,7 @@ export default function Dashboard() {
               <div className="dashSubtitle">
                 {activeTab === 'admin'
                   ? 'Manage animals, requests, donations, and operations.'
-                  : activeTab === 'volunteer'
-                    ? 'View your tasks and the animals in our care.'
-                    : 'Manage your adoption applications and favorites.'}
+                  : 'Manage your adoption applications and favorites.'}
               </div>
             </div>
 
@@ -897,8 +807,8 @@ export default function Dashboard() {
           </div>
 
           {/* Overview stat cards belong to the dashboard landing only — inside a module they're
-              redundant, so they aren't rendered there (any screen size). Volunteers never see them. */}
-          {activeTab !== 'volunteer' && activeNav === 'dashboard' && (
+              redundant, so they aren't rendered there (any screen size). */}
+          {activeNav === 'dashboard' && (
             <OverviewCards cards={activeTab === 'admin' ? (overview?.stats || []) : userStats} />
           )}
 
@@ -932,13 +842,11 @@ export default function Dashboard() {
                 </>
               ) : null}
             </div>
-          ) : activeTab === 'volunteer' ? (
-            <div>
-              {activeNav === 'myanimals' ? <ReadOnlyAnimals /> : <VolunteerTasksPanel />}
-            </div>
           ) : (
             <div>
               {activeNav === 'dashboard' ? <UserApplications applications={applications} loading={appsLoading} /> : null}
+              {/* Volunteers get their own task hub as an extra module on top of the user dashboard. */}
+              {activeNav === 'mytasks' && isVolunteer ? <VolunteerTasksPanel /> : null}
               {activeNav === 'messages' ? <Messages /> : null}
               {activeNav === 'impact' ? <ImpactPanel /> : null}
               {activeNav === 'profile' ? <UserProfile key={user?.id} user={user} onProfileUpdated={setUser} /> : null}
