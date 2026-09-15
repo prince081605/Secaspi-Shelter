@@ -12,6 +12,9 @@ const styles = `
   .aiFab { position: fixed; right: 22px; bottom: 22px; z-index: 1000; width: 58px; height: 58px; border-radius: 50%;
     border: none; cursor: pointer; font-size: 26px; color: #fff; background: var(--brand, #c1612e);
     box-shadow: 0 6px 20px rgba(0,0,0,0.25); }
+  /* Clearance so the last of a page's content can scroll above the floating button (58px + 22px
+     offset + gap). Only present while the FAB is mounted. */
+  body.has-ai-fab { padding-bottom: 96px; }
   .aiPanel { position: fixed; right: 22px; bottom: 90px; z-index: 1000; width: 340px; max-width: calc(100vw - 32px);
     height: 460px; max-height: calc(100vh - 130px); background: #fff; border-radius: 16px; overflow: hidden;
     box-shadow: 0 12px 40px rgba(0,0,0,0.28); display: flex; flex-direction: column; }
@@ -36,6 +39,9 @@ export default function AiAssistant() {
   const bodyRef = useRef(null);
   const location = useLocation();
 
+  // The FAB shows when the admin has enabled the assistant and we're not on a focused auth page.
+  const visible = enabled && !AUTH_ROUTES.includes(location.pathname);
+
   // Only render the widget if the admin has switched the assistant on.
   useEffect(() => {
     api.get('/api/home/settings')
@@ -47,7 +53,14 @@ export default function AiAssistant() {
     if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
   }, [messages, open]);
 
-  if (!enabled || AUTH_ROUTES.includes(location.pathname)) return null;
+  // Reserve space at the very bottom of the page while the FAB is shown, so the last of the
+  // content can always scroll clear of it. Removed automatically on auth pages and unmount.
+  useEffect(() => {
+    document.body.classList.toggle('has-ai-fab', visible);
+    return () => document.body.classList.remove('has-ai-fab');
+  }, [visible]);
+
+  if (!visible) return null;
 
   const send = async (e) => {
     e.preventDefault();
