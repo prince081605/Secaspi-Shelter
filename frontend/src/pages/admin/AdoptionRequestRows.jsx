@@ -372,7 +372,7 @@ export function OngoingApprovedRow({ application, onChanged }) {
   const markDone = async () => {
     const ok = await confirm({
       ...ADOPTION_STATUS_PROMPTS.completed,
-      confirmLabel: 'Mark as done',
+      confirmLabel: 'Complete adoption',
       summary: [
         { label: 'Applicant', value: application.full_name || application.applicant?.full_name },
         { label: 'Animal', value: application.animal?.name },
@@ -413,7 +413,7 @@ export function OngoingApprovedRow({ application, onChanged }) {
     <>
       <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Track'}</button>
       <button className="dashBtn dashBtnDanger" onClick={reject}>Reject</button>
-      <button className="dashBtn dashBtnPrimary" onClick={markDone}>Mark as done</button>
+      <button className="dashBtn dashBtnPrimary" onClick={markDone}>Complete adoption</button>
     </>
   );
   const panel = (
