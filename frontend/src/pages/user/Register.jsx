@@ -16,9 +16,14 @@ export default function Register() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [created, setCreated] = useState(null);
+
+  // Resend-verification state for the success card.
+  const [resending, setResending] = useState(false);
+  const [resendMsg, setResendMsg] = useState('');
 
   // Live preview of the system-assigned username as they type their name (debounced).
   // The username is read-only — the server assigns the final, guaranteed-unique value.
@@ -35,10 +40,18 @@ export default function Register() {
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
+
+    // Catch the mismatch on the client so the user isn't bounced off the server for it — the
+    // server enforces the same rule (`confirmed`) as the real guard.
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    setLoading(true);
     try {
-      const data = await auth.register(name, email, password);
+      const data = await auth.register(name, email, password, confirmPassword);
       setCreated(data?.user || null);
     } catch (err) {
       setError(err.message || 'Register failed');
@@ -47,12 +60,25 @@ export default function Register() {
     }
   };
 
+  const onResend = async () => {
+    setResending(true);
+    setResendMsg('');
+    try {
+      await auth.resendVerification(created?.email || email);
+      setResendMsg('Verification email sent. Check your inbox (and spam).');
+    } catch (err) {
+      setResendMsg(err?.message || 'Could not resend right now. Try again shortly.');
+    } finally {
+      setResending(false);
+    }
+  };
+
   if (created) {
     return (
       <AuthLayout
-        title="Account created!"
-        subtitle="Your account is ready. Use your email and password to log in."
-        footer={<>Ready to go? <Link to="/login" state={{ from }}>Log in</Link></>}
+        title="Almost there — verify your email"
+        subtitle={`We sent a verification link to ${created.email || email}. Open it to confirm your address.`}
+        footer={<>Already verified? <Link to="/login" state={{ from }}>Log in</Link></>}
       >
         <div className="ui-field">
           <label className="ui-label">Your username</label>
@@ -61,6 +87,19 @@ export default function Register() {
             This is your unique display name. You log in with your email.
           </p>
         </div>
+        {resendMsg ? <div className="ui-success-msg" style={{ marginBottom: '0.75rem' }}>{resendMsg}</div> : null}
+        <p className="ui-muted" style={{ marginBottom: '0.75rem', fontSize: '0.85rem' }}>
+          Didn&apos;t get the email? Check your spam folder, or resend it.
+        </p>
+        <button
+          type="button"
+          className="ui-btn-secondary"
+          style={{ width: '100%', marginBottom: '0.6rem' }}
+          onClick={onResend}
+          disabled={resending}
+        >
+          {resending ? 'Sending…' : 'Resend verification email'}
+        </button>
         <button className="ui-btn-primary" style={{ width: '100%' }} onClick={() => navigate('/login', { replace: true, state: { from } })}>
           Continue to login
         </button>
@@ -100,6 +139,21 @@ export default function Register() {
             required
             minLength={8}
           />
+        </div>
+        <div className="ui-field">
+          <label className="ui-label ui-label-required">Confirm password</label>
+          <PasswordInput
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            autoComplete="new-password"
+            required
+            minLength={8}
+          />
+          {confirmPassword && password !== confirmPassword ? (
+            <p className="ui-muted" style={{ marginTop: '0.4rem', fontSize: '0.85rem', color: 'var(--danger, #c0392b)' }}>
+              Passwords do not match.
+            </p>
+          ) : null}
         </div>
         <button className="ui-btn-primary" style={{ width: '100%' }} disabled={loading}>
           {loading ? 'Creating...' : 'Create Account'}

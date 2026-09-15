@@ -35,6 +35,10 @@ use Illuminate\Support\Facades\Route;
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:10,1');
 Route::post('/username/suggest', [AuthController::class, 'suggestUsername']);
+// Email verification. `verify-email` takes a token from the emailed link; `resend-verification`
+// re-issues one and is tighter (like forgot-password) since each hit can send an email.
+Route::post('/verify-email', [AuthController::class, 'verifyEmail'])->middleware('throttle:10,1');
+Route::post('/resend-verification', [AuthController::class, 'resendVerification'])->middleware('throttle:5,1');
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:5,1');
 Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:10,1');
 

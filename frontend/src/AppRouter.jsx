@@ -12,6 +12,7 @@ const Login = lazy(() => import('./pages/user/Login'));
 const Register = lazy(() => import('./pages/user/Register'));
 const ForgotPassword = lazy(() => import('./pages/user/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/user/ResetPassword'));
+const VerifyEmail = lazy(() => import('./pages/user/VerifyEmail'));
 const Home = lazy(() => import('./pages/user/Home'));
 const Adoption = lazy(() => import('./pages/user/Adoption'));
 const Matchmaker = lazy(() => import('./pages/user/Matchmaker'));
@@ -80,6 +81,7 @@ export default function AppRouter() {
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/" element={<Home />} />
             <Route path="/adopt" element={<Adoption />} />
             <Route path="/matchmaker" element={<Matchmaker />} />

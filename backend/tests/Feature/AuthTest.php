@@ -19,10 +19,25 @@ class AuthTest extends TestCase
             'name' => 'Jane Doe',
             'email' => 'jane@example.com',
             'password' => 'password123',
+            'password_confirmation' => 'password123',
         ])->assertCreated()
             ->assertJsonPath('user.role', 'user'); // response must report the default role, not null
 
-        $this->assertDatabaseHas('users', ['email' => 'jane@example.com', 'role' => 'user']);
+        // A new account starts unverified until it clicks the emailed link.
+        $this->assertDatabaseHas('users', ['email' => 'jane@example.com', 'role' => 'user', 'email_verified' => false]);
+    }
+
+    public function test_register_requires_a_matching_password_confirmation(): void
+    {
+        $this->postJson('/api/register', [
+            'name' => 'Mismatch',
+            'email' => 'mismatch@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'different456',
+        ])->assertStatus(422)
+            ->assertJsonValidationErrors('password');
+
+        $this->assertDatabaseMissing('users', ['email' => 'mismatch@example.com']);
     }
 
     public function test_register_cannot_self_assign_admin_role(): void
@@ -31,10 +46,73 @@ class AuthTest extends TestCase
             'name' => 'Sneaky',
             'email' => 'sneaky@example.com',
             'password' => 'password123',
+            'password_confirmation' => 'password123',
             'role' => 'admin',
         ])->assertCreated();
 
         $this->assertSame('user', User::where('email', 'sneaky@example.com')->value('role'));
+    }
+
+    public function test_email_verification_marks_the_account_verified(): void
+    {
+        $this->postJson('/api/register', [
+            'name' => 'Verify Me',
+            'email' => 'verify@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])->assertCreated()
+            ->assertJsonPath('user.email_verified', 0);
+
+        $user = User::where('email', 'verify@example.com')->first();
+        $this->assertNotNull($user->email_verification_token, 'a token should be issued at registration');
+
+        $this->postJson('/api/verify-email', [
+            'email' => 'verify@example.com',
+            'token' => $user->email_verification_token,
+        ])->assertOk();
+
+        $user->refresh();
+        $this->assertTrue((bool) $user->email_verified);
+        $this->assertNull($user->email_verification_token, 'the token should be cleared after use');
+    }
+
+    public function test_email_verification_rejects_a_bad_token(): void
+    {
+        $this->postJson('/api/register', [
+            'name' => 'Bad Token',
+            'email' => 'badtoken@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])->assertCreated();
+
+        $this->postJson('/api/verify-email', [
+            'email' => 'badtoken@example.com',
+            'token' => 'not-the-real-token',
+        ])->assertStatus(401);
+
+        $this->assertFalse((bool) User::where('email', 'badtoken@example.com')->value('email_verified'));
+    }
+
+    public function test_email_verification_rejects_an_expired_token(): void
+    {
+        $this->postJson('/api/register', [
+            'name' => 'Expired',
+            'email' => 'expired@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])->assertCreated();
+
+        $user = User::where('email', 'expired@example.com')->first();
+        $token = $user->email_verification_token;
+        // Push the expiry into the past.
+        $user->forceFill(['email_verification_token_expires_at' => now()->subMinute()])->save();
+
+        $this->postJson('/api/verify-email', [
+            'email' => 'expired@example.com',
+            'token' => $token,
+        ])->assertStatus(401);
+
+        $this->assertFalse((bool) $user->fresh()->email_verified);
     }
 
     public function test_login_returns_a_token_and_rejects_a_bad_password(): void

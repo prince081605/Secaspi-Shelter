@@ -6,10 +6,21 @@ export const auth = {
     if (data?.token) setAuthToken(data.token);
     return data;
   },
-  async register(name, email, password) {
+  async register(name, email, password, passwordConfirmation) {
     // Register intentionally does not auto-login — it returns a success card, then the user
-    // continues to login. (No token is returned, so there's nothing to store here.)
-    return api.post('/api/register', { name, email, password });
+    // verifies their email and continues to login. (No token is returned, so nothing to store.)
+    return api.post('/api/register', {
+      name,
+      email,
+      password,
+      password_confirmation: passwordConfirmation,
+    });
+  },
+  async verifyEmail(email, token) {
+    return api.post('/api/verify-email', { email, token });
+  },
+  async resendVerification(email) {
+    return api.post('/api/resend-verification', { email });
   },
   async suggestUsername(name) {
     const data = await api.post('/api/username/suggest', { name });

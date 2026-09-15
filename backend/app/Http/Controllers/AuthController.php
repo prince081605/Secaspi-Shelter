@@ -74,7 +74,10 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8'],
+            // `confirmed` requires a matching `password_confirmation` field — same convention as
+            // the change-password flow. Server-enforced so the client-side match check can't be
+            // the only guard.
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
         if ($validator->fails()) {
@@ -94,15 +97,151 @@ class AuthController extends Controller
         // 'user' instead of null.
         $user->refresh();
 
-        return response()->json([
+        // Issue an email-verification token and send the confirmation link. `email_verified`
+        // stays false (its DB default) until the user clicks through.
+        $token = $this->issueVerificationToken($user);
+        $verifyUrl = $this->sendVerificationEmail($user, $token);
+
+        $response = [
+            'message' => 'Account created. Check your email to verify your address.',
             'user' => [
                 'id' => $user->id,
                 'full_name' => $user->full_name,
                 'username' => $user->username,
                 'email' => $user->email,
                 'role' => $user->role,
+                'email_verified' => (int) ($user->email_verified ?? 0),
             ],
-        ], 201);
+        ];
+
+        // In local dev (mail goes to the log by default) also return the link directly so the
+        // flow can be exercised without a configured mail transport — mirrors forgotPassword().
+        if (app()->environment('local')) {
+            $response['verify_url'] = $verifyUrl;
+        }
+
+        return response()->json($response, 201);
+    }
+
+    /**
+     * Confirm an email address from the link sent at registration. Idempotent: a
+     * request for an already-verified account succeeds without changing anything.
+     */
+    public function verifyEmail(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => ['required', 'email'],
+            'token' => ['required', 'string'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+        }
+
+        $user = User::where('email', $request->input('email'))->first();
+
+        if ($user && $user->email_verified) {
+            return response()->json(['message' => 'Email already verified. You can log in.']);
+        }
+
+        // Constant-time token comparison; a missing token/user fails the same way an invalid
+        // one does, so the endpoint can't be used to probe which addresses are pending.
+        $stored = (string) ($user->email_verification_token ?? '');
+        $supplied = (string) $request->input('token');
+        $expired = $user && $user->email_verification_token_expires_at
+            && now()->greaterThan($user->email_verification_token_expires_at);
+
+        if (! $user || $stored === '' || ! hash_equals($stored, $supplied) || $expired) {
+            return response()->json([
+                'message' => 'This verification link is invalid or has expired. Request a new one below.',
+            ], 401);
+        }
+
+        $user->forceFill([
+            'email_verified' => true,
+            'email_verification_token' => null,
+            'email_verification_token_expires_at' => null,
+        ])->save();
+
+        return response()->json(['message' => 'Email verified. You can now log in.']);
+    }
+
+    /**
+     * Re-send the verification link. Always returns the same generic response so it
+     * can't be used to enumerate which addresses are registered or already verified.
+     */
+    public function resendVerification(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => ['required', 'email'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+        }
+
+        $user = User::where('email', $request->input('email'))->first();
+        $verifyUrl = null;
+
+        if ($user && ! $user->email_verified) {
+            $token = $this->issueVerificationToken($user);
+            $verifyUrl = $this->sendVerificationEmail($user, $token);
+        }
+
+        $response = [
+            'message' => 'If that account exists and is unverified, a new verification link has been sent.',
+        ];
+
+        if ($verifyUrl && app()->environment('local')) {
+            $response['verify_url'] = $verifyUrl;
+        }
+
+        return response()->json($response);
+    }
+
+    /**
+     * Generate a fresh verification token, persist it (plus a 24h expiry) on the user, and
+     * return the plaintext token. The columns are guarded against mass assignment, so this
+     * writes them with forceFill.
+     */
+    private function issueVerificationToken(User $user): string
+    {
+        $token = Str::random(64);
+
+        $user->forceFill([
+            'email_verification_token' => $token,
+            'email_verification_token_expires_at' => now()->addDay(),
+        ])->save();
+
+        return $token;
+    }
+
+    /**
+     * Email the verification link and return the URL. A mail-transport failure is logged but
+     * never surfaced to the caller — registration must not 500 because SMTP is down.
+     */
+    private function sendVerificationEmail(User $user, string $token): string
+    {
+        $verifyUrl = rtrim(config('app.frontend_url'), '/')
+            .'/verify-email?email='.urlencode($user->email)
+            .'&token='.$token;
+
+        try {
+            Mail::raw(
+                "Hi {$user->full_name},\n\n"
+                .'Welcome to SECASPI Shelter! Please confirm your email address by opening the '
+                ."link below (valid for 24 hours):\n\n"
+                ."{$verifyUrl}\n\n"
+                ."If you didn't create this account, you can safely ignore this email.",
+                function ($message) use ($user) {
+                    $message->to($user->email)->subject('Verify your SECASPI Shelter email');
+                }
+            );
+        } catch (\Throwable $e) {
+            Log::error('Failed to send verification email', ['email' => $user->email, 'exception' => $e]);
+        }
+
+        return $verifyUrl;
     }
 
     public function forgotPassword(Request $request)
