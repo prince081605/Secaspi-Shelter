@@ -8,10 +8,14 @@ export default function ResetPassword() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
 
-  // Pre-filled from the emailed link (?email=...&token=...); editable in case the user
-  // landed here manually or pasted a token.
-  const [email, setEmail] = useState(params.get('email') || '');
-  const [token, setToken] = useState(params.get('token') || '');
+  // Taken straight from the emailed link (?email=...&token=...) and submitted as-is. The token is
+  // never rendered or editable, so it can't be accidentally altered — the only place it lives is
+  // the URL, which is where the reset email put it. Landing here without both means the link is
+  // incomplete (see the guard below).
+  const email = params.get('email') || '';
+  const token = params.get('token') || '';
+  const linkValid = Boolean(email && token);
+
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
 
@@ -45,6 +49,25 @@ export default function ResetPassword() {
     }
   };
 
+  // No usable link — don't show a form the user can't complete; send them back to request a fresh one.
+  if (!linkValid) {
+    return (
+      <AuthLayout
+        title="Reset link incomplete"
+        subtitle="This password reset link is missing information. Open the most recent link from your reset email, or request a new one."
+        footer={<Link to="/login">Back to login</Link>}
+      >
+        <Link
+          to="/forgot-password"
+          className="ui-btn-primary"
+          style={{ width: '100%', display: 'block', textAlign: 'center', textDecoration: 'none' }}
+        >
+          Request a new link
+        </Link>
+      </AuthLayout>
+    );
+  }
+
   return (
     <AuthLayout
       title="Reset password"
@@ -56,25 +79,10 @@ export default function ResetPassword() {
 
       <form onSubmit={onSubmit}>
         <div className="ui-field">
-          <label className="ui-label ui-label-required">Email</label>
-          <input
-            className="ui-input"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-            required
-          />
-        </div>
-        <div className="ui-field">
-          <label className="ui-label ui-label-required">Reset token</label>
-          <input
-            className="ui-input"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            required
-            placeholder="From your reset email"
-          />
+          <label className="ui-label">Email</label>
+          {/* Shown read-only so the user can confirm which account they're resetting; it comes
+              from the link, not typed. */}
+          <input className="ui-input" type="email" value={email} readOnly />
         </div>
         <div className="ui-field">
           <label className="ui-label ui-label-required">New password</label>
