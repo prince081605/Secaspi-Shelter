@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { api } from '../lib/api';
 import { sendAssistantMessage } from '../lib/assistantApi';
 import { PawPrint, Send, MessageCircle, X } from 'lucide-react';
+
+// Focused auth flows — the floating assistant button would only overlap the form's submit
+// button and footer links here, so it's hidden on these routes.
+const AUTH_ROUTES = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email'];
 
 const styles = `
   .aiFab { position: fixed; right: 22px; bottom: 22px; z-index: 1000; width: 58px; height: 58px; border-radius: 50%;
@@ -29,6 +34,7 @@ export default function AiAssistant() {
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const bodyRef = useRef(null);
+  const location = useLocation();
 
   // Only render the widget if the admin has switched the assistant on.
   useEffect(() => {
@@ -41,7 +47,7 @@ export default function AiAssistant() {
     if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
   }, [messages, open]);
 
-  if (!enabled) return null;
+  if (!enabled || AUTH_ROUTES.includes(location.pathname)) return null;
 
   const send = async (e) => {
     e.preventDefault();
