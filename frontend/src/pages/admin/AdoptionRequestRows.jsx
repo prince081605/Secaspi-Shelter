@@ -388,9 +388,31 @@ export function OngoingApprovedRow({ application, onChanged }) {
     }
   };
 
+  // A home visit can fail after approval. Rejecting here declines the adoption; the backend
+  // returns the animal to Available and notifies the applicant.
+  const reject = async () => {
+    const ok = await confirm({
+      ...ADOPTION_STATUS_PROMPTS.declined,
+      message: 'The adoption is declined (e.g. the home visit did not pass). The applicant is notified and the animal is returned to Available.',
+      summary: [
+        { label: 'Applicant', value: application.full_name || application.applicant?.full_name },
+        { label: 'Animal', value: application.animal?.name },
+      ],
+    });
+    if (!ok) return;
+    setError('');
+    try {
+      await adminUpdateAdoptionApplication(application.id, { status: 'declined' });
+      onChanged();
+    } catch (err) {
+      setError(err?.message || 'Failed to reject the adoption.');
+    }
+  };
+
   const actions = (
     <>
       <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Track'}</button>
+      <button className="dashBtn dashBtnDanger" onClick={reject}>Reject</button>
       <button className="dashBtn dashBtnPrimary" onClick={markDone}>Mark as done</button>
     </>
   );
