@@ -70,7 +70,7 @@ export default function Receipt() {
     <div className="ui-page">
       <style>{styles}</style>
 
-      <SiteNav back={{ to: '/donations', label: 'Back to History' }} />
+      <SiteNav />
 
       <div className="receiptBody">
         {loading ? (
