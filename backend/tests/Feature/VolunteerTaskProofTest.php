@@ -124,7 +124,7 @@ class VolunteerTaskProofTest extends TestCase
         Storage::assertExists($second);
     }
 
-    public function test_staff_see_the_proof_and_can_sign_the_task_off(): void
+    public function test_staff_see_the_proof_but_cannot_verify_the_task(): void
     {
         Storage::fake();
         [$user, $task] = $this->volunteerWithTask();
@@ -137,8 +137,79 @@ class VolunteerTaskProofTest extends TestCase
         $this->assertSame('submitted', $row['status']);
         $this->assertNotNull($row['proof_url']);
 
+        // Staff do tasks themselves, so completing one is kept for admins.
         $this->putJson("/api/admin/volunteer-tasks/{$task->id}", ['status' => 'completed'])
-            ->assertOk()->assertJsonPath('task.status', 'completed');
+            ->assertStatus(403);
+        $this->assertSame('submitted', $task->fresh()->status);
+    }
+
+    public function test_an_admin_verifies_the_task_and_is_recorded_as_the_verifier(): void
+    {
+        Storage::fake();
+        [$user, $task] = $this->volunteerWithTask();
+        Sanctum::actingAs($user);
+        $this->postJson("/api/volunteer/tasks/{$task->id}/proof", ['proof_image' => $this->photo()])->assertOk();
+
+        $admin = User::factory()->admin()->create();
+        Sanctum::actingAs($admin);
+        $this->putJson("/api/admin/volunteer-tasks/{$task->id}", ['status' => 'completed'])
+            ->assertOk()
+            ->assertJsonPath('task.status', 'completed')
+            ->assertJsonPath('task.verified_by', $admin->full_name);
+
+        $task->refresh();
+        $this->assertSame($admin->id, $task->verified_by);
+        $this->assertNotNull($task->verified_at);
+
+        // The volunteer sees who verified it on their own task list.
+        Sanctum::actingAs($user);
+        $this->getJson('/api/volunteer/me')->assertOk()
+            ->assertJsonPath('volunteer.tasks.0.verified_by', $admin->full_name);
+    }
+
+    public function test_sending_a_task_back_clears_its_verification(): void
+    {
+        Storage::fake();
+        [, $task] = $this->volunteerWithTask('submitted');
+        Sanctum::actingAs(User::factory()->admin()->create());
+
+        $this->putJson("/api/admin/volunteer-tasks/{$task->id}", ['status' => 'completed'])->assertOk();
+        $this->putJson("/api/admin/volunteer-tasks/{$task->id}", ['status' => 'ongoing'])->assertOk();
+
+        $task->refresh();
+        $this->assertSame('ongoing', $task->status);
+        $this->assertNull($task->verified_by);
+        $this->assertNull($task->verified_at);
+    }
+
+    public function test_a_task_request_can_carry_a_date_but_not_a_past_one(): void
+    {
+        $user = User::factory()->volunteer()->create();
+        Volunteer::create(['user_id' => $user->id, 'type' => 'volunteer']);
+        Sanctum::actingAs($user);
+
+        $date = now()->addDays(3)->toDateString();
+        $this->postJson('/api/volunteer/tasks', ['task_name' => 'Walk the dogs', 'assigned_date' => $date])
+            ->assertCreated()->assertJsonPath('task.status', 'requested');
+        $this->assertSame($date, (string) VolunteerTask::first()->assigned_date);
+
+        $this->postJson('/api/volunteer/tasks', ['task_name' => 'Too late', 'assigned_date' => now()->subDay()->toDateString()])
+            ->assertStatus(422)->assertJsonValidationErrors(['assigned_date']);
+
+        // Still optional.
+        $this->postJson('/api/volunteer/tasks', ['task_name' => 'Whenever'])->assertCreated();
+    }
+
+    public function test_staff_can_send_proof_for_their_own_task(): void
+    {
+        Storage::fake();
+        $user = User::factory()->staff()->create();
+        $staff = Volunteer::create(['user_id' => $user->id, 'type' => 'staff']);
+        $task = $staff->tasks()->create(['task_name' => 'Restock the food shelf', 'status' => 'assigned']);
+        Sanctum::actingAs($user);
+
+        $this->postJson("/api/volunteer/tasks/{$task->id}/proof", ['proof_image' => $this->photo()])
+            ->assertOk()->assertJsonPath('task.status', 'submitted');
     }
 
     public function test_a_submitted_task_counts_towards_the_volunteers_badge(): void

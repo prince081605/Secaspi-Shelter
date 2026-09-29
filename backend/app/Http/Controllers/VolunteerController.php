@@ -26,7 +26,7 @@ class VolunteerController extends Controller
      */
     public function me(Request $request)
     {
-        $volunteer = Volunteer::with('tasks')->where('user_id', $request->user()->id)->first();
+        $volunteer = Volunteer::with('tasks.verifier')->where('user_id', $request->user()->id)->first();
 
         if (! $volunteer) {
             return response()->json(['volunteer' => null]);
@@ -49,14 +49,18 @@ class VolunteerController extends Controller
 
         $validator = Validator::make($request->all(), [
             'task_name' => ['required', 'string', 'max:150'],
+            // The day they plan to do it. Optional, and never in the past — it's a proposal.
+            'assigned_date' => ['nullable', 'date', 'after_or_equal:today'],
         ]);
 
         if ($validator->fails()) {
             return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
         }
 
+        $data = $validator->validated();
         $task = $volunteer->tasks()->create([
-            'task_name' => $validator->validated()['task_name'],
+            'task_name' => $data['task_name'],
+            'assigned_date' => $data['assigned_date'] ?? null,
             'status' => 'requested',
         ]);
 
@@ -131,7 +135,7 @@ class VolunteerController extends Controller
 
     public function adminIndex(Request $request)
     {
-        $query = Volunteer::query()->with(['user', 'tasks']);
+        $query = Volunteer::query()->with(['user', 'tasks.verifier']);
 
         if ($type = $request->query('type')) {
             $query->where('type', $type);
@@ -178,7 +182,7 @@ class VolunteerController extends Controller
             $user->forceFill(['role' => $volunteer->type])->save();
         }
 
-        return response()->json(['volunteer' => $this->toItem($volunteer->fresh(['user', 'tasks']))], 201);
+        return response()->json(['volunteer' => $this->toItem($volunteer->fresh(['user', 'tasks.verifier']))], 201);
     }
 
     public function adminUpdate(Request $request, Volunteer $volunteer)
@@ -195,7 +199,7 @@ class VolunteerController extends Controller
 
         $volunteer->update($validator->validated());
 
-        return response()->json(['volunteer' => $this->toItem($volunteer->fresh(['user', 'tasks']))]);
+        return response()->json(['volunteer' => $this->toItem($volunteer->fresh(['user', 'tasks.verifier']))]);
     }
 
     public function adminDestroy(Volunteer $volunteer)
@@ -253,7 +257,24 @@ class VolunteerController extends Controller
             return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
         }
 
-        $task->update($validator->validated());
+        $data = $validator->validated();
+        $completing = ($data['status'] ?? null) === 'completed' && $task->status !== 'completed';
+
+        // Completing a task is the admin verifying the work (usually against the proof photo).
+        // Staff run the rest of the task flow, but they also do tasks themselves, so letting
+        // them complete tasks would let them verify their own work.
+        if ($completing && ! $request->user()->hasRoleAtLeast('admin')) {
+            return response()->json(['message' => 'Only an admin can verify a task as completed.'], 403);
+        }
+
+        $task->fill($data);
+        if ($completing) {
+            $task->forceFill(['verified_by' => $request->user()->id, 'verified_at' => now()]);
+        } elseif (isset($data['status']) && $data['status'] !== 'completed') {
+            // Reopened (e.g. sent back for a better photo): the old verification no longer holds.
+            $task->forceFill(['verified_by' => null, 'verified_at' => null]);
+        }
+        $task->save();
         $statusChanged = $task->wasChanged('status');
 
         if ($statusChanged) {
@@ -263,7 +284,7 @@ class VolunteerController extends Controller
             }
         }
 
-        return response()->json(['task' => $this->toTaskItem($task)]);
+        return response()->json(['task' => $this->toTaskItem($task->load('verifier'))]);
     }
 
     public function destroyTask(VolunteerTask $task)
@@ -305,6 +326,8 @@ class VolunteerController extends Controller
             'proof_url' => $t->proof_path ? Storage::url($t->proof_path) : null,
             'proof_note' => $t->proof_note,
             'proof_submitted_at' => $t->proof_submitted_at,
+            'verified_at' => $t->verified_at,
+            'verified_by' => $t->verifier?->full_name,
         ];
     }
 }

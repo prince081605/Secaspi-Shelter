@@ -19,8 +19,9 @@ import DonationsAdmin from '../admin/DonationsAdmin';
 import ExpensesAdmin from '../admin/ExpensesAdmin';
 import UsersAdmin from '../admin/UsersAdmin';
 import { adminGetOverview, adminGetPendingCounts } from '../../lib/dashboardApi';
-import { getMyVolunteer, requestVolunteerTask } from '../../lib/volunteersApi';
+import { getMyVolunteer } from '../../lib/volunteersApi';
 import VolunteersAdmin from '../admin/VolunteersAdmin';
+import MyTaskItem, { MyTaskList, RequestTaskForm } from '../../components/MyTaskItem';
 import ReportsAdmin from '../admin/ReportsAdmin';
 import AnalyticsAdmin from '../admin/AnalyticsAdmin';
 import Messages from '../Messages';
@@ -319,18 +320,16 @@ function UserProfile({ user, onProfileUpdated }) {
   );
 }
 
-// Volunteer's own task hub: their assigned tasks + a request-a-task form. Reuses the
-// same endpoints as the public VolunteerApply page (GET /volunteer/me, POST /volunteer/tasks).
+// A volunteer's or staff member's own task hub: their tasks, each with an Update button for
+// sending proof of completion, plus a request-a-task form. Same endpoints as the public
+// VolunteerApply page (GET /volunteer/me, POST /volunteer/tasks, POST .../proof).
 function VolunteerTasksPanel() {
-  const isMobile = useIsMobile();
   const [loading, setLoading] = useState(true);
   const [volunteer, setVolunteer] = useState(null);
-  const [taskName, setTaskName] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
 
+  // Refreshes after the first load stay quiet: flipping `loading` would unmount the task list
+  // and close the task the person just updated, hiding its new completion details.
   const load = () => {
-    setLoading(true);
     getMyVolunteer()
       .then((v) => setVolunteer(v?.volunteer || null))
       .catch(() => setVolunteer(null))
@@ -338,27 +337,12 @@ function VolunteerTasksPanel() {
   };
   useEffect(() => { load(); }, []);
 
-  const handleRequestTask = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setError('');
-    try {
-      await requestVolunteerTask({ task_name: taskName });
-      setTaskName('');
-      load();
-    } catch (err) {
-      setError(err?.message || 'Failed to request task.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   if (loading) return <div className="ui-empty">Loading…</div>;
   if (!volunteer) {
     return (
       <>
         <h2 className="dashSectionTitle"><ClipboardList size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />My Tasks</h2>
-        <div className="ui-empty">Your volunteer profile isn't set up yet. Please contact the shelter team.</div>
+        <div className="ui-empty">Your personnel profile isn't set up yet. Please contact the shelter team.</div>
       </>
     );
   }
@@ -366,52 +350,15 @@ function VolunteerTasksPanel() {
   return (
     <>
       <h2 className="dashSectionTitle"><ClipboardList size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />My Tasks</h2>
-      {error && <div className="ui-error">{error}</div>}
-      <form onSubmit={handleRequestTask} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 16 }}>
-        <div className="ui-field" style={{ flex: 1, marginBottom: 0 }}>
-          <label className="ui-label ui-label-required">Task you'd like to do</label>
-          <input
-            className="ui-input"
-            value={taskName}
-            onChange={(e) => setTaskName(e.target.value)}
-            placeholder="e.g. Walk the dogs on Saturday"
-            required
-          />
-        </div>
-        <button className="ui-btn-primary" type="submit" disabled={submitting || !taskName.trim()}>
-          {submitting ? 'Sending…' : 'Request task'}
-        </button>
-      </form>
+      <RequestTaskForm onRequested={load} />
       {(!volunteer.tasks || volunteer.tasks.length === 0) ? (
         <div className="ui-empty">No tasks yet. Request one above to get started!</div>
-      ) : isMobile ? (
-        <div className="dashCardList">
-          {volunteer.tasks.map((t) => (
-            <DashCard
-              key={t.id}
-              title={t.task_name}
-              fields={[
-                { label: 'Status', value: <StatusBadge status={t.status} /> },
-                { label: 'When', value: t.status === 'requested' ? 'Awaiting confirmation' : (t.assigned_date || '—') },
-              ]}
-            />
-          ))}
-        </div>
       ) : (
-        <div className="dashTableWrap">
-          <table className="dashTable">
-            <thead><tr><th>Task</th><th>Status</th><th>When</th></tr></thead>
-            <tbody>
-              {volunteer.tasks.map((t) => (
-                <tr key={t.id}>
-                  <td>{t.task_name}</td>
-                  <td><StatusBadge status={t.status} /></td>
-                  <td>{t.status === 'requested' ? 'Awaiting confirmation' : (t.assigned_date || '—')}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <MyTaskList>
+          {volunteer.tasks.map((t) => (
+            <MyTaskItem key={t.id} task={t} onUpdated={load} />
+          ))}
+        </MyTaskList>
       )}
     </>
   );
@@ -437,6 +384,7 @@ export default function Dashboard() {
   const isAdminRole = role === 'admin';
   const isStaffPlus = atLeast(role, 'staff'); // staff + admin: operational dashboard
   const isVolunteer = role === 'volunteer';   // normal user dashboard + an extra "My Tasks" module
+  const isStaff = role === 'staff';           // staff dashboard + their own "My Tasks" module
 
   const handleLogout = async () => {
     try {
@@ -680,6 +628,16 @@ export default function Dashboard() {
               <LayoutDashboard size={16} style={{ verticalAlign: '-3px' }} /> Dashboard
             </button>
 
+            {/* Staff are assigned tasks too, and report them done the same way volunteers do. */}
+            {activeTab === 'admin' && isStaff && (
+              <button
+                className={'dashNavBtn ' + (activeNav === 'mytasks' ? 'dashNavBtnActive' : '')}
+                onClick={() => setActiveNav('mytasks')}
+              >
+                <ClipboardList size={16} style={{ verticalAlign: '-3px' }} /> My Tasks
+              </button>
+            )}
+
             {activeTab === 'admin' && visibleNavCategories.map((cat) => {
               const isOpen = !!openCategories[cat.key];
               const aggregate = cat.items.reduce((sum, it) => sum + (it.badge || 0), 0);
@@ -805,7 +763,8 @@ export default function Dashboard() {
               {activeNav === 'reminders' ? <RemindersAdmin onChanged={fetchPendingCounts} /> : null}
               {activeNav === 'donations' ? <DonationsAdmin isAdmin={isAdminRole} /> : null}
               {activeNav === 'expenses' ? <ExpensesAdmin isAdmin={isAdminRole} /> : null}
-              {activeNav === 'volunteers' ? <VolunteersAdmin /> : null}
+              {activeNav === 'volunteers' ? <VolunteersAdmin isAdmin={isAdminRole} /> : null}
+              {activeNav === 'mytasks' && isStaff ? <VolunteerTasksPanel /> : null}
               {activeNav === 'reports' ? <ReportsAdmin isAdmin={isAdminRole} /> : null}
               {/* Users & Settings are admin-only — guarded here too so a forced nav can't mount them. */}
               {isAdminRole && activeNav === 'users' ? <UsersAdmin currentUserId={user?.id} /> : null}

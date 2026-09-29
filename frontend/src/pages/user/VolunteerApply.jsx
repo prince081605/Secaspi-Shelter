@@ -2,14 +2,13 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PawPrint, PartyPopper } from 'lucide-react';
 import SiteNav from '../../components/SiteNav';
+import MyTaskItem, { MyTaskList, RequestTaskForm } from '../../components/MyTaskItem';
 import useLoginGate from '../../lib/useLoginGate';
 import { ID_TYPES } from '../../lib/validIdTypes';
 import {
   submitVolunteerApplication,
   listMyVolunteerApplications,
   getMyVolunteer,
-  requestVolunteerTask,
-  submitTaskProof,
 } from '../../lib/volunteersApi';
 
 const styles = `
@@ -22,12 +21,6 @@ const styles = `
   .volTag-approved, .volTag-assigned, .volTag-ongoing { background: #d8f3dc; color: #1b7a3d; }
   .volTag-rejected { background: #ffe0e0; color: #b42318; }
   .volTag-completed { background: var(--line); color: var(--ink-soft); }
-  .volTag-submitted { background: var(--brand-soft-2, #ead6b8); color: var(--brand-2); }
-  .volItemStacked { flex-direction: column; align-items: stretch; gap: 0.8rem; }
-  .volItemHead { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
-  .volProofSent { display: flex; gap: 0.8rem; align-items: flex-start; flex-wrap: wrap; }
-  .volProofThumb { display: block; width: 88px; height: 88px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
-  .volProofForm { border-top: 1px solid var(--line); padding-top: 0.9rem; }
   .volSuccess { padding: 2.5rem; text-align: center; }
   .volIdPreview { display: block; max-width: min(320px, 100%); margin-top: 0.7rem; border: 1px solid var(--line); border-radius: 10px; }
   @media (max-width: 560px) {
@@ -36,102 +29,6 @@ const styles = `
     .volItem { flex-wrap: wrap; }
   }
 `;
-
-// What the volunteer may do with a task, by status. A 'requested' task has not been approved
-// yet, and a 'completed' one is closed — everything between is work they can report on, including
-// 'submitted', so a blurry photo can be replaced while it is still waiting to be reviewed.
-const CAN_SEND_PROOF = ['assigned', 'ongoing', 'submitted'];
-
-const TASK_META = {
-  requested: 'Awaiting confirmation',
-  submitted: 'Proof sent — waiting for the team to sign it off',
-};
-
-/**
- * One task on the volunteer's own dashboard, and the way they report it finished: a photo of
- * the work, optionally with a note. Sending proof does not complete the task — it hands it to
- * an admin, who signs it off against what was sent.
- */
-function TaskRow({ task, onSubmitted }) {
-  const [open, setOpen] = useState(false);
-  const [image, setImage] = useState(null);
-  const [note, setNote] = useState('');
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState('');
-
-  const send = async (e) => {
-    e.preventDefault();
-    if (!image) return;
-    setSending(true);
-    setError('');
-    try {
-      const body = new FormData();
-      body.append('proof_image', image);
-      if (note.trim()) body.append('proof_note', note.trim());
-      await submitTaskProof(task.id, body);
-      setOpen(false);
-      setImage(null);
-      setNote('');
-      onSubmitted();
-    } catch (err) {
-      const fieldError = Object.values(err?.data?.errors || {})[0]?.[0];
-      setError(fieldError || err?.message || 'Failed to send your proof. Please try again.');
-    } finally {
-      setSending(false);
-    }
-  };
-
-  return (
-    <li className="volItem volItemStacked">
-      <div className="volItemHead">
-        <div>
-          <div style={{ fontWeight: 600 }}>{task.task_name}</div>
-          <div className="volItemMeta">{TASK_META[task.status] || task.assigned_date || ''}</div>
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          {CAN_SEND_PROOF.includes(task.status) && (
-            <button type="button" className="dashBtn" onClick={() => setOpen((v) => !v)}>
-              {open ? 'Cancel' : task.proof_url ? 'Replace proof' : 'Send proof'}
-            </button>
-          )}
-          <span className={`volTag volTag-${task.status}`}>{task.status}</span>
-        </div>
-      </div>
-
-      {task.proof_url && !open && (
-        <div className="volProofSent">
-          <a href={task.proof_url} target="_blank" rel="noreferrer" title="Open the full-size photo">
-            <img src={task.proof_url} alt={`Proof you sent for ${task.task_name}`} className="volProofThumb" />
-          </a>
-          {task.proof_note && <p className="ui-muted" style={{ margin: 0, fontSize: '0.85rem' }}>{task.proof_note}</p>}
-        </div>
-      )}
-
-      {open && (
-        <form onSubmit={send} className="volProofForm">
-          {error && <div className="ui-error">{error}</div>}
-          <div className="ui-field">
-            <label className="ui-label ui-label-required">Photo of the finished task</label>
-            <input
-              className="ui-input"
-              type="file"
-              accept="image/*"
-              onChange={(e) => setImage(e.target.files?.[0] || null)}
-              required
-            />
-          </div>
-          <div className="ui-field">
-            <label className="ui-label">Anything the team should know (optional)</label>
-            <textarea className="ui-input" rows={2} maxLength={1000} value={note} onChange={(e) => setNote(e.target.value)} />
-          </div>
-          <button className="ui-btn-primary" type="submit" disabled={sending || !image}>
-            {sending ? 'Sending…' : 'Send proof'}
-          </button>
-        </form>
-      )}
-    </li>
-  );
-}
 
 export default function VolunteerApply() {
   const navigate = useNavigate();
@@ -162,10 +59,6 @@ export default function VolunteerApply() {
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
 
-  // task request
-  const [taskName, setTaskName] = useState('');
-  const [taskSubmitting, setTaskSubmitting] = useState(false);
-  const [taskError, setTaskError] = useState('');
 
   const load = () => {
     setLoading(true);
@@ -178,6 +71,12 @@ export default function VolunteerApply() {
         setApplications(a?.applications || []);
       })
       .finally(() => setLoading(false));
+  };
+
+  // After proof is sent, only the task list needs refreshing — and quietly, since load() would
+  // swap the page for its loading state and close the task the person just updated.
+  const refreshTasks = () => {
+    getMyVolunteer().then((v) => setVolunteer(v?.volunteer || null)).catch(() => {});
   };
 
   useEffect(() => {
@@ -245,21 +144,6 @@ export default function VolunteerApply() {
     }
   };
 
-  const handleRequestTask = async (e) => {
-    e.preventDefault();
-    setTaskSubmitting(true);
-    setTaskError('');
-    try {
-      await requestVolunteerTask({ task_name: taskName });
-      setTaskName('');
-      load();
-    } catch (err) {
-      setTaskError(err?.message || 'Failed to request task. Please try again.');
-    } finally {
-      setTaskSubmitting(false);
-    }
-  };
-
   const hasPending = applications.some((a) => a.status === 'pending');
 
   return (
@@ -280,34 +164,18 @@ export default function VolunteerApply() {
               Request a task you'd like to help with — the team will confirm it.
             </p>
 
-            {taskError && <div className="ui-error">{taskError}</div>}
-
-            <form onSubmit={handleRequestTask} style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-              <div className="ui-field" style={{ flex: 1, marginBottom: 0 }}>
-                <label className="ui-label ui-label-required">Task you'd like to do</label>
-                <input
-                  className="ui-input"
-                  value={taskName}
-                  onChange={(e) => setTaskName(e.target.value)}
-                  placeholder="e.g. Walk the dogs on Saturday"
-                  required
-                />
-              </div>
-              <button className="ui-btn-primary" type="submit" disabled={taskSubmitting || !taskName.trim()}>
-                {taskSubmitting ? 'Sending…' : 'Request task'}
-              </button>
-            </form>
+            <RequestTaskForm onRequested={refreshTasks} />
 
             <div style={{ marginTop: '2rem' }}>
               <h2 className="ui-h2" style={{ fontSize: '1.15rem', marginBottom: '0.8rem' }}>My tasks</h2>
               {(!volunteer.tasks || volunteer.tasks.length === 0) ? (
                 <p className="ui-muted">No tasks yet. Request one above to get started!</p>
               ) : (
-                <ul className="volList">
+                <MyTaskList>
                   {volunteer.tasks.map((t) => (
-                    <TaskRow key={t.id} task={t} onSubmitted={load} />
+                    <MyTaskItem key={t.id} task={t} onUpdated={refreshTasks} />
                   ))}
-                </ul>
+                </MyTaskList>
               )}
             </div>
           </>

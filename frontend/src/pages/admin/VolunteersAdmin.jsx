@@ -25,6 +25,18 @@ import { labelForIdType as idLabelFor } from '../../lib/validIdTypes';
 // every task produces a photo worth waiting for.
 const NEXT_TASK_STATUS = { assigned: 'ongoing', ongoing: 'completed', submitted: 'completed' };
 
+// Completing a task is an admin's verification of the work (the backend enforces this too):
+// staff do tasks themselves, so they move tasks along but never complete them.
+function nextStatusFor(task, isAdmin) {
+  const next = NEXT_TASK_STATUS[task.status];
+  return next === 'completed' && !isAdmin ? null : next;
+}
+
+function nextStatusLabel(task, next) {
+  if (next !== 'completed') return `Mark ${next}`;
+  return task.status === 'submitted' ? 'Verify & complete' : 'Mark completed';
+}
+
 function fileSrc(path) {
   if (!path) return '';
   return path.startsWith('http') ? path : `${import.meta.env.VITE_API_BASE_URL}/storage/${path}`;
@@ -47,9 +59,15 @@ function TaskProof({ task }) {
           style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--line)', display: 'block' }}
         />
       </a>
-      {task.proof_note && (
-        <span style={{ fontSize: 12, color: 'var(--ink-soft)', maxWidth: 180 }}>{task.proof_note}</span>
-      )}
+      <span style={{ fontSize: 12, color: 'var(--ink-soft)', maxWidth: 200, display: 'grid', gap: 2 }}>
+        {task.proof_note && <span>{task.proof_note}</span>}
+        {task.proof_submitted_at && (
+          <span className="ui-muted">Sent {new Date(task.proof_submitted_at).toLocaleString()}</span>
+        )}
+        {task.status === 'completed' && task.verified_by && (
+          <span style={{ color: '#1b7a3d', fontWeight: 600 }}>Verified by {task.verified_by}</span>
+        )}
+      </span>
     </div>
   );
 }
@@ -177,7 +195,7 @@ function AddPersonForm({ type, onCancel, onAdded }) {
   );
 }
 
-function TasksPanel({ volunteer, onChanged }) {
+function TasksPanel({ volunteer, onChanged, isAdmin }) {
   const confirm = useConfirm();
   const isMobile = useIsMobile();
   const [taskName, setTaskName] = useState('');
@@ -211,15 +229,21 @@ function TasksPanel({ volunteer, onChanged }) {
     // Completing a task the volunteer has sent proof for is a sign-off on that proof, not a
     // status flip — say so, and point at the photo they are signing off.
     const signingOff = task.status === 'submitted' && status === 'completed';
+    const sendingBack = task.status === 'submitted' && status === 'ongoing';
     const ok = await confirm({
-      title: signingOff ? 'Sign this task off as completed?' : `Mark this task ${status}?`,
+      title: signingOff
+        ? 'Verify this task as completed?'
+        : sendingBack ? 'Send this task back?' : `Mark this task ${status}?`,
       message: signingOff
-        ? 'You are accepting the proof the volunteer sent. They are notified that the task is complete.'
-        : 'The volunteer sees the new task status on their dashboard.',
-      confirmLabel: signingOff ? 'Sign off' : `Mark ${status}`,
+        ? 'You are accepting the proof that was sent. They are notified that the task is verified complete.'
+        : sendingBack
+          ? 'The proof is not accepted. The task goes back to ongoing so they can send a better photo.'
+          : 'They see the new task status on their dashboard.',
+      confirmLabel: signingOff ? 'Verify & complete' : sendingBack ? 'Send back' : `Mark ${status}`,
+      tone: sendingBack ? 'danger' : undefined,
       summary: [
         { label: 'Task', value: task.task_name },
-        { label: 'Volunteer', value: volunteer.user?.full_name },
+        { label: volunteer.type === 'staff' ? 'Staff member' : 'Volunteer', value: volunteer.user?.full_name },
         { label: 'From', value: task.status },
         { label: 'To', value: status },
         { label: 'Note', value: signingOff ? task.proof_note : '' },
@@ -236,8 +260,30 @@ function TasksPanel({ volunteer, onChanged }) {
   };
 
   const advanceTask = (task) => {
-    const next = NEXT_TASK_STATUS[task.status];
+    const next = nextStatusFor(task, isAdmin);
     if (next) setStatus(task, next);
+  };
+
+  // The buttons a task row offers, shared by the table and the mobile cards.
+  const taskActions = (t) => {
+    const next = nextStatusFor(t, isAdmin);
+    return (
+      <>
+        {t.status === 'requested' && (
+          <button className="dashBtn dashBtnPrimary" onClick={() => setStatus(t, 'assigned')}>Confirm</button>
+        )}
+        {next && (
+          <button className="dashBtn dashBtnPrimary" onClick={() => advanceTask(t)}>{nextStatusLabel(t, next)}</button>
+        )}
+        {isAdmin && t.status === 'submitted' && (
+          <button className="dashBtn" onClick={() => setStatus(t, 'ongoing')}>Send back</button>
+        )}
+        {!isAdmin && t.status === 'submitted' && (
+          <span className="ui-muted" style={{ fontSize: 12 }}>Awaiting admin verification</span>
+        )}
+        <button className="dashBtn dashBtnDanger" aria-label={t.status === 'requested' ? 'Decline task' : 'Delete task'} onClick={() => deleteTask(t)}><X size={14} /></button>
+      </>
+    );
   };
 
   const deleteTask = async (task) => {
@@ -273,17 +319,7 @@ function TasksPanel({ volunteer, onChanged }) {
                 { label: 'Date', value: t.assigned_date || '—' },
                 t.proof_url && { label: 'Proof', value: <TaskProof task={t} /> },
               ]}
-              actions={
-                <>
-                  {t.status === 'requested' && (
-                    <button className="dashBtn dashBtnPrimary" onClick={() => setStatus(t, 'assigned')}>Confirm</button>
-                  )}
-                  {NEXT_TASK_STATUS[t.status] && (
-                    <button className="dashBtn dashBtnPrimary" onClick={() => advanceTask(t)}>Mark {NEXT_TASK_STATUS[t.status]}</button>
-                  )}
-                  <button className="dashBtn dashBtnDanger" aria-label={t.status === 'requested' ? 'Decline task' : 'Delete task'} onClick={() => deleteTask(t)}><X size={14} /></button>
-                </>
-              }
+              actions={taskActions(t)}
             />
           ))}
         </div>
@@ -299,19 +335,7 @@ function TasksPanel({ volunteer, onChanged }) {
                   <td>{t.assigned_date || '—'}</td>
                   <td><TaskProof task={t} /></td>
                   <td className="dashActionsCell">
-                    <span className="dashActionsRow">
-                      {t.status === 'requested' && (
-                        <button className="dashBtn dashBtnPrimary" onClick={() => setStatus(t, 'assigned')}>
-                          Confirm
-                        </button>
-                      )}
-                      {NEXT_TASK_STATUS[t.status] && (
-                        <button className="dashBtn dashBtnPrimary" onClick={() => advanceTask(t)}>
-                          Mark {NEXT_TASK_STATUS[t.status]}
-                        </button>
-                      )}
-                      <button className="dashBtn dashBtnDanger" aria-label={t.status === 'requested' ? 'Decline task' : 'Delete task'} onClick={() => deleteTask(t)}><X size={14} /></button>
-                    </span>
+                    <span className="dashActionsRow">{taskActions(t)}</span>
                   </td>
                 </tr>
               ))}
@@ -328,7 +352,7 @@ function TasksPanel({ volunteer, onChanged }) {
   );
 }
 
-function PersonnelRow({ personnel, onChanged }) {
+function PersonnelRow({ personnel, onChanged, isAdmin }) {
   const confirm = useConfirm();
   const isMobile = useIsMobile();
   const [expanded, setExpanded] = useState(false);
@@ -392,7 +416,7 @@ function PersonnelRow({ personnel, onChanged }) {
   const panel = (
     <>
       {personnel.performance_notes && <div><strong>Notes:</strong> {personnel.performance_notes}</div>}
-      <TasksPanel volunteer={personnel} onChanged={onChanged} />
+      <TasksPanel volunteer={personnel} onChanged={onChanged} isAdmin={isAdmin} />
     </>
   );
 
@@ -661,7 +685,7 @@ function VolunteerRequests() {
   );
 }
 
-function PersonnelRoster({ type, onChanged }) {
+function PersonnelRoster({ type, isAdmin }) {
   const isMobile = useIsMobile();
   const [personnel, setPersonnel] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -717,7 +741,7 @@ function PersonnelRoster({ type, onChanged }) {
       ) : isMobile ? (
         <div className="dashCardList" style={{ marginTop: 10 }}>
           {personnel.map((p) => (
-            <PersonnelRow key={p.id} personnel={p} onChanged={refresh} />
+            <PersonnelRow key={p.id} personnel={p} onChanged={refresh} isAdmin={isAdmin} />
           ))}
         </div>
       ) : (
@@ -734,7 +758,7 @@ function PersonnelRoster({ type, onChanged }) {
             </thead>
             <tbody>
               {personnel.map((p) => (
-                <PersonnelRow key={p.id} personnel={p} onChanged={refresh} />
+                <PersonnelRow key={p.id} personnel={p} onChanged={refresh} isAdmin={isAdmin} />
               ))}
             </tbody>
           </table>
@@ -746,7 +770,7 @@ function PersonnelRoster({ type, onChanged }) {
   );
 }
 
-export default function VolunteersAdmin() {
+export default function VolunteersAdmin({ isAdmin = false }) {
   const [mode, setMode] = useState('volunteers');
   const [subMode, setSubMode] = useState('roster');
 
@@ -789,11 +813,11 @@ export default function VolunteersAdmin() {
           {subMode === 'requests' ? (
             <VolunteerRequests />
           ) : (
-            <PersonnelRoster type="volunteer" />
+            <PersonnelRoster type="volunteer" isAdmin={isAdmin} />
           )}
         </>
       ) : (
-        <PersonnelRoster type="staff" />
+        <PersonnelRoster type="staff" isAdmin={isAdmin} />
       )}
     </>
   );
