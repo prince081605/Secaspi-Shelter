@@ -15,6 +15,7 @@ import useConfirm from '../../lib/useConfirm';
 import Pagination from '../../components/Pagination';
 import DashCard from '../../components/DashCard';
 import useIsMobile from '../../lib/useIsMobile';
+import { SPECIES } from '../../lib/species';
 
 // The intake queue (rescue/surrender/stray triage → "Add to Animals" conversion) was extracted
 // from AnimalsAdmin.jsx (audit §0.2 / §3 C-1 / §7 C) — a distinct domain that bloated that file
@@ -107,7 +108,10 @@ function NewIntakeForm({ onCancel, onCreated }) {
         </div>
         <div className="ui-field">
           <label className="ui-label">Species</label>
-          <input className="ui-input" value={form.species} onChange={setField('species')} />
+          <select className="ui-input" value={form.species} onChange={setField('species')}>
+            <option value="">Not sure yet</option>
+            {SPECIES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select>
         </div>
         <div className="ui-field">
           <label className="ui-label">Breed</label>

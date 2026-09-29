@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class IntakeController extends Controller
 {
@@ -44,13 +45,15 @@ class IntakeController extends Controller
 
     public function adminStore(Request $request)
     {
+        AnimalController::normalizeSpecies($request);
+
         $validator = Validator::make($request->all(), [
             'intake_type' => ['required', 'in:' . implode(',', self::TYPES)],
             'reporter_name' => ['nullable', 'string', 'max:150'],
             'contact_number' => ['nullable', 'string', 'max:50'],
             'location' => ['nullable', 'string'],
             'animal_name' => ['nullable', 'string', 'max:100'],
-            'species' => ['nullable', 'string', 'max:50'],
+            'species' => ['nullable', Rule::in(Animal::SPECIES)],
             'breed' => ['nullable', 'string', 'max:100'],
             'estimated_age' => ['nullable', 'string', 'max:50'],
             'gender' => ['nullable', 'in:male,female'],
@@ -83,13 +86,16 @@ class IntakeController extends Controller
 
     public function adminUpdate(Request $request, Intake $intake)
     {
+        AnimalController::normalizeSpecies($request);
+
         $validator = Validator::make($request->all(), [
             'intake_type' => ['sometimes', 'in:' . implode(',', self::TYPES)],
             'reporter_name' => ['nullable', 'string', 'max:150'],
             'contact_number' => ['nullable', 'string', 'max:50'],
             'location' => ['nullable', 'string'],
             'animal_name' => ['nullable', 'string', 'max:100'],
-            'species' => ['nullable', 'string', 'max:50'],
+            // An intake logged before species became dog/cat-only may keep what it has.
+            'species' => ['nullable', Rule::in([...Animal::SPECIES, mb_strtolower((string) $intake->species)])],
             'breed' => ['nullable', 'string', 'max:100'],
             'estimated_age' => ['nullable', 'string', 'max:50'],
             'gender' => ['nullable', 'in:male,female'],

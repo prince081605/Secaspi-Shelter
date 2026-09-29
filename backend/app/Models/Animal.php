@@ -7,6 +7,10 @@ class Animal extends Model
 {
     public $timestamps = false;
 
+    // The shelter takes in dogs and cats only. Stored lowercase (the Matchmaker filters on it);
+    // animals and intakes both validate against this list.
+    public const SPECIES = ['dog', 'cat'];
+
     protected $fillable = [
         'name',
         'species',

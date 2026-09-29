@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class AnimalController extends Controller
 {
@@ -144,10 +145,11 @@ class AnimalController extends Controller
     public function store(Request $request)
     {
         $this->normalizeBehavioralAssessment($request);
+        self::normalizeSpecies($request);
 
         $validator = Validator::make($request->all(), [
             'name' => ['required', 'string', 'max:100'],
-            'species' => ['required', 'string', 'max:50'],
+            'species' => ['required', Rule::in(Animal::SPECIES)],
             'breed' => ['nullable', 'string', 'max:100'],
             'age' => ['nullable', 'integer', 'min:0'],
             'gender' => ['nullable', 'in:male,female'],
@@ -204,10 +206,13 @@ class AnimalController extends Controller
     public function update(Request $request, Animal $animal)
     {
         $this->normalizeBehavioralAssessment($request);
+        self::normalizeSpecies($request);
 
         $validator = Validator::make($request->all(), [
             'name' => ['sometimes', 'string', 'max:100'],
-            'species' => ['sometimes', 'string', 'max:50'],
+            // An animal recorded before species became dog/cat-only can keep what it has, so
+            // editing its other fields doesn't fail — but it can't be changed to anything new.
+            'species' => ['sometimes', Rule::in([...Animal::SPECIES, mb_strtolower((string) $animal->species)])],
             'breed' => ['nullable', 'string', 'max:100'],
             'age' => ['nullable', 'integer', 'min:0'],
             'gender' => ['nullable', 'in:male,female'],
@@ -234,6 +239,14 @@ class AnimalController extends Controller
      * the create form, which can't send a native array). Coerce the string form to
      * an array up front so a single `array` validation rule covers both.
      */
+    /** "Dog", " dog " and "dog" are the same species. Shared with IntakeController. */
+    public static function normalizeSpecies(Request $request): void
+    {
+        if (is_string($request->input('species'))) {
+            $request->merge(['species' => mb_strtolower(trim($request->input('species')))]);
+        }
+    }
+
     private function normalizeBehavioralAssessment(Request $request): void
     {
         $value = $request->input('behavioral_assessment');

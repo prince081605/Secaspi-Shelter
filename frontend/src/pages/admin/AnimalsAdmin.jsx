@@ -20,6 +20,7 @@ import Pagination from '../../components/Pagination';
 import DashCard from '../../components/DashCard';
 import useIsMobile from '../../lib/useIsMobile';
 import IntakesAdmin from './IntakesAdmin';
+import { SPECIES, isKnownSpecies } from '../../lib/species';
 import './AnimalsAdmin.css';
 
 const STATUSES = ['available', 'adopted', 'fostered', 'medical', 'quarantine', 'archived'];
@@ -79,6 +80,8 @@ function AnimalForm({ initial, onCancel, onSaved }) {
     for (const key of Object.keys(emptyForm)) {
       if (merged[key] === null || merged[key] === undefined) merged[key] = emptyForm[key];
     }
+    // Older records may say "Dog"; the dropdown's values are lowercase.
+    merged.species = String(merged.species).toLowerCase();
     return merged;
   });
   const [photoFiles, setPhotoFiles] = useState(null);
@@ -250,7 +253,15 @@ function AnimalForm({ initial, onCancel, onSaved }) {
         </div>
         <div className="ui-field">
           <label className="ui-label ui-label-required">Species</label>
-          <input className="ui-input" value={form.species} onChange={setField('species')} required />
+          <select className="ui-input" value={form.species} onChange={setField('species')} required>
+            <option value="">Select species</option>
+            {SPECIES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            {/* An older record may carry a species from before this was a dropdown; keep it
+                selectable so editing the animal does not silently change it. */}
+            {form.species && !isKnownSpecies(form.species) && (
+              <option value={form.species}>{form.species}</option>
+            )}
+          </select>
         </div>
         <div className="ui-field">
           <label className="ui-label">Breed</label>
