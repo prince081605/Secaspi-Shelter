@@ -23,7 +23,6 @@ const Donate = lazy(() => import('./pages/user/Donate'));
 const Transparency = lazy(() => import('./pages/user/Transparency'));
 const VisitationBooking = lazy(() => import('./pages/user/VisitationBooking'));
 const VolunteerApply = lazy(() => import('./pages/user/VolunteerApply'));
-const DonationHistory = lazy(() => import('./pages/user/DonationHistory'));
 const Receipt = lazy(() => import('./pages/user/Receipt'));
 const Checkout = lazy(() => import('./pages/user/Checkout'));
 const NotFound = lazy(() => import('./pages/user/NotFound'));
@@ -117,14 +116,9 @@ export default function AppRouter() {
             <Route path="/donate" element={<Donate />} />
             <Route path="/visit" element={<VisitationBooking />} />
             <Route path="/volunteer" element={<VolunteerApply />} />
-            <Route
-              path="/donations"
-              element={
-                <RequireAuth>
-                  <DonationHistory />
-                </RequireAuth>
-              }
-            />
+            {/* Donation history is a module inside the user dashboard now; the old address still
+                works for the receipt, checkout and donate pages that link to it. */}
+            <Route path="/donations" element={<Navigate to="/dashboard" state={{ nav: 'mydonations' }} replace />} />
             <Route
               path="/donations/:id"
               element={

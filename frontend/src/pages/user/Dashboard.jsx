@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import './Dashboard.css';
 import { auth } from '../../lib/auth';
 import { listMyAdoptionApplications, listMyFosterApplications } from '../../lib/animalsApi';
@@ -26,6 +26,7 @@ import ReportsAdmin from '../admin/ReportsAdmin';
 import AnalyticsAdmin from '../admin/AnalyticsAdmin';
 import Messages from '../Messages';
 import ImpactPanel from './ImpactPanel';
+import MyDonationsPanel from './MyDonationsPanel';
 import SettingsAdmin from '../admin/SettingsAdmin';
 import VisitationsAdmin from '../admin/VisitationsAdmin';
 import RemindersAdmin from '../admin/RemindersAdmin';
@@ -366,6 +367,9 @@ function VolunteerTasksPanel() {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  // Other pages can open a specific user-dashboard module, e.g. /donations redirects here with
+  // { nav: 'mydonations' } so links to the old standalone page land on the module instead.
+  const requestedNav = useLocation().state?.nav;
   const [role, setRole] = useState('');
   const [tab, setTab] = useState('user');
   const [user, setUser] = useState(null);
@@ -406,7 +410,7 @@ export default function Dashboard() {
         setRole(r);
         // Land each role on its primary dashboard: staff/admin → operations, everyone else
         // (users and volunteers) → the user dashboard.
-        setTab(atLeast(r, 'staff') ? 'admin' : 'user');
+        setTab(atLeast(r, 'staff') && !requestedNav ? 'admin' : 'user');
       } catch {
         if (!mounted) return;
         setRole(fallbackRole);
@@ -553,7 +557,7 @@ export default function Dashboard() {
     }))
     .filter((cat) => cat.items.length > 0);
 
-  const [activeNav, setActiveNav] = useState('dashboard');
+  const [activeNav, setActiveNav] = useState(requestedNav || 'dashboard');
   // On phones the sidebar collapses behind a ☰ toggle; selecting a nav item closes it (see effect
   // below) so the chosen panel is shown instead of the long nav list.
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -691,7 +695,10 @@ export default function Dashboard() {
                 >
                   <Trophy size={16} style={{ verticalAlign: '-3px' }} /> My Impact
                 </button>
-                <button className="dashNavBtn" onClick={() => navigate('/donations')}>
+                <button
+                  className={'dashNavBtn ' + (activeNav === 'mydonations' ? 'dashNavBtnActive' : '')}
+                  onClick={() => setActiveNav('mydonations')}
+                >
                   <HandCoins size={16} style={{ verticalAlign: '-3px' }} /> My Donations
                 </button>
                 <button
@@ -784,6 +791,7 @@ export default function Dashboard() {
               {activeNav === 'mytasks' && isVolunteer ? <VolunteerTasksPanel /> : null}
               {activeNav === 'messages' ? <Messages /> : null}
               {activeNav === 'impact' ? <ImpactPanel /> : null}
+              {activeNav === 'mydonations' ? <MyDonationsPanel /> : null}
               {activeNav === 'profile' ? <UserProfile key={user?.id} user={user} onProfileUpdated={setUser} /> : null}
               {/* default user sections */}
               {activeNav === 'dashboard' ? <UserProfile key={user?.id} user={user} onProfileUpdated={setUser} /> : null}
