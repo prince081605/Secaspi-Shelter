@@ -19,6 +19,9 @@ class AttendanceController extends Controller
     /** Longest shift an admin may record in one entry. */
     private const MAX_RECORD_MINUTES = 24 * 60;
 
+    /** How far ahead of the server's clock an admin-entered time may be (device clock drift). */
+    private const CLOCK_SKEW_MINUTES = 5;
+
     // ---- Self-service -------------------------------------------------------------------------
 
     /** The signed-in person's clock: open shift, recent shifts, and hour totals. */
@@ -167,6 +170,32 @@ class AttendanceController extends Controller
         return response()->json(['attendance' => $this->toItem($attendance->load(['volunteer.user', 'recorder']))]);
     }
 
+    /**
+     * Close someone's open shift at the server's current time — "Time out" in the log.
+     *
+     * Stamped here rather than sent by the page: the admin's device clock is never exactly the
+     * server's, and a time-out a few seconds behind it failed `after:time_in` on a fresh shift
+     * (or `before_or_equal:now` when ahead). Capped like a self clock-out, since this is usually
+     * someone who forgot; an exact longer shift can still be set with Edit.
+     */
+    public function adminTimeOut(Request $request, VolunteerAttendance $attendance)
+    {
+        if (! $attendance->isOpen()) {
+            return response()->json(['message' => 'This shift has already been timed out.'], 409);
+        }
+
+        $now = now();
+        $attendance->fill([
+            'time_out' => $now,
+            'minutes' => min(VolunteerAttendance::minutesBetween($attendance->time_in, $now), VolunteerAttendance::MAX_SELF_MINUTES),
+            'notes' => $attendance->notes ?: 'Timed out by admin',
+        ]);
+        $attendance->forceFill(['recorded_by' => $request->user()->id])->save();
+        $attendance->volunteer->recalculateHours();
+
+        return response()->json(['attendance' => $this->toItem($attendance->load(['volunteer.user', 'recorder']))]);
+    }
+
     public function adminDestroy(VolunteerAttendance $attendance)
     {
         $volunteer = $attendance->volunteer;
@@ -185,9 +214,14 @@ class AttendanceController extends Controller
 
     private function recordValidator(Request $request)
     {
+        // "Not in the future" is judged by the server's clock, but the times come from the admin's
+        // device, which is never set exactly the same. A few minutes' grace stops "now" typed on a
+        // slightly-fast device from being rejected as a future time.
+        $latest = now()->addMinutes(self::CLOCK_SKEW_MINUTES)->toIso8601String();
+
         return Validator::make($request->all(), [
-            'time_in' => ['required', 'date', 'before_or_equal:now'],
-            'time_out' => ['nullable', 'date', 'after:time_in', 'before_or_equal:now'],
+            'time_in' => ['required', 'date', "before_or_equal:{$latest}"],
+            'time_out' => ['nullable', 'date', 'after:time_in', "before_or_equal:{$latest}"],
             'notes' => ['nullable', 'string', 'max:255'],
         ])->after(function ($validator) use ($request) {
             if ($validator->errors()->isNotEmpty() || ! $request->filled('time_out')) {

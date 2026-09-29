@@ -4,6 +4,7 @@ import {
   adminCreateAttendance,
   adminDeleteAttendance,
   adminListAttendance,
+  adminTimeOutAttendance,
   adminUpdateAttendance,
   formatDateTime,
   formatDuration,
@@ -144,7 +145,7 @@ export default function AttendanceAdmin({ isAdmin = false }) {
   const closeShift = async (r) => {
     const ok = await confirm({
       title: `Time out ${r.volunteer?.full_name || 'this person'} now?`,
-      message: 'Closes their open shift at the current time and adds it to their hours.',
+      message: 'Closes their open shift at the current time and adds it to their hours (at most 12 — use Edit to record a longer shift).',
       confirmLabel: 'Time out',
       summary: [
         { label: 'On duty since', value: formatDateTime(r.time_in) },
@@ -153,7 +154,7 @@ export default function AttendanceAdmin({ isAdmin = false }) {
     });
     if (!ok) return;
     try {
-      await adminUpdateAttendance(r.id, { time_in: r.time_in, time_out: new Date().toISOString(), notes: r.notes || 'Timed out by admin' });
+      await adminTimeOutAttendance(r.id);
       refresh();
     } catch (err) {
       setError(Object.values(err?.data?.errors || {})[0]?.[0] || err?.message || 'Failed to time out.');

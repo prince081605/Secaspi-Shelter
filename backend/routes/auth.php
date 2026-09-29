@@ -189,6 +189,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('/admin/attendance', [AttendanceController::class, 'adminIndex'])->middleware('role:staff');
     Route::post('/admin/volunteers/{volunteer}/attendance', [AttendanceController::class, 'adminStore'])->middleware('admin');
     Route::put('/admin/attendance/{attendance}', [AttendanceController::class, 'adminUpdate'])->middleware('admin');
+    Route::post('/admin/attendance/{attendance}/time-out', [AttendanceController::class, 'adminTimeOut'])->middleware('admin');
     Route::delete('/admin/attendance/{attendance}', [AttendanceController::class, 'adminDestroy'])->middleware('admin');
 
     // ---- Intake management (Phase 6) ----

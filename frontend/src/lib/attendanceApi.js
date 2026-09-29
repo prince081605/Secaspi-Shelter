@@ -35,6 +35,11 @@ export async function adminUpdateAttendance(id, payload) {
   return api.put(`/api/admin/attendance/${id}`, payload);
 }
 
+// Closes an open shift at the server's time — the page never sends a clock reading of its own.
+export async function adminTimeOutAttendance(id) {
+  return api.post(`/api/admin/attendance/${id}/time-out`);
+}
+
 export async function adminDeleteAttendance(id) {
   return api.delete(`/api/admin/attendance/${id}`);
 }

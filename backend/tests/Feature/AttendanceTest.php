@@ -131,6 +131,65 @@ class AttendanceTest extends TestCase
         $this->assertEquals(5, $volunteer->fresh()->hours_rendered);
     }
 
+    public function test_an_admin_can_time_out_a_shift_the_moment_it_starts(): void
+    {
+        [$user, $volunteer] = $this->person();
+        Sanctum::actingAs($user);
+        $this->postJson('/api/volunteer/attendance/clock-in')->assertCreated();
+        $record = VolunteerAttendance::first();
+
+        // No clock reading comes from the admin's device — the server stamps the time-out, so a
+        // device a few seconds behind can no longer land it before the time-in.
+        $admin = User::factory()->admin()->create();
+        Sanctum::actingAs($admin);
+        $this->postJson("/api/admin/attendance/{$record->id}/time-out")->assertOk()
+            ->assertJsonPath('attendance.minutes', 0)
+            ->assertJsonPath('attendance.recorded_by', $admin->full_name)
+            ->assertJsonPath('attendance.notes', 'Timed out by admin');
+
+        $this->assertNotNull($record->fresh()->time_out);
+        $this->postJson("/api/admin/attendance/{$record->id}/time-out")->assertStatus(409);
+    }
+
+    public function test_an_admin_can_time_out_a_shift_left_open_for_days_and_it_is_capped(): void
+    {
+        [$user, $volunteer] = $this->person();
+        Sanctum::actingAs($user);
+        $this->postJson('/api/volunteer/attendance/clock-in')->assertCreated();
+        $this->travel(30)->hours();
+
+        Sanctum::actingAs(User::factory()->admin()->create());
+        $this->postJson('/api/admin/attendance/'.VolunteerAttendance::first()->id.'/time-out')->assertOk()
+            ->assertJsonPath('attendance.minutes', VolunteerAttendance::MAX_SELF_MINUTES);
+        $this->assertEquals(12, $volunteer->fresh()->hours_rendered);
+    }
+
+    public function test_only_admins_can_time_someone_out(): void
+    {
+        [$user] = $this->person();
+        Sanctum::actingAs($user);
+        $this->postJson('/api/volunteer/attendance/clock-in')->assertCreated();
+
+        Sanctum::actingAs(User::factory()->staff()->create());
+        $this->postJson('/api/admin/attendance/'.VolunteerAttendance::first()->id.'/time-out')->assertForbidden();
+        $this->assertNull(VolunteerAttendance::first()->time_out);
+    }
+
+    public function test_a_time_entered_on_a_slightly_fast_device_is_not_a_future_time(): void
+    {
+        [, $volunteer] = $this->person();
+        Sanctum::actingAs(User::factory()->admin()->create());
+
+        $this->postJson("/api/admin/volunteers/{$volunteer->id}/attendance", [
+            'time_in' => now()->subHours(2)->toIso8601String(),
+            'time_out' => now()->addMinute()->toIso8601String(),
+        ])->assertCreated();
+
+        $this->postJson("/api/admin/volunteers/{$volunteer->id}/attendance", [
+            'time_in' => now()->addHour()->toIso8601String(),
+        ])->assertStatus(422)->assertJsonValidationErrors(['time_in']);
+    }
+
     public function test_a_record_must_end_after_it_starts_and_last_at_most_a_day(): void
     {
         [, $volunteer] = $this->person();
