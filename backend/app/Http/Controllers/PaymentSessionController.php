@@ -30,6 +30,11 @@ class PaymentSessionController extends Controller
     {
         $session = $this->resolve($request, $token);
 
+        // A hosted provider may have taken the payment since we last looked; this is how the
+        // PayMongo return page learns about it when no webhook can reach us (localhost, or a
+        // sleeping instance). Checked before expiry, so a late-but-paid session settles.
+        $session = $this->gateway->sync($session);
+
         // Expire lazily so the state a donor sees is always current, whether or not
         // the scheduler that runs payments:expire-sessions exists in this environment.
         if ($session->hasExpired()) {
@@ -122,6 +127,9 @@ class PaymentSessionController extends Controller
         return [
             'token'         => $session->token,
             'rail'          => $session->rail,
+            'provider'      => $session->provider,
+            // PayMongo's hosted page, so the return page can offer "Continue to PayMongo".
+            'checkout_url'  => $session->checkout_url,
             'amount'        => $session->amount,
             'status'        => $session->status,
             'failure_code'  => $session->failure_code,

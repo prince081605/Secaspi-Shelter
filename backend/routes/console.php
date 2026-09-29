@@ -1,10 +1,12 @@
 <?php
 
 use App\Contracts\PaymentGateway;
+use App\Exceptions\PaymentException;
 use App\Models\PaymentSession;
 use App\Models\Reminder;
 use App\Models\User;
 use App\Notifications\ReminderDue;
+use App\Services\PaymongoGateway;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Hash;
@@ -169,3 +171,26 @@ Artisan::command('payments:expire-sessions', function (PaymentGateway $gateway) 
 })->purpose('Expire abandoned checkout sessions');
 
 Schedule::command('payments:expire-sessions')->hourly();
+
+/**
+ * One-time setup: tell PayMongo where to send "checkout paid" events. Run it once per
+ * environment that PayMongo can reach (the deployed backend — never localhost), then put
+ * the printed secret in that environment's PAYMONGO_WEBHOOK_SECRET.
+ */
+Artisan::command('paymongo:webhook {url? : Defaults to APP_URL/api/webhooks/paymongo}', function (PaymongoGateway $gateway) {
+    $url = $this->argument('url') ?: rtrim(config('app.url'), '/').'/api/webhooks/paymongo';
+
+    try {
+        $webhook = $gateway->registerWebhook($url);
+    } catch (PaymentException $e) {
+        $this->error($e->getMessage().' (details are in the log)');
+
+        return 1;
+    }
+
+    $this->info("Registered {$webhook['id']} → {$url}");
+    $this->line('Set this as PAYMONGO_WEBHOOK_SECRET where that URL is served:');
+    $this->line($webhook['attributes']['secret_key'] ?? '(no secret_key in the response)');
+
+    return 0;
+})->purpose('Register this app\'s webhook URL with PayMongo');

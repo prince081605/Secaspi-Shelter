@@ -127,9 +127,9 @@ export default function AppRouter() {
                 </RequireAuth>
               }
             />
-            {/* The simulated payment gateway (AspinPay). A real hosted checkout lives on the
-                processor's own domain; this one is a route here, so it still needs a session —
-                the backend re-checks that the token's donation belongs to the caller. */}
+            {/* The simulated checkout (AspinPay), and the page PayMongo returns donors to.
+                Either way it needs a session — the backend re-checks that the token's
+                donation belongs to the caller. */}
             <Route
               path="/pay/:token"
               element={

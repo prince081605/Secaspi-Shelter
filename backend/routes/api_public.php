@@ -4,6 +4,7 @@ use App\Http\Controllers\AnimalController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\ImpactController;
 use App\Http\Controllers\MatchmakerController;
+use App\Http\Controllers\PaymongoWebhookController;
 use App\Http\Controllers\PublicHomeController;
 use App\Http\Controllers\RescueReportController;
 use App\Http\Controllers\SettingController;
@@ -13,6 +14,10 @@ use Illuminate\Support\Facades\Route;
 // nightly backups still run on a sleeping Render Free service. Auth is the X-Backup-Token
 // header (checked in the controller), not Sanctum — hence its place among the public routes.
 Route::post('/internal/backup', [BackupController::class, 'run']);
+
+// PayMongo payment confirmations. Server-to-server, so no Sanctum session: the request is
+// authenticated by its Paymongo-Signature header, checked in the controller.
+Route::post('/webhooks/paymongo', PaymongoWebhookController::class)->middleware('throttle:120,1');
 
 Route::get('/home/settings', [SettingController::class, 'publicIndex']);
 

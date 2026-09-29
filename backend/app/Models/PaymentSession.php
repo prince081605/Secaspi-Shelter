@@ -12,6 +12,9 @@ class PaymentSession extends Model
         'donation_id',
         'token',
         'rail',
+        'provider',
+        'provider_ref',
+        'checkout_url',
         'amount',
         'status',
         'failure_code',
@@ -40,6 +43,15 @@ class PaymentSession extends Model
     public function hasExpired(): bool
     {
         return $this->expires_at !== null && $this->expires_at->isPast();
+    }
+
+    /**
+     * Where to send the donor to pay: the provider's hosted page when there is one,
+     * otherwise our own simulated checkout.
+     */
+    public function payUrl(): string
+    {
+        return $this->checkout_url ?: "/pay/{$this->token}";
     }
 
     public function attemptsLeft(): int

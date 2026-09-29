@@ -1,8 +1,21 @@
 import { api } from './api';
 
-// The AspinPay checkout (see backend App\Services\SimulatedGateway). Every call is
-// keyed by the session token from the /pay/:token URL; the backend re-checks that the
-// donation behind that token belongs to the signed-in donor.
+// The checkout API (backend App\Contracts\PaymentGateway). Every call is keyed by the
+// session token from the /pay/:token URL; the backend re-checks that the donation behind
+// that token belongs to the signed-in donor.
+
+/**
+ * Send the donor to a checkout link from the backend. With PayMongo that is their hosted
+ * page on another site (an absolute URL), which the router cannot reach; the simulated
+ * checkout is one of our own routes.
+ */
+export function goToCheckout(url, navigate, options) {
+  if (/^https?:\/\//i.test(url)) {
+    window.location.assign(url);
+  } else {
+    navigate(url, options);
+  }
+}
 
 export async function getCheckout(token) {
   return api.get(`/api/payments/${token}`);

@@ -8,9 +8,12 @@ use App\Models\PaymentSession;
 /**
  * The checkout lifecycle, in the shape every hosted payment provider uses:
  * create a session, send the payer to it, authorise their instrument, confirm
- * the one-time code, settle. App\Services\SimulatedGateway is the only
- * implementation today (the shelter is not a registered merchant), but a real
- * provider slots in behind this interface without touching controllers.
+ * the one-time code, settle. Two implementations, picked by PAYMENTS_DRIVER:
+ *
+ *   App\Services\SimulatedGateway — runs the whole checkout in-app, moves no money.
+ *   App\Services\PaymongoGateway  — hands the donor to PayMongo's hosted page; the
+ *                                   instrument and OTP steps happen there, and the
+ *                                   result comes back through sync() and the webhook.
  */
 interface PaymentGateway
 {
@@ -28,4 +31,10 @@ interface PaymentGateway
 
     /** Sweep a session whose window has closed. Safe to call on any session. */
     public function expire(PaymentSession $session): PaymentSession;
+
+    /**
+     * Bring a session up to date with the provider — settling it if the provider says it
+     * has been paid. Safe to call on any session, as often as you like.
+     */
+    public function sync(PaymentSession $session): PaymentSession;
 }

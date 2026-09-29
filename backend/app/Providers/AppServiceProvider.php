@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Contracts\PaymentGateway;
+use App\Services\PaymongoGateway;
 use App\Services\SimulatedGateway;
 use Illuminate\Support\ServiceProvider;
 
@@ -18,6 +19,7 @@ class AppServiceProvider extends ServiceProvider
         // which gateway it is talking to.
         $this->app->singleton(PaymentGateway::class, function () {
             return match (config('payments.driver')) {
+                'paymongo' => new PaymongoGateway(),
                 default => new SimulatedGateway(),
             };
         });

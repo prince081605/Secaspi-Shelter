@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HandCoins } from 'lucide-react';
 import { listDonations } from '../../lib/donationsApi';
-import { startCheckout } from '../../lib/paymentsApi';
+import { goToCheckout, startCheckout } from '../../lib/paymentsApi';
 import { labelFor } from '../../lib/donationCategories';
 import StatusBadge from '../../components/StatusBadge';
 import DashCard from '../../components/DashCard';
@@ -52,7 +52,7 @@ export default function MyDonationsPanel() {
     setActionError('');
     try {
       const { checkout_url: url } = await startCheckout(id);
-      navigate(url);
+      goToCheckout(url, navigate);
     } catch (e) {
       setActionError(e?.message || 'Could not reopen this payment. Please try again.');
       setResuming(null);

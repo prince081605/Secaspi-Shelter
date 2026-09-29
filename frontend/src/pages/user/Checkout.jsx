@@ -1,26 +1,33 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   authorizePayment,
   cancelPayment,
   confirmOtp,
   getCheckout,
+  goToCheckout,
   startCheckout,
 } from '../../lib/paymentsApi';
 import './Checkout.css';
 
 /*
-  The AspinPay hosted checkout.
+  /pay/:token — one page, two jobs, depending on which gateway opened the session.
 
-  This is a simulated payment gateway — see backend App\Services\SimulatedGateway. It
-  reproduces the steps a real processor puts a payer through (authorise the instrument,
-  answer an OTP, settle) but no money moves and no bank is contacted. The shelter is not
-  a registered merchant, so a live gateway was never an option; the lifecycle is real
-  even though the money is not.
+  Simulated (AspinPay, backend App\Services\SimulatedGateway): the whole checkout runs
+  here. It reproduces the steps a real processor puts a payer through (authorise the
+  instrument, answer an OTP, settle) but no money moves and no bank is contacted.
+
+  PayMongo (App\Services\PaymongoGateway): the donor pays on PayMongo's own page and is
+  sent back here — to the plain URL on success, with ?cancelled=1 if they backed out.
+  This page then waits for the backend to confirm the payment with PayMongo; it never
+  treats arriving here as proof of payment.
 
   Notably absent: SiteNav. A hand-off to a payment processor should look like leaving
   the site, and the visual break is doing real work here.
 */
+
+// How often the PayMongo return page asks whether the payment has been confirmed.
+const POLL_MS = 3000;
 
 const RAILS = {
   gcash: {
@@ -82,6 +89,8 @@ function useCountdown(expiresAt, active) {
 export default function Checkout() {
   const { token } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnedCancelled = searchParams.get('cancelled') === '1';
 
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -95,6 +104,7 @@ export default function Checkout() {
   const [otp, setOtp] = useState('');
 
   const redirectTimer = useRef(null);
+  const cancelSent = useRef(false);
 
   useEffect(() => {
     let mounted = true;
@@ -114,8 +124,11 @@ export default function Checkout() {
   const donationId = session?.donation?.id;
   const status = session?.status;
   const rail = RAILS[session?.rail] || RAILS.gcash;
+  const hosted = session?.provider === 'paymongo';
   const isLive = status === 'open' || status === 'awaiting_otp';
-  const secondsLeft = useCountdown(session?.expires_at, isLive);
+  // The donor is on PayMongo's page, not this one, while the window runs — a countdown
+  // here would only alarm someone who has already paid and is waiting to be confirmed.
+  const secondsLeft = useCountdown(session?.expires_at, isLive && !hosted);
 
   // Settled: hand the donor back to the merchant, the way a real gateway returns you to
   // the shop. The receipt is the confirmation, so that is where they land.
@@ -131,6 +144,16 @@ export default function Checkout() {
     if (secondsLeft !== 0 || !isLive) return;
     getCheckout(token).then((d) => setSession(d?.session || null)).catch(() => {});
   }, [secondsLeft, isLive, token]);
+
+  // Back from PayMongo, waiting on its confirmation. Each read makes the backend ask
+  // PayMongo directly, so this settles even when no webhook can reach us.
+  useEffect(() => {
+    if (!hosted || status !== 'open' || returnedCancelled) return undefined;
+    const id = setInterval(() => {
+      getCheckout(token).then((d) => setSession(d?.session || null)).catch(() => {});
+    }, POLL_MS);
+    return () => clearInterval(id);
+  }, [hosted, status, returnedCancelled, token]);
 
   const run = useCallback(async (fn) => {
     setBusy(true);
@@ -150,6 +173,15 @@ export default function Checkout() {
       setBusy(false);
     }
   }, [token]);
+
+  // The donor pressed back/cancel on PayMongo's page. Close the session here too so the
+  // link stops being payable. The backend checks PayMongo first, so a donor who paid and
+  // then hit Back is settled, not cancelled. Guarded against StrictMode's double effect.
+  useEffect(() => {
+    if (!hosted || !isLive || !returnedCancelled || cancelSent.current) return;
+    cancelSent.current = true;
+    run(() => cancelPayment(token));
+  }, [hosted, isLive, returnedCancelled, run, token]);
 
   const handleAuthorize = (e) => {
     e.preventDefault();
@@ -173,7 +205,7 @@ export default function Checkout() {
     try {
       const { checkout_url: url } = await startCheckout(donationId);
       // A retry is a brand new session with its own token, so this is a real navigation.
-      navigate(url, { replace: true });
+      goToCheckout(url, navigate, { replace: true });
     } catch (e) {
       setError(e?.message || 'Could not start a new payment. Please try from your donation history.');
       setBusy(false);
@@ -210,27 +242,31 @@ export default function Checkout() {
 
   return (
     <div className="apay">
-      <div className="apaySim">
-        ⚠ SIMULATION — this is a practice checkout. No real money moves.
-      </div>
+      {!hosted && (
+        <>
+          <div className="apaySim">
+            ⚠ SIMULATION — this is a practice checkout. No real money moves.
+          </div>
 
-      <details className="apayDemo">
-        <summary>Demo credentials</summary>
-        <table>
-          <tbody>
-            <tr><td>any number</td><td>Payment succeeds</td></tr>
-            <tr><td>123456</td><td>The one-time code</td></tr>
-            <tr><td>09000000001</td><td>Forces “insufficient funds”</td></tr>
-            <tr><td>09000000002</td><td>Forces a bank decline</td></tr>
-            <tr><td>09000000003</td><td>Forces “account not found”</td></tr>
-          </tbody>
-        </table>
-      </details>
+          <details className="apayDemo">
+            <summary>Demo credentials</summary>
+            <table>
+              <tbody>
+                <tr><td>any number</td><td>Payment succeeds</td></tr>
+                <tr><td>123456</td><td>The one-time code</td></tr>
+                <tr><td>09000000001</td><td>Forces “insufficient funds”</td></tr>
+                <tr><td>09000000002</td><td>Forces a bank decline</td></tr>
+                <tr><td>09000000003</td><td>Forces “account not found”</td></tr>
+              </tbody>
+            </table>
+          </details>
+        </>
+      )}
 
       <div className="apayBrand">
         <span className="apayBrandMark" aria-hidden="true">🔒</span>
-        AspinPay
-        <span className="apayBrandSub">Secure Checkout</span>
+        {hosted ? 'Payment status' : 'AspinPay'}
+        <span className="apayBrandSub">{hosted ? 'via PayMongo' : 'Secure Checkout'}</span>
       </div>
 
       <div className="apayCard">
@@ -249,7 +285,29 @@ export default function Checkout() {
         <div className="apayBody">
           {error && <div className="apayError">{error}</div>}
 
-          {status === 'open' && (
+          {hosted && status === 'open' && (
+            <div className="apayResult">
+              <div className="apayResultMark apayResultWait" aria-hidden="true">⏳</div>
+              <div className="apayResultTitle">
+                {returnedCancelled ? 'Cancelling…' : 'Waiting for PayMongo'}
+              </div>
+              <p className="apayResultText" aria-live="polite">
+                If you’ve just paid, this page updates on its own in a few seconds.
+                If you haven’t paid yet, continue to PayMongo’s secure checkout.
+              </p>
+              <div className="apayBtnRow">
+                <button
+                  className="apayBtn"
+                  onClick={() => window.location.assign(session.checkout_url)}
+                  disabled={busy || !session.checkout_url}
+                >
+                  Continue to PayMongo
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!hosted && status === 'open' && (
             <form onSubmit={handleAuthorize}>
               <div className="apayStep">Step 1 of 2</div>
               <div className="apayTitle">Log in to {rail.name}</div>
@@ -376,7 +434,7 @@ export default function Checkout() {
       </div>
 
       <div className="apayFoot">
-        <span>🔒 Simulated 256-bit channel</span>
+        <span>{hosted ? '🔒 Payments processed by PayMongo' : '🔒 Simulated 256-bit channel'}</span>
         {isLive
           ? <button className="apayCancel" onClick={handleCancel} disabled={busy}>Cancel payment</button>
           : <button className="apayCancel" onClick={() => navigate('/donations')}>Back to my donations</button>}

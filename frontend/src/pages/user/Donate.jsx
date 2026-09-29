@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { createDonation } from '../../lib/donationsApi';
+import { goToCheckout } from '../../lib/paymentsApi';
 import { getTransparency } from '../../lib/publicHomeApi';
 import { DONATION_CATEGORIES, NEEDED_MOST_LABEL, NEEDED_MOST_VALUE } from '../../lib/donationCategories';
 import SiteNav from '../../components/SiteNav';
@@ -38,7 +39,7 @@ const styles = `
 
 const PRESET_AMOUNTS = [100, 300, 500, 1000, 2500];
 
-// Which methods AspinPay can settle instantly. Cash is handed over in person, so it has
+// Which methods the online checkout can settle instantly. Cash is handed over in person, so it has
 // no online rail — mirrors config('payments.gateway_rails') on the backend.
 const GATEWAY_RAILS = ['gcash', 'bank'];
 
@@ -60,7 +61,7 @@ export default function Donate() {
     initialAmount && !PRESET_AMOUNTS.includes(initialAmount) ? String(initialAmount) : ''
   );
   const [paymentMethod, setPaymentMethod] = useState(draft?.payment_method || 'gcash');
-  // 'gateway' = pay through the AspinPay checkout now; 'manual' = send it yourself and
+  // 'gateway' = pay through the online checkout (PayMongo or AspinPay) now; 'manual' = send it yourself and
   // upload a screenshot for staff to verify. Online is the default because it settles
   // instantly and costs the donor nothing extra.
   const [settlement, setSettlement] = useState(draft?.settlement || 'gateway');
@@ -152,7 +153,7 @@ export default function Donate() {
       // processor is the whole point, so go there rather than showing a success card
       // for money that has not arrived yet.
       if (data?.checkout_url) {
-        navigate(data.checkout_url);
+        goToCheckout(data.checkout_url, navigate);
         return;
       }
 

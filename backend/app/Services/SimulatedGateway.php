@@ -6,9 +6,8 @@ use App\Contracts\PaymentGateway;
 use App\Exceptions\PaymentException;
 use App\Models\Donation;
 use App\Models\PaymentSession;
-use App\Notifications\DonationStatusChanged;
+use App\Services\Concerns\SettlesPaymentSessions;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
@@ -25,6 +24,8 @@ use Illuminate\Support\Str;
  */
 class SimulatedGateway implements PaymentGateway
 {
+    use SettlesPaymentSessions;
+
     public function createSession(Donation $donation, string $rail): PaymentSession
     {
         if (! in_array($rail, config('payments.gateway_rails', []), true)) {
@@ -42,6 +43,7 @@ class SimulatedGateway implements PaymentGateway
                 'donation_id' => $donation->id,
                 'token'       => Str::random(48),
                 'rail'        => $rail,
+                'provider'    => 'simulated',
                 'amount'      => $donation->amount,
                 'status'      => 'open',
                 'expires_at'  => now()->addMinutes((int) config('payments.session_ttl_minutes', 15)),
@@ -96,14 +98,7 @@ class SimulatedGateway implements PaymentGateway
             throw PaymentException::notPayable();
         }
 
-        DB::transaction(function () use ($session) {
-            $session->update(['status' => 'cancelled', 'failure_code' => null]);
-            // The donation is kept, not deleted: the donor can resume it from their
-            // history, and a cancelled row is honest history rather than a gap.
-            $session->donation()->update(['status' => 'cancelled']);
-        });
-
-        return $session->refresh();
+        return $this->close($session, 'cancelled', null);
     }
 
     public function expire(PaymentSession $session): PaymentSession
@@ -112,91 +107,12 @@ class SimulatedGateway implements PaymentGateway
             return $session;
         }
 
-        DB::transaction(function () use ($session) {
-            $session->update(['status' => 'expired', 'failure_code' => 'expired']);
-            $session->donation()->update(['status' => 'cancelled']);
-        });
-
-        return $session->refresh();
+        return $this->close($session, 'expired', 'expired');
     }
 
-    /**
-     * The only place a donation becomes money in the bank.
-     *
-     * Locked and guarded: a donor who double-taps Confirm, or refreshes the tab
-     * mid-request, must not settle twice or fire two "donation verified"
-     * notifications. The lock also means the notification is sent exactly once,
-     * outside the transaction, only by the request that actually did the work.
-     */
-    protected function settle(PaymentSession $session): PaymentSession
+    /** This gateway is its own provider, so there is never anything newer to fetch. */
+    public function sync(PaymentSession $session): PaymentSession
     {
-        $justSettled = DB::transaction(function () use ($session) {
-            $locked = PaymentSession::whereKey($session->id)->lockForUpdate()->first();
-
-            if ($locked->status === 'succeeded') {
-                return false;
-            }
-
-            $locked->update([
-                'status'       => 'succeeded',
-                'failure_code' => null,
-                'completed_at' => now(),
-            ]);
-
-            $locked->donation()->update([
-                'status'     => 'verified',
-                'settlement' => 'gateway',
-                // Dated at settlement, not at form-fill: this is when the shelter
-                // actually received it, which is what the monthly totals measure.
-                'donated_at' => now(),
-            ]);
-
-            return true;
-        });
-
-        $session->refresh();
-
-        if ($justSettled) {
-            $donation = $session->donation()->with('user')->first();
-            if ($donation?->user) {
-                try {
-                    (new DonationStatusChanged($donation))->sendTo($donation->user);
-                } catch (\Throwable $e) {
-                    // The payment is already committed. Notifications send synchronously
-                    // (see AppNotification), so an SMTP outage would otherwise surface to
-                    // the donor as a failed payment for money we have taken — log it and
-                    // let the receipt speak for itself.
-                    Log::error('Donation settled but the confirmation notification failed', [
-                        'donation_id' => $donation->id,
-                        'session_id'  => $session->id,
-                        'exception'   => $e,
-                    ]);
-                }
-            }
-        }
-
         return $session;
-    }
-
-    protected function fail(PaymentSession $session, string $code): PaymentSession
-    {
-        $session->update(['status' => 'failed', 'failure_code' => $code]);
-
-        // The donation stays awaiting_payment on purpose — a declined card is not a
-        // cancelled gift, and the donor should be able to retry with another account.
-
-        return $session->refresh();
-    }
-
-    protected function assertPayable(PaymentSession $session): void
-    {
-        if ($session->hasExpired()) {
-            $this->expire($session);
-            throw PaymentException::expired();
-        }
-
-        if (! in_array($session->status, PaymentSession::LIVE_STATUSES, true)) {
-            throw PaymentException::notPayable();
-        }
     }
 }

@@ -244,6 +244,17 @@
 .apayResultOk { background: var(--apay-ok-soft); color: var(--apay-ok); }
 .apayResultBad { background: var(--apay-bad-soft); color: var(--apay-bad); }
 
+/* PayMongo return page, waiting on the provider's confirmation. */
+.apayResultWait { background: var(--apay-warn-soft); color: var(--apay-warn); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .apayResultWait { animation: apayPulse 1.6s ease-in-out infinite; }
+}
+
+@keyframes apayPulse {
+  50% { opacity: 0.55; }
+}
+
 .apayResultTitle { font-size: 1.2rem; font-weight: 700; margin-bottom: 0.4rem; }
 .apayResultText { font-size: 0.9rem; color: var(--apay-ink-soft); margin-bottom: 1.4rem; }
 

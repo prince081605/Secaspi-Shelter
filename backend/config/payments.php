@@ -7,11 +7,14 @@ return [
     | Driver
     |--------------------------------------------------------------------------
     |
-    | Which implementation of App\Contracts\PaymentGateway handles checkout.
-    | Only 'simulated' ships today: the shelter is not a registered merchant, so
-    | there is no live provider to talk to. The binding lives in
-    | AppServiceProvider — adding a real PayMongo/Xendit driver means writing one
-    | class and flipping this value, nothing else in the app changes.
+    | Which implementation of App\Contracts\PaymentGateway handles checkout:
+    |
+    |   'simulated' — the in-app AspinPay checkout. No money moves, no account needed.
+    |   'paymongo'  — PayMongo's hosted checkout. Needs PAYMONGO_SECRET_KEY; with a
+    |                 sk_test_ key it runs in PayMongo test mode (real API, real
+    |                 checkout page, no real money).
+    |
+    | The binding lives in AppServiceProvider.
     |
     */
 
@@ -63,6 +66,34 @@ return [
         '09000000001' => 'insufficient_funds',
         '09000000002' => 'declined',
         '09000000003' => 'invalid_account',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | PayMongo
+    |--------------------------------------------------------------------------
+    |
+    | secret_key      sk_test_… (test mode) or sk_live_… (live, once the shelter's
+    |                 business account is verified). Server-side only — never ship
+    |                 it to the frontend.
+    | webhook_secret  whsk_… — returned when the webhook is registered (see
+    |                 `php artisan paymongo:webhook`). Used to check that a call to
+    |                 /api/webhooks/paymongo really came from PayMongo.
+    | methods         Which PayMongo payment methods the hosted page offers for each
+    |                 rail the donor can pick on our donate form.
+    | min_amount      PayMongo will not open a checkout below this many pesos.
+    |
+    */
+
+    'paymongo' => [
+        'secret_key'     => env('PAYMONGO_SECRET_KEY'),
+        'webhook_secret' => env('PAYMONGO_WEBHOOK_SECRET'),
+        'base_url'       => env('PAYMONGO_BASE_URL', 'https://api.paymongo.com/v1'),
+        'methods'        => [
+            'gcash' => array_filter(explode(',', env('PAYMONGO_GCASH_METHODS', 'gcash'))),
+            'bank'  => array_filter(explode(',', env('PAYMONGO_BANK_METHODS', 'dob,card'))),
+        ],
+        'min_amount'     => (int) env('PAYMONGO_MIN_AMOUNT', 20),
     ],
 
 ];

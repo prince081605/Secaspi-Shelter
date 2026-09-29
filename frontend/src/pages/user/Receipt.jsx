@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getDonation } from '../../lib/donationsApi';
-import { startCheckout } from '../../lib/paymentsApi';
+import { goToCheckout, startCheckout } from '../../lib/paymentsApi';
 import { labelFor } from '../../lib/donationCategories';
 import SiteNav from '../../components/SiteNav';
 import StatusBadge from '../../components/StatusBadge';
@@ -40,7 +40,7 @@ export default function Receipt() {
     setActionError('');
     try {
       const { checkout_url: url } = await startCheckout(id);
-      navigate(url);
+      goToCheckout(url, navigate);
     } catch (e) {
       setActionError(e?.message || 'Could not reopen this payment. Please try again.');
       setResuming(false);
@@ -102,7 +102,7 @@ export default function Receipt() {
               <span className="receiptLabel">Settled Via</span>
               <span className="receiptValue">
                 {donation.settlement === 'gateway'
-                  ? 'AspinPay online checkout'
+                  ? 'Online checkout'
                   : 'Manual transfer, verified by staff'}
               </span>
             </div>

@@ -90,6 +90,10 @@ class DonationController extends Controller
 
                 return [$donation, $session];
             });
+        } catch (PaymentException $e) {
+            // The gateway refused (below its minimum, provider unreachable). The transaction
+            // has rolled the donation back, so the donor can simply try again.
+            return response()->json(['message' => $e->getMessage()], $e->status);
         } catch (\Throwable $e) {
             Log::error('Failed to record donation', [
                 'user_id'        => $user->id,
@@ -111,8 +115,9 @@ class DonationController extends Controller
                 'category'       => $donation->category,
                 'status'         => $donation->status,
             ],
-            // Present only on the gateway path; the frontend redirects when it sees it.
-            'checkout_url'   => $session ? "/pay/{$session->token}" : null,
+            // Present only on the gateway path; the frontend redirects when it sees it —
+            // to PayMongo's page (absolute URL) or the simulated checkout (a local path).
+            'checkout_url'   => $session?->payUrl(),
             'checkout_token' => $session?->token,
         ]), 201);
     }
@@ -141,7 +146,7 @@ class DonationController extends Controller
         $donation->update(['status' => 'awaiting_payment']);
 
         return response()->json([
-            'checkout_url'   => "/pay/{$session->token}",
+            'checkout_url'   => $session->payUrl(),
             'checkout_token' => $session->token,
         ]);
     }
