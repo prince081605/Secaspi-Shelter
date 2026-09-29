@@ -34,6 +34,11 @@ const FILTER_CONFIG = {
   },
   volunteers: {},
   staff: {},
+  // Days attended, shifts and hours per person over the range (shelter time).
+  attendance: {
+    dateRange: true,
+    personnelType: true,
+  },
   rescue: {
     dateRange: true,
     status: ['pending', 'assigned', 'in_progress', 'resolved'],
@@ -41,7 +46,7 @@ const FILTER_CONFIG = {
   },
 };
 
-const emptyFilters = { from: '', to: '', status: '', species: '', payment_method: '', urgency: '', record_type: '', category: '' };
+const emptyFilters = { from: '', to: '', status: '', species: '', payment_method: '', urgency: '', record_type: '', category: '', personnel_type: '' };
 
 function saveBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
@@ -177,6 +182,17 @@ export default function ReportsAdmin({ isAdmin = false }) {
             <select className="ui-input" style={{ maxWidth: 200 }} value={filters.category} onChange={setField('category')}>
               <option value="">All categories</option>
               {DONATION_CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+            </select>
+          </label>
+        )}
+
+        {config.personnelType && (
+          <label className="dashFilterField">
+            <span className="dashFilterLabel">Personnel</span>
+            <select className="ui-input" style={{ maxWidth: 180 }} value={filters.personnel_type} onChange={setField('personnel_type')}>
+              <option value="">Volunteers & staff</option>
+              <option value="volunteer">Volunteers</option>
+              <option value="staff">Staff</option>
             </select>
           </label>
         )}

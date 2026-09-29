@@ -22,6 +22,7 @@ import { adminGetOverview, adminGetPendingCounts } from '../../lib/dashboardApi'
 import { getMyVolunteer } from '../../lib/volunteersApi';
 import VolunteersAdmin from '../admin/VolunteersAdmin';
 import MyTaskItem, { MyTaskList, RequestTaskForm } from '../../components/MyTaskItem';
+import AttendanceCard from '../../components/AttendanceCard';
 import ReportsAdmin from '../admin/ReportsAdmin';
 import AnalyticsAdmin from '../admin/AnalyticsAdmin';
 import Messages from '../Messages';
@@ -321,8 +322,8 @@ function UserProfile({ user, onProfileUpdated }) {
   );
 }
 
-// A volunteer's or staff member's own task hub: their tasks, each with an Update button for
-// sending proof of completion, plus a request-a-task form. Same endpoints as the public
+// A volunteer's or staff member's own task hub: their time clock (Time in / Time out), their
+// tasks, each with an Update button for sending proof of completion, plus a request-a-task form. Same endpoints as the public
 // VolunteerApply page (GET /volunteer/me, POST /volunteer/tasks, POST .../proof).
 function VolunteerTasksPanel() {
   const [loading, setLoading] = useState(true);
@@ -351,6 +352,7 @@ function VolunteerTasksPanel() {
   return (
     <>
       <h2 className="dashSectionTitle"><ClipboardList size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />My Tasks</h2>
+      <AttendanceCard />
       <RequestTaskForm onRequested={load} />
       {(!volunteer.tasks || volunteer.tasks.length === 0) ? (
         <div className="ui-empty">No tasks yet. Request one above to get started!</div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Users, Handshake, Briefcase, ClipboardList, Inbox, X } from 'lucide-react';
+import { Users, Handshake, Briefcase, ClipboardList, Inbox, X, Clock } from 'lucide-react';
+import AttendanceAdmin from './AttendanceAdmin';
 import {
   adminListVolunteers,
   adminCreateVolunteer,
@@ -362,7 +363,7 @@ function PersonnelRow({ personnel, onChanged, isAdmin }) {
   const saveHours = async () => {
     const ok = await confirm({
       title: 'Save hours rendered?',
-      message: 'This is the volunteer’s recorded service total, which their certificate is issued from.',
+      message: 'This is their recorded service total, which their certificate is issued from. Attendance hours are counted in it; the difference is kept as a manual adjustment.',
       confirmLabel: 'Save hours',
       summary: [
         { label: 'Person', value: personnel.user?.full_name },
@@ -401,11 +402,14 @@ function PersonnelRow({ personnel, onChanged, isAdmin }) {
     }
   };
 
-  const hoursControl = (
+  // Hours come from attendance; only an admin can override the total (the backend enforces it).
+  const hoursControl = isAdmin ? (
     <span className="dashActionsRow">
-      <input className="ui-input" type="number" min="0" style={{ width: 80 }} value={hours} onChange={(e) => setHours(e.target.value)} />
+      <input className="ui-input" type="number" min="0" step="0.25" style={{ width: 90 }} value={hours} onChange={(e) => setHours(e.target.value)} />
       <button className="dashBtn" onClick={saveHours}>Save</button>
     </span>
+  ) : (
+    <span>{Number(personnel.hours_rendered || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
   );
   const actions = (
     <>
@@ -778,7 +782,7 @@ export default function VolunteersAdmin({ isAdmin = false }) {
     <>
       <h2 className="dashSectionTitle"><Users size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />Personnel Management</h2>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         <button
           className={mode === 'volunteers' ? 'dashBtn dashBtnPrimary' : 'dashBtn'}
           onClick={() => setMode('volunteers')}
@@ -790,6 +794,12 @@ export default function VolunteersAdmin({ isAdmin = false }) {
           onClick={() => setMode('staff')}
         >
           <Briefcase size={16} style={{ verticalAlign: '-3px' }} /> Staff
+        </button>
+        <button
+          className={mode === 'attendance' ? 'dashBtn dashBtnPrimary' : 'dashBtn'}
+          onClick={() => setMode('attendance')}
+        >
+          <Clock size={16} style={{ verticalAlign: '-3px' }} /> Attendance
         </button>
       </div>
 
@@ -816,6 +826,8 @@ export default function VolunteersAdmin({ isAdmin = false }) {
             <PersonnelRoster type="volunteer" isAdmin={isAdmin} />
           )}
         </>
+      ) : mode === 'attendance' ? (
+        <AttendanceAdmin isAdmin={isAdmin} />
       ) : (
         <PersonnelRoster type="staff" isAdmin={isAdmin} />
       )}

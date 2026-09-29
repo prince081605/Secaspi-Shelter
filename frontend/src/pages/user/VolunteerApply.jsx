@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { PawPrint, PartyPopper } from 'lucide-react';
 import SiteNav from '../../components/SiteNav';
 import MyTaskItem, { MyTaskList, RequestTaskForm } from '../../components/MyTaskItem';
+import AttendanceCard from '../../components/AttendanceCard';
 import useLoginGate from '../../lib/useLoginGate';
 import { ID_TYPES } from '../../lib/validIdTypes';
 import {
@@ -164,6 +165,7 @@ export default function VolunteerApply() {
               Request a task you'd like to help with — the team will confirm it.
             </p>
 
+            <AttendanceCard />
             <RequestTaskForm onRequested={refreshTasks} />
 
             <div style={{ marginTop: '2rem' }}>

@@ -17,10 +17,10 @@ class ReportExportTest extends TestCase
     {
         // The staff report was previously unrouted dead code; it's now exposed (audit §11 A-1).
         $staffMember = User::factory()->create(['full_name' => 'Staffer One']);
-        Volunteer::create(['user_id' => $staffMember->id, 'type' => 'staff', 'hours_rendered' => 12]);
+        Volunteer::create(['user_id' => $staffMember->id, 'type' => 'staff']);
 
         $volunteerMember = User::factory()->create(['full_name' => 'Volunteer Two']);
-        Volunteer::create(['user_id' => $volunteerMember->id, 'type' => 'volunteer', 'hours_rendered' => 5]);
+        Volunteer::create(['user_id' => $volunteerMember->id, 'type' => 'volunteer']);
 
         Sanctum::actingAs(User::factory()->staff()->create());
 

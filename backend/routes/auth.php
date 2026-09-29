@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdoptionApplicationController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AnimalController;
+use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DonationController;
@@ -180,6 +181,16 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::put('/admin/intakes/{intake}', [IntakeController::class, 'adminUpdate'])->middleware('role:staff');
     Route::delete('/admin/intakes/{intake}', [IntakeController::class, 'adminDestroy'])->middleware('role:staff');
     Route::post('/admin/intakes/{intake}/convert', [IntakeController::class, 'adminConvert'])->middleware('role:staff');
+    // ---- Attendance ---- people clock themselves in/out (the controller checks they have a
+    // personnel record); staff see the log; only admins add, correct or delete records.
+    Route::get('/volunteer/attendance', [AttendanceController::class, 'me']);
+    Route::post('/volunteer/attendance/clock-in', [AttendanceController::class, 'clockIn'])->middleware('throttle:10,1');
+    Route::post('/volunteer/attendance/clock-out', [AttendanceController::class, 'clockOut'])->middleware('throttle:10,1');
+    Route::get('/admin/attendance', [AttendanceController::class, 'adminIndex'])->middleware('role:staff');
+    Route::post('/admin/volunteers/{volunteer}/attendance', [AttendanceController::class, 'adminStore'])->middleware('admin');
+    Route::put('/admin/attendance/{attendance}', [AttendanceController::class, 'adminUpdate'])->middleware('admin');
+    Route::delete('/admin/attendance/{attendance}', [AttendanceController::class, 'adminDestroy'])->middleware('admin');
+
     Route::post('/admin/intakes/{intake}/documents', [IntakeController::class, 'addDocuments'])->middleware('role:staff');
     Route::delete('/admin/intakes/{intake}/documents/{document}', [IntakeController::class, 'destroyDocument'])->middleware('role:staff');
 
@@ -203,3 +214,4 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('/admin/reports/export/csv', [ReportController::class, 'exportCsv'])->middleware('role:staff');
     Route::get('/admin/reports/export/pdf', [ReportController::class, 'exportPdf'])->middleware('role:staff');
 });
+    Route::get('/admin/reports/attendance', [ReportController::class, 'attendance'])->middleware('role:staff');

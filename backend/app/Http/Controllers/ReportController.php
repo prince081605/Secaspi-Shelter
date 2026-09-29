@@ -10,15 +10,17 @@ use App\Models\MedicalRecord;
 use App\Models\RescueReport;
 use App\Models\Vaccination;
 use App\Models\Volunteer;
+use App\Models\VolunteerAttendance;
 use App\Support\DonationCategories;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class ReportController extends Controller
 {
-    private const TYPES = ['adoption', 'animals', 'medical', 'donations', 'expenses', 'volunteers', 'staff', 'rescue'];
+    private const TYPES = ['adoption', 'animals', 'medical', 'donations', 'expenses', 'volunteers', 'staff', 'attendance', 'rescue'];
 
     private const TYPE_LABELS = [
         'adoption' => 'Adoption Applications Report',
@@ -28,6 +30,7 @@ class ReportController extends Controller
         'expenses' => 'Expenses Report',
         'volunteers' => 'Volunteers Report',
         'staff' => 'Staff Report',
+        'attendance' => 'Attendance Report',
         'rescue' => 'Rescue Reports Report',
     ];
 
@@ -67,6 +70,11 @@ class ReportController extends Controller
     public function staff(Request $request)
     {
         return response()->json($this->staffData($request));
+    }
+
+    public function attendance(Request $request)
+    {
+        return response()->json($this->attendanceData($request));
     }
 
     public function rescue(Request $request)
@@ -150,6 +158,7 @@ class ReportController extends Controller
             'expenses' => $this->expensesData($request),
             'volunteers' => $this->volunteersData($request),
             'staff' => $this->staffData($request),
+            'attendance' => $this->attendanceData($request),
             'rescue' => $this->rescueData($request),
         };
     }
@@ -442,47 +451,29 @@ class ReportController extends Controller
 
     private function volunteersData(Request $request): array
     {
-        $volunteers = Volunteer::query()->with(['user', 'tasks'])->where('type', 'volunteer')->orderByDesc('id')->get();
-
-        $taskStatusCounts = ['assigned' => 0, 'ongoing' => 0, 'completed' => 0];
-        foreach ($volunteers as $v) {
-            foreach ($v->tasks as $task) {
-                if (isset($taskStatusCounts[$task->status])) {
-                    $taskStatusCounts[$task->status]++;
-                }
-            }
-        }
-
-        return [
-            'summary' => [
-                ['label' => 'Total volunteers', 'value' => $volunteers->count()],
-                ['label' => 'Total hours rendered', 'value' => (int) $volunteers->sum('hours_rendered')],
-                ['label' => 'Tasks assigned', 'value' => $taskStatusCounts['assigned']],
-                ['label' => 'Tasks ongoing', 'value' => $taskStatusCounts['ongoing']],
-                ['label' => 'Tasks completed', 'value' => $taskStatusCounts['completed']],
-            ],
-            'columns' => [
-                ['key' => 'name', 'label' => 'Name'],
-                ['key' => 'availability', 'label' => 'Availability'],
-                ['key' => 'hours_rendered', 'label' => 'Hours'],
-                ['key' => 'task_count', 'label' => 'Tasks'],
-            ],
-            'rows' => $volunteers->map(fn (Volunteer $v) => [
-                'name' => $v->user->full_name ?? '—',
-                'availability' => $v->availability ?: '—',
-                'hours_rendered' => (int) $v->hours_rendered,
-                'task_count' => $v->tasks->count(),
-            ])->values()->all(),
-        ];
+        return $this->personnelData('volunteer', 'Total volunteers');
     }
 
     private function staffData(Request $request): array
     {
-        $staff = Volunteer::query()->with(['user', 'tasks'])->where('type', 'staff')->orderByDesc('id')->get();
+        return $this->personnelData('staff', 'Total staff');
+    }
 
-        $taskStatusCounts = ['assigned' => 0, 'ongoing' => 0, 'completed' => 0];
-        foreach ($staff as $s) {
-            foreach ($s->tasks as $task) {
+    /**
+     * Volunteers and staff share one report shape. Task counts cover every status a task can be
+     * in (VolunteerController::TASK_STATUSES) — requested and submitted included, so proof waiting
+     * for verification isn't missing from the totals.
+     */
+    private function personnelData(string $type, string $totalLabel): array
+    {
+        $people = Volunteer::query()->with(['user', 'tasks'])->withCount([
+            'attendances as shifts_count' => fn ($q) => $q->whereNotNull('time_out'),
+        ])->where('type', $type)->orderByDesc('id')->get();
+
+        $statuses = ['requested', 'assigned', 'ongoing', 'submitted', 'completed'];
+        $taskStatusCounts = array_fill_keys($statuses, 0);
+        foreach ($people as $p) {
+            foreach ($p->tasks as $task) {
                 if (isset($taskStatusCounts[$task->status])) {
                     $taskStatusCounts[$task->status]++;
                 }
@@ -491,24 +482,81 @@ class ReportController extends Controller
 
         return [
             'summary' => [
-                ['label' => 'Total staff', 'value' => $staff->count()],
-                ['label' => 'Total hours rendered', 'value' => (int) $staff->sum('hours_rendered')],
+                ['label' => $totalLabel, 'value' => $people->count()],
+                ['label' => 'Total hours rendered', 'value' => round((float) $people->sum('hours_rendered'), 1)],
+                ['label' => 'Tasks requested', 'value' => $taskStatusCounts['requested']],
                 ['label' => 'Tasks assigned', 'value' => $taskStatusCounts['assigned']],
                 ['label' => 'Tasks ongoing', 'value' => $taskStatusCounts['ongoing']],
+                ['label' => 'Awaiting verification', 'value' => $taskStatusCounts['submitted']],
                 ['label' => 'Tasks completed', 'value' => $taskStatusCounts['completed']],
             ],
             'columns' => [
                 ['key' => 'name', 'label' => 'Name'],
                 ['key' => 'availability', 'label' => 'Availability'],
                 ['key' => 'hours_rendered', 'label' => 'Hours'],
+                ['key' => 'shifts', 'label' => 'Shifts'],
                 ['key' => 'task_count', 'label' => 'Tasks'],
+                ['key' => 'tasks_completed', 'label' => 'Completed'],
             ],
-            'rows' => $staff->map(fn (Volunteer $s) => [
-                'name' => $s->user->full_name ?? '—',
-                'availability' => $s->availability ?: '—',
-                'hours_rendered' => (int) $s->hours_rendered,
-                'task_count' => $s->tasks->count(),
+            'rows' => $people->map(fn (Volunteer $p) => [
+                'name' => $p->user->full_name ?? '—',
+                'availability' => $p->availability ?: '—',
+                'hours_rendered' => round((float) $p->hours_rendered, 1),
+                'shifts' => (int) $p->shifts_count,
+                'task_count' => $p->tasks->count(),
+                'tasks_completed' => $p->tasks->where('status', 'completed')->count(),
             ])->values()->all(),
+        ];
+    }
+
+    /**
+     * Attendance over a date range (shelter time): one row per person who worked a shift in it,
+     * with the days they came in and the hours those shifts add up to.
+     */
+    private function attendanceData(Request $request): array
+    {
+        $tz = VolunteerAttendance::TIMEZONE;
+        $query = VolunteerAttendance::query()->with('volunteer.user')->whereNotNull('time_out');
+        if ($from = $request->query('from')) {
+            $query->where('time_in', '>=', CarbonImmutable::parse($from, $tz)->startOfDay()->utc());
+        }
+        if ($to = $request->query('to')) {
+            $query->where('time_in', '<', CarbonImmutable::parse($to, $tz)->addDay()->startOfDay()->utc());
+        }
+        if (in_array($type = $request->query('personnel_type'), ['volunteer', 'staff'], true)) {
+            $query->whereHas('volunteer', fn ($q) => $q->where('type', $type));
+        }
+        $records = $query->get();
+
+        $rows = $records->groupBy('volunteer_id')->map(function ($shifts) use ($tz) {
+            $person = $shifts->first()->volunteer;
+
+            return [
+                'name' => $person?->user?->full_name ?? '—',
+                'type' => $person?->type ?? '—',
+                'days' => $shifts->map(fn ($a) => $a->time_in->setTimezone($tz)->toDateString())->unique()->count(),
+                'shifts' => $shifts->count(),
+                'hours' => round($shifts->sum('minutes') / 60, 1),
+                'last_attended' => $shifts->max('time_in')?->setTimezone($tz)->toDateString() ?? '—',
+            ];
+        })->sortByDesc('hours')->values();
+
+        return [
+            'summary' => [
+                ['label' => 'People who attended', 'value' => $rows->count()],
+                ['label' => 'Shifts worked', 'value' => $records->count()],
+                ['label' => 'Hours worked', 'value' => round($records->sum('minutes') / 60, 1)],
+                ['label' => 'On duty now', 'value' => VolunteerAttendance::whereNull('time_out')->count()],
+            ],
+            'columns' => [
+                ['key' => 'name', 'label' => 'Name'],
+                ['key' => 'type', 'label' => 'Type'],
+                ['key' => 'days', 'label' => 'Days attended'],
+                ['key' => 'shifts', 'label' => 'Shifts'],
+                ['key' => 'hours', 'label' => 'Hours'],
+                ['key' => 'last_attended', 'label' => 'Last attended'],
+            ],
+            'rows' => $rows->all(),
         ];
     }
 

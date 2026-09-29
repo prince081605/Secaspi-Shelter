@@ -8,6 +8,7 @@ export const REPORT_TYPES = [
   { key: 'expenses', label: 'Expenses' },
   { key: 'volunteers', label: 'Volunteers' },
   { key: 'staff', label: 'Staff' },
+  { key: 'attendance', label: 'Attendance' },
   { key: 'rescue', label: 'Rescue Reports' },
 ];
 

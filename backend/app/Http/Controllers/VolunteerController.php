@@ -143,7 +143,9 @@ class VolunteerController extends Controller
             $query->where('type', 'volunteer');
         }
 
-        $volunteers = $query->orderByDesc('id')->paginate(20)->withQueryString();
+        // per_page lets a picker (e.g. "add attendance for…") load everyone at once; capped.
+        $perPage = min(max((int) $request->query('per_page', 20), 1), 100);
+        $volunteers = $query->orderByDesc('id')->paginate($perPage)->withQueryString();
 
         $volunteers->getCollection()->transform(fn (Volunteer $v) => $this->toItem($v));
 
@@ -189,7 +191,7 @@ class VolunteerController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'availability' => ['nullable', 'string', 'max:150'],
-            'hours_rendered' => ['sometimes', 'integer', 'min:0'],
+            'hours_rendered' => ['sometimes', 'numeric', 'min:0', 'max:100000'],
             'performance_notes' => ['nullable', 'string'],
         ]);
 
@@ -197,7 +199,19 @@ class VolunteerController extends Controller
             return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
         }
 
-        $volunteer->update($validator->validated());
+        $data = $validator->validated();
+
+        // Hours come from attendance now; overriding the total is a correction to someone's
+        // record (and staff work shifts themselves), so it's kept for admins.
+        if (array_key_exists('hours_rendered', $data)) {
+            if (! $request->user()->hasRoleAtLeast('admin')) {
+                return response()->json(['message' => 'Only an admin can change hours rendered.'], 403);
+            }
+            $volunteer->setTotalHours((float) $data['hours_rendered']);
+            unset($data['hours_rendered']);
+        }
+
+        $volunteer->update($data);
 
         return response()->json(['volunteer' => $this->toItem($volunteer->fresh(['user', 'tasks.verifier']))]);
     }

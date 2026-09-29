@@ -390,11 +390,15 @@ class MockDataSeeder extends Seeder
         $tasks = ['Morning feeding', 'Kennel cleaning', 'Dog walking', 'Bathing & grooming', 'Adoption event assistance', 'Medication assistance', 'Intake processing'];
         foreach ($personnelUserIds as $userId) {
             $role = DB::table('users')->where('id', $userId)->value('role');
+            // Mock hours predate attendance, so they sit in the adjustment (see the 2026_09_30
+            // attendance migration): hours_rendered = hours_adjustment + attendance hours.
+            $hours = mt_rand(0, 120);
             $volunteerId = DB::table('volunteers')->insertGetId([
                 'user_id' => $userId,
                 'type' => $role === 'staff' ? 'staff' : 'volunteer',
                 'availability' => $this->pick(['Weekends', 'Weekdays', 'Flexible', 'Mon/Wed/Fri']),
-                'hours_rendered' => mt_rand(0, 120),
+                'hours_rendered' => $hours,
+                'hours_adjustment' => $hours,
                 'performance_notes' => $this->pick([null, 'Reliable and punctual.', 'Great with the animals.']),
                 'created_at' => now()->subDays(mt_rand(10, 200)),
             ]);
