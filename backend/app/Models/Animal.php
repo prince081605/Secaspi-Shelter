@@ -82,4 +82,16 @@ class Animal extends Model
     {
         return $this->hasMany(FosterApplication::class, 'animal_id');
     }
+
+    // current_location_id is deliberately not fillable: it only changes through
+    // AnimalController::move(), so every change is also written to the location log.
+    public function currentLocation()
+    {
+        return $this->belongsTo(ShelterLocation::class, 'current_location_id');
+    }
+
+    public function locationLogs()
+    {
+        return $this->hasMany(AnimalLocationLog::class, 'animal_id');
+    }
 }

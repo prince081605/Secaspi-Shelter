@@ -20,6 +20,7 @@ use App\Http\Controllers\ReminderController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RescueReportController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\ShelterLocationController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VaccinationController;
 use App\Http\Controllers\VisitationController;
@@ -131,6 +132,12 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('/animals', [AnimalController::class, 'store'])->middleware('role:staff');
     Route::put('/animals/{animal}', [AnimalController::class, 'update'])->middleware('role:staff');
     Route::post('/animals/{animal}/archive', [AnimalController::class, 'archive'])->middleware('role:staff');
+    // ---- In-shelter location (QR-based) ---- staff move animals between areas; admins manage the areas.
+    Route::post('/animals/{animal}/location', [AnimalController::class, 'move'])->middleware('role:staff');
+    Route::get('/admin/shelter-locations', [ShelterLocationController::class, 'index'])->middleware('role:staff');
+    Route::post('/admin/shelter-locations', [ShelterLocationController::class, 'store'])->middleware('admin');
+    Route::put('/admin/shelter-locations/{location}', [ShelterLocationController::class, 'update'])->middleware('admin');
+    Route::delete('/admin/shelter-locations/{location}', [ShelterLocationController::class, 'destroy'])->middleware('admin');
     Route::post('/animals/{animal}/photos', [AnimalController::class, 'addPhotos'])->middleware('role:staff');
     Route::delete('/animals/{animal}/photos/{photo}', [AnimalController::class, 'destroyPhoto'])->middleware('role:staff');
 
@@ -174,13 +181,6 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::put('/admin/volunteer-tasks/{task}', [VolunteerController::class, 'updateTask'])->middleware('role:staff');
     Route::delete('/admin/volunteer-tasks/{task}', [VolunteerController::class, 'destroyTask'])->middleware('role:staff');
 
-    // ---- Intake management (Phase 6) ----
-    Route::get('/admin/intakes', [IntakeController::class, 'adminIndex'])->middleware('role:staff');
-    Route::post('/admin/intakes', [IntakeController::class, 'adminStore'])->middleware('role:staff');
-    Route::get('/admin/intakes/{intake}', [IntakeController::class, 'adminShow'])->middleware('role:staff');
-    Route::put('/admin/intakes/{intake}', [IntakeController::class, 'adminUpdate'])->middleware('role:staff');
-    Route::delete('/admin/intakes/{intake}', [IntakeController::class, 'adminDestroy'])->middleware('role:staff');
-    Route::post('/admin/intakes/{intake}/convert', [IntakeController::class, 'adminConvert'])->middleware('role:staff');
     // ---- Attendance ---- people clock themselves in/out (the controller checks they have a
     // personnel record); staff see the log; only admins add, correct or delete records.
     Route::get('/volunteer/attendance', [AttendanceController::class, 'me']);
@@ -191,6 +191,13 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::put('/admin/attendance/{attendance}', [AttendanceController::class, 'adminUpdate'])->middleware('admin');
     Route::delete('/admin/attendance/{attendance}', [AttendanceController::class, 'adminDestroy'])->middleware('admin');
 
+    // ---- Intake management (Phase 6) ----
+    Route::get('/admin/intakes', [IntakeController::class, 'adminIndex'])->middleware('role:staff');
+    Route::post('/admin/intakes', [IntakeController::class, 'adminStore'])->middleware('role:staff');
+    Route::get('/admin/intakes/{intake}', [IntakeController::class, 'adminShow'])->middleware('role:staff');
+    Route::put('/admin/intakes/{intake}', [IntakeController::class, 'adminUpdate'])->middleware('role:staff');
+    Route::delete('/admin/intakes/{intake}', [IntakeController::class, 'adminDestroy'])->middleware('role:staff');
+    Route::post('/admin/intakes/{intake}/convert', [IntakeController::class, 'adminConvert'])->middleware('role:staff');
     Route::post('/admin/intakes/{intake}/documents', [IntakeController::class, 'addDocuments'])->middleware('role:staff');
     Route::delete('/admin/intakes/{intake}/documents/{document}', [IntakeController::class, 'destroyDocument'])->middleware('role:staff');
 
@@ -210,8 +217,8 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('/admin/reports/expenses', [ReportController::class, 'expenses'])->middleware('admin');
     Route::get('/admin/reports/volunteers', [ReportController::class, 'volunteers'])->middleware('role:staff');
     Route::get('/admin/reports/staff', [ReportController::class, 'staff'])->middleware('role:staff');
+    Route::get('/admin/reports/attendance', [ReportController::class, 'attendance'])->middleware('role:staff');
     Route::get('/admin/reports/rescue', [ReportController::class, 'rescue'])->middleware('role:staff');
     Route::get('/admin/reports/export/csv', [ReportController::class, 'exportCsv'])->middleware('role:staff');
     Route::get('/admin/reports/export/pdf', [ReportController::class, 'exportPdf'])->middleware('role:staff');
 });
-    Route::get('/admin/reports/attendance', [ReportController::class, 'attendance'])->middleware('role:staff');

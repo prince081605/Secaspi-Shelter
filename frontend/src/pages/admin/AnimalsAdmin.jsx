@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from 'react';
-import { PawPrint, Dog, Syringe, Pill, Search, X } from 'lucide-react';
+import { PawPrint, Dog, Syringe, Pill, Search, X, MapPin } from 'lucide-react';
 import {
   adminListAnimals,
   adminGetAnimalStats,
@@ -21,6 +21,10 @@ import DashCard from '../../components/DashCard';
 import useIsMobile from '../../lib/useIsMobile';
 import IntakesAdmin from './IntakesAdmin';
 import { SPECIES, isKnownSpecies } from '../../lib/species';
+import { listShelterLocations } from '../../lib/locationsApi';
+import AnimalLocationPanel from '../../components/AnimalLocationPanel';
+import ShelterLocationsManager from './ShelterLocationsManager';
+import ActionMenu from '../../components/ActionMenu';
 import './AnimalsAdmin.css';
 
 const STATUSES = ['available', 'adopted', 'fostered', 'medical', 'quarantine', 'archived'];
@@ -442,6 +446,10 @@ function QrCodeViewer({ animalId }) {
       <a href={photoSrc(qrCode)} download={`${animalName || 'animal'}-qr.svg`} style={{ fontSize: 13, color: 'var(--brand)' }}>
         Download QR
       </a>
+      <p className="ui-muted" style={{ fontSize: 12, textAlign: 'center', maxWidth: 280, margin: 0 }}>
+        Print this on the kennel card. Visitors who scan it see the adoption page; signed-in staff also
+        get the animal's in-shelter location and can update it there.
+      </p>
     </div>
   );
 }
@@ -693,18 +701,21 @@ function MedicalManager({ animalId, onChanged }) {
   );
 }
 
-export default function AnimalsAdmin() {
+export default function AnimalsAdmin({ isAdmin = false }) {
   const confirm = useConfirm();
   const isMobile = useIsMobile();
   const [animals, setAnimals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filters, setFilters] = useState({ q: '', species: '', status: '', size: '' });
+  const [filters, setFilters] = useState({ q: '', species: '', status: '', size: '', location_id: '' });
   const [showCreate, setShowCreate] = useState(false);
   const [editingAnimal, setEditingAnimal] = useState(null);
   const [photosOpenFor, setPhotosOpenFor] = useState(null);
   const [medicalOpenFor, setMedicalOpenFor] = useState(null);
   const [qrOpenFor, setQrOpenFor] = useState(null);
+  const [locationOpenFor, setLocationOpenFor] = useState(null);
+  const [showLocations, setShowLocations] = useState(false);
+  const [locations, setLocations] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [viewMode, setViewMode] = useState('table');
   const [stats, setStats] = useState({ total: 0, available: 0, adopted: 0, archived: 0 });
@@ -740,6 +751,13 @@ export default function AnimalsAdmin() {
     }, 300);
     return () => { mounted = false; clearTimeout(timer); };
   }, [filters, refreshKey, page]);
+
+  // Shelter areas for the Location filter; reloaded when areas or animals change.
+  useEffect(() => {
+    let mounted = true;
+    listShelterLocations().then((res) => { if (mounted) setLocations(res?.locations || []); }).catch(() => {});
+    return () => { mounted = false; };
+  }, [refreshKey]);
 
   // Stat strip reflects true totals across all animals (not just the current filtered page),
   // fetched in one grouped-count request instead of 4 full-list calls (audit §3).
@@ -797,18 +815,25 @@ export default function AnimalsAdmin() {
     }
   };
 
+  // One "Manage" dropdown per animal instead of six buttons. The panel items toggle, so their
+  // label says "Hide …" while that animal's panel is open.
+  const togglePanel = (openId, setOpenId, id) => setOpenId(openId === id ? null : id);
   const renderActions = (a) => (
-    <>
-      <button className="dashBtn" onClick={() => { setEditingAnimal(a); setShowCreate(false); }}>Edit</button>
-      <button className="dashBtn" onClick={() => setPhotosOpenFor(photosOpenFor === a.id ? null : a.id)}>Photos</button>
-      <button className="dashBtn" onClick={() => setMedicalOpenFor(medicalOpenFor === a.id ? null : a.id)}>Medical</button>
-      <button className="dashBtn" onClick={() => setQrOpenFor(qrOpenFor === a.id ? null : a.id)}>QR Code</button>
-      {a.status === 'archived' ? (
-        <button className="dashBtn dashBtnPrimary" onClick={() => handleRestore(a)}>Restore</button>
-      ) : (
-        <button className="dashBtn" onClick={() => handleArchive(a)}>Archive</button>
-      )}
-    </>
+    <ActionMenu
+      label="Manage"
+      ariaLabel={`Manage ${a.name}`}
+      items={[
+        { label: 'Edit details', onClick: () => { setEditingAnimal(a); setShowCreate(false); } },
+        { label: photosOpenFor === a.id ? 'Hide photos' : 'Photos', onClick: () => togglePanel(photosOpenFor, setPhotosOpenFor, a.id) },
+        { label: medicalOpenFor === a.id ? 'Hide medical' : 'Medical records', onClick: () => togglePanel(medicalOpenFor, setMedicalOpenFor, a.id) },
+        { label: qrOpenFor === a.id ? 'Hide QR code' : 'QR code', onClick: () => togglePanel(qrOpenFor, setQrOpenFor, a.id) },
+        { label: locationOpenFor === a.id ? 'Hide location' : 'Location', onClick: () => togglePanel(locationOpenFor, setLocationOpenFor, a.id) },
+        { divider: true },
+        a.status === 'archived'
+          ? { label: 'Restore', onClick: () => handleRestore(a) }
+          : { label: 'Archive', tone: 'danger', onClick: () => handleArchive(a) },
+      ]}
+    />
   );
 
   const renderExpanded = (a) => (
@@ -816,10 +841,15 @@ export default function AnimalsAdmin() {
       {photosOpenFor === a.id && <PhotoManager animalId={a.id} onChanged={refresh} />}
       {medicalOpenFor === a.id && <MedicalManager animalId={a.id} onChanged={refresh} />}
       {qrOpenFor === a.id && <QrCodeViewer animalId={a.id} />}
+      {locationOpenFor === a.id && (
+        <div style={{ marginTop: 10 }}><AnimalLocationPanel animalId={a.id} source="admin" onMoved={refresh} /></div>
+      )}
     </>
   );
 
-  const hasExpanded = (a) => photosOpenFor === a.id || medicalOpenFor === a.id || qrOpenFor === a.id;
+  const hasExpanded = (a) => photosOpenFor === a.id || medicalOpenFor === a.id || qrOpenFor === a.id || locationOpenFor === a.id;
+
+  const locationName = (a) => a.current_location?.name || 'Unassigned';
 
   return (
     <div className="aa-module">
@@ -831,13 +861,22 @@ export default function AnimalsAdmin() {
           <h2>Manage Animal Listings</h2>
           <p>Create, edit, and retire adoption profiles for Aspins currently in shelter care.</p>
         </div>
-        <button
-          className="dashBtn dashBtnPrimary"
-          onClick={() => { setShowCreate((v) => !v); setEditingAnimal(null); }}
-        >
-          {showCreate ? 'Close' : '+ Add Animal'}
-        </button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {isAdmin && (
+            <button className="dashBtn" onClick={() => setShowLocations((v) => !v)}>
+              <MapPin size={15} style={{ verticalAlign: '-3px' }} /> {showLocations ? 'Close areas' : 'Manage locations'}
+            </button>
+          )}
+          <button
+            className="dashBtn dashBtnPrimary"
+            onClick={() => { setShowCreate((v) => !v); setEditingAnimal(null); }}
+          >
+            {showCreate ? 'Close' : '+ Add Animal'}
+          </button>
+        </div>
       </div>
+
+      {isAdmin && showLocations && <ShelterLocationsManager onChanged={refresh} />}
 
       {error && <div className="ui-error">{error}</div>}
 
@@ -880,6 +919,17 @@ export default function AnimalsAdmin() {
             <option value="">All sizes</option>
             {SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
+          <select
+            className="ui-input"
+            style={{ maxWidth: 170 }}
+            aria-label="Filter animals by in-shelter location"
+            value={filters.location_id}
+            onChange={(e) => updateFilter('location_id')(e.target.value)}
+          >
+            <option value="">All locations</option>
+            {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+            <option value="none">Unassigned</option>
+          </select>
         </div>
         <div className="aa-view-toggle" role="group" aria-label="Switch view">
           <button className={viewMode === 'table' ? 'active' : ''} onClick={() => setViewMode('table')}>Table</button>
@@ -909,6 +959,7 @@ export default function AnimalsAdmin() {
                   { label: 'Sex', value: a.gender || '—' },
                   { label: 'Size', value: a.size || '—' },
                   { label: 'Status', value: <StatusBadge status={a.status} /> },
+                  { label: 'Location', value: locationName(a) },
                 ]}
                 actions={renderActions(a)}
               />
@@ -926,6 +977,7 @@ export default function AnimalsAdmin() {
                 <th>Sex</th>
                 <th>Size</th>
                 <th>Status</th>
+                <th>Location</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
@@ -948,11 +1000,12 @@ export default function AnimalsAdmin() {
                     <td>{a.gender || '—'}</td>
                     <td>{a.size || '—'}</td>
                     <td><StatusBadge status={a.status} /></td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{locationName(a)}</td>
                     <td><div className="aa-row-actions">{renderActions(a)}</div></td>
                   </tr>
                   {hasExpanded(a) && (
                     <tr>
-                      <td colSpan={6} className="dashExpandPanel">{renderExpanded(a)}</td>
+                      <td colSpan={7} className="dashExpandPanel">{renderExpanded(a)}</td>
                     </tr>
                   )}
                 </Fragment>
@@ -972,8 +1025,9 @@ export default function AnimalsAdmin() {
                 <div className="dashAnimalMeta">
                   {a.species} {a.breed ? `• ${a.breed}` : ''} {a.age ? `• ${a.age} yrs` : ''}
                 </div>
-                <div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                   <StatusBadge status={a.status} />
+                  <span className="ui-muted" style={{ fontSize: 12 }}><MapPin size={12} style={{ verticalAlign: '-2px' }} /> {locationName(a)}</span>
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
                   {renderActions(a)}

@@ -4,6 +4,9 @@ import { getAnimal } from '../../lib/animalsApi';
 import { Dog, QrCode, Image as ImageIcon } from 'lucide-react';
 import Reveal from '../../components/Reveal';
 import SiteNav from '../../components/SiteNav';
+import AnimalLocationPanel from '../../components/AnimalLocationPanel';
+import { auth } from '../../lib/auth';
+import { getAuthToken } from '../../lib/api';
 
 const styles = `
   /* ---- Split screen ----
@@ -121,6 +124,8 @@ const styles = `
   .detBento { padding: 2.5rem 2.5rem 8rem; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; align-content: start; }
   .bentoTile { background: var(--paper); border: 1px solid var(--line); border-radius: 18px; padding: 1.3rem 1.4rem; }
   .bentoWide { grid-column: 1 / -1; }
+  .bentoStaff { border: 1.5px dashed var(--brand); }
+  .bentoStaffTag { display: inline-block; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--brand); margin-bottom: 0.4rem; }
   .bentoTitle { font-family: 'Fraunces', serif; font-size: 1.05rem; font-weight: 600; color: var(--ink); margin-bottom: 0.8rem; }
   .bentoLabel { font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
 
@@ -207,10 +212,26 @@ export default function AnimalDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [navHeight, setNavHeight] = useState(0);
+  // Staff who open this page — typically by scanning the QR on the kennel card — also get the
+  // animal's in-shelter location and can update it here. Visitors see the normal page.
+  const [isStaff, setIsStaff] = useState(false);
 
   const flipSurfaceRef = useRef(null);
   const qrCloseRef = useRef(null);
   const hasFlippedRef = useRef(false);
+
+  useEffect(() => {
+    // Only ask who is signed in when someone is; a visitor scanning the QR makes no auth call.
+    if (!getAuthToken()) return undefined;
+    let mounted = true;
+    auth.me()
+      .then((data) => {
+        const role = String(data?.user?.role || data?.role || '').toLowerCase();
+        if (mounted) setIsStaff(role === 'staff' || role === 'admin');
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -437,6 +458,14 @@ export default function AnimalDetail() {
 
             {/* Right: bento */}
             <div className="detBento">
+              {isStaff && (
+                <div className="bentoTile bentoWide bentoStaff">
+                  <span className="bentoStaffTag">Staff only</span>
+                  <div className="bentoLabel">In-shelter location</div>
+                  <AnimalLocationPanel animalId={animal.id} source="qr_page" />
+                </div>
+              )}
+
               {animal.rescue_story && (
                 <Reveal className="bentoTile bentoWide">
                   <div className="bentoLabel">Their story</div>

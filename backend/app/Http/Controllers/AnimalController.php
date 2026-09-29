@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Animal;
+use App\Models\AnimalLocationLog;
 use App\Models\AnimalPhoto;
 use App\Models\CareGuide;
+use App\Models\ShelterLocation;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Writer\SvgWriter;
 use Illuminate\Http\Request;
@@ -60,13 +62,22 @@ class AnimalController extends Controller
             }
         }
 
-        $animals = $query->with('mainPhoto')
+        // In-shelter area: an id, or "none" for animals with no area recorded.
+        if ($location = $request->query('location_id')) {
+            $location === 'none'
+                ? $query->whereNull('current_location_id')
+                : $query->where('current_location_id', (int) $location);
+        }
+
+        $animals = $query->with(['mainPhoto', 'currentLocation'])
             ->orderByDesc('id')
             ->paginate(20)
             ->withQueryString();
 
+        // Location is staff-only information, so it's added here rather than in toListItem(),
+        // which the public adoption list shares.
         $animals->getCollection()->transform(function (Animal $animal) {
-            return $this->toListItem($animal);
+            return [...$this->toListItem($animal), 'current_location' => $this->locationRef($animal->currentLocation)];
         });
 
         return response()->json($animals);
@@ -352,12 +363,71 @@ class AnimalController extends Controller
         return $path;
     }
 
+    /**
+     * Record that an animal was moved to another area of the shelter (or back to "unassigned").
+     * Staff do this from the animal's page — the page its QR code opens — or from the Animals
+     * panel; either way the move is logged with who, when, from and to.
+     */
+    public function move(Request $request, Animal $animal)
+    {
+        $validator = Validator::make($request->all(), [
+            'location_id' => ['present', 'nullable', 'integer', Rule::exists('shelter_locations', 'id')],
+            'note' => ['nullable', 'string', 'max:255'],
+            'source' => ['nullable', Rule::in(AnimalLocationLog::SOURCES)],
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+        }
+        $data = $validator->validated();
+        $to = $data['location_id'] ?? null;
+
+        if ((int) $animal->current_location_id === (int) $to) {
+            return response()->json([
+                'message' => "{$animal->name} is already there.",
+                'errors' => ['location_id' => ["{$animal->name} is already there."]],
+            ], 422);
+        }
+
+        DB::transaction(function () use ($animal, $to, $data, $request) {
+            $log = new AnimalLocationLog([
+                'animal_id' => $animal->id,
+                'from_location_id' => $animal->current_location_id,
+                'to_location_id' => $to,
+                'source' => $data['source'] ?? 'admin',
+                'note' => $data['note'] ?? null,
+            ]);
+            $log->forceFill(['moved_by' => $request->user()->id])->save();
+
+            $animal->forceFill(['current_location_id' => $to])->save();
+        });
+
+        return response()->json(['animal' => $this->toAdminDetail($animal->fresh())]);
+    }
+
+    private function locationRef(?ShelterLocation $location): ?array
+    {
+        return $location ? ['id' => $location->id, 'name' => $location->name] : null;
+    }
+
     private function toAdminDetail(Animal $animal): array
     {
-        $animal->load(['photos', 'medicalRecords', 'vaccinations']);
+        $animal->load(['photos', 'medicalRecords', 'vaccinations', 'currentLocation']);
         $qrCode = $this->ensureQrCode($animal);
 
+        $history = $animal->locationLogs()->with(['fromLocation', 'toLocation', 'mover'])
+            ->orderByDesc('created_at')->orderByDesc('id')->limit(10)->get();
+
         return [
+            'current_location' => $this->locationRef($animal->currentLocation),
+            'location_history' => $history->map(fn (AnimalLocationLog $l) => [
+                'id' => $l->id,
+                'from' => $this->locationRef($l->fromLocation),
+                'to' => $this->locationRef($l->toLocation),
+                'moved_by' => $l->mover?->full_name,
+                'source' => $l->source,
+                'note' => $l->note,
+                'created_at' => $l->created_at,
+            ])->values(),
             'id' => $animal->id,
             'name' => $animal->name,
             'species' => $animal->species,

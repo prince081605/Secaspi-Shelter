@@ -422,7 +422,7 @@ export default function Dashboard() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [requestedNav]);
 
   useEffect(() => {
     let mounted = true;
@@ -764,7 +764,7 @@ export default function Dashboard() {
                   <ActivityFeed activity={overview?.activity} />
                 </>
               ) : null}
-              {activeNav === 'animals' ? <AnimalsAdmin /> : null}
+              {activeNav === 'animals' ? <AnimalsAdmin isAdmin={isAdminRole} /> : null}
               {activeNav === 'requests' ? <AdoptionRequestsAdmin onUnreadChanged={fetchPendingCounts} /> : null}
               {activeNav === 'rescues' ? <RescueReportsAdmin onUnreadChanged={fetchPendingCounts} /> : null}
               {activeNav === 'visitations' ? <VisitationsAdmin /> : null}

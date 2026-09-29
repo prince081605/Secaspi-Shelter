@@ -222,7 +222,7 @@ class ReportController extends Controller
             ->groupBy('status')
             ->pluck('count', 'status');
 
-        $animals = $query->orderByDesc('id')->get();
+        $animals = $query->with('currentLocation')->orderByDesc('id')->get();
 
         $statusLabels = ['available' => 'Available', 'adopted' => 'Adopted', 'fostered' => 'Fostered', 'medical' => 'Medical', 'quarantine' => 'Quarantine', 'archived' => 'Archived'];
         $summary = [];
@@ -241,6 +241,7 @@ class ReportController extends Controller
                 ['key' => 'gender', 'label' => 'Gender'],
                 ['key' => 'size', 'label' => 'Size'],
                 ['key' => 'status', 'label' => 'Status'],
+                ['key' => 'location', 'label' => 'Location'],
             ],
             'rows' => $animals->map(fn (Animal $a) => [
                 'id' => $a->id,
@@ -250,6 +251,7 @@ class ReportController extends Controller
                 'gender' => $a->gender ?: '—',
                 'size' => $a->size ?: '—',
                 'status' => $a->status,
+                'location' => $a->currentLocation?->name ?? '—',
             ])->values()->all(),
         ];
     }
