@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Settings, Globe, Heart, Bot } from 'lucide-react';
+import { Settings, Globe, Heart } from 'lucide-react';
 import {
   adminGetSettings,
   adminUpdateSettings,
@@ -27,9 +27,6 @@ const FIELDS = {
   adoption_policies: '',
   donation_monthly_goal: '',
   ...CATEGORY_GOAL_FIELDS,
-  ai_assistant_enabled: '0',
-  ai_daily_message_cap: '20',
-  ai_persona: '',
 };
 
 export default function SettingsAdmin({ onSaved } = {}) {
@@ -211,27 +208,6 @@ export default function SettingsAdmin({ onSaved } = {}) {
               <img src={settingImageUrl(images.fund_usage_image_path)} alt="How donations are used" style={{ maxWidth: 240, marginTop: 8 }} />
             )}
             {imageState.key === 'fund_usage_image_path' && imageState.status === 'error' && <div className="ui-error">{imageState.error}</div>}
-          </div>
-
-          <h3 className="dashSubSectionTitle" style={{ marginTop: 20 }}><Bot size={16} style={{ verticalAlign: '-3px', marginRight: 6 }} />AI Shelter Assistant</h3>
-          <p className="ui-muted" style={{ fontSize: '0.85rem', marginTop: -4 }}>
-            When on, a chat assistant appears on the public site. Common questions are answered free;
-            live AI answers require an OpenAI API key set on the server (otherwise it stays in free FAQ mode).
-          </p>
-          <div className="ui-field">
-            <label className="ui-label">Assistant</label>
-            <select className="ui-select" value={form.ai_assistant_enabled} onChange={handleChange('ai_assistant_enabled')}>
-              <option value="0">Off</option>
-              <option value="1">On</option>
-            </select>
-          </div>
-          <div className="ui-field">
-            <label className="ui-label">Daily message limit per visitor</label>
-            <input className="ui-input" type="number" min="1" max="1000" value={form.ai_daily_message_cap} onChange={handleChange('ai_daily_message_cap')} placeholder="20" />
-          </div>
-          <div className="ui-field">
-            <label className="ui-label">Assistant tone / persona (optional)</label>
-            <input className="ui-input" value={form.ai_persona} onChange={handleChange('ai_persona')} placeholder="a warm, concise, helpful shelter assistant" />
           </div>
 
           <button className="ui-btn-primary" type="submit" disabled={saveState.status === 'loading'}>

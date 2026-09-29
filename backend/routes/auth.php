@@ -7,7 +7,6 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DonationController;
 use App\Http\Controllers\ExpenseController;
-use App\Http\Controllers\FaqController;
 use App\Http\Controllers\FosterApplicationController;
 use App\Http\Controllers\ImpactController;
 use App\Http\Controllers\IntakeController;
@@ -184,12 +183,6 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('/admin/intakes/{intake}/convert', [IntakeController::class, 'adminConvert'])->middleware('role:staff');
     Route::post('/admin/intakes/{intake}/documents', [IntakeController::class, 'addDocuments'])->middleware('role:staff');
     Route::delete('/admin/intakes/{intake}/documents/{document}', [IntakeController::class, 'destroyDocument'])->middleware('role:staff');
-
-    // ---- AI assistant FAQ knowledge base (training) ---- admin only
-    Route::get('/admin/faqs', [FaqController::class, 'adminIndex'])->middleware('admin');
-    Route::post('/admin/faqs', [FaqController::class, 'store'])->middleware('admin');
-    Route::put('/admin/faqs/{faq}', [FaqController::class, 'update'])->middleware('admin');
-    Route::delete('/admin/faqs/{faq}', [FaqController::class, 'destroy'])->middleware('admin');
 
     // ---- Site settings ---- admin only
     Route::get('/admin/settings', [SettingController::class, 'adminIndex'])->middleware('admin');

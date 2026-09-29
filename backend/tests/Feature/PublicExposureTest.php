@@ -21,20 +21,14 @@ class PublicExposureTest extends TestCase
     {
         Setting::setMany([
             'shelter_name' => 'SECASPI',
-            'ai_assistant_enabled' => '1',
-            'ai_persona' => 'secret system persona',
-            'ai_daily_message_cap' => '50',
             'cost_per_meal' => '25',
         ]);
 
         $json = $this->getJson('/api/home/settings')
             ->assertOk()
             ->assertJsonPath('shelter_name', 'SECASPI')
-            ->assertJsonPath('ai_assistant_enabled', '1')
             ->json();
 
-        $this->assertArrayNotHasKey('ai_persona', $json);
-        $this->assertArrayNotHasKey('ai_daily_message_cap', $json);
         $this->assertArrayNotHasKey('cost_per_meal', $json);
     }
 

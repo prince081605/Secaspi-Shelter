@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\AiAssistantController;
 use App\Http\Controllers\AnimalController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\ImpactController;
@@ -35,11 +34,6 @@ Route::post('/rescue-reports', [RescueReportController::class, 'store'])->middle
 
 // ---- Smart adoption matchmaker (lifestyle quiz -> ranked animals) ----
 Route::post('/matchmaker', [MatchmakerController::class, 'match']);
-
-// ---- AI shelter assistant (FAQ-first, cost-capped) ----
-// The free FAQ path runs TF-IDF matching + DB queries on every anonymous request, so throttle
-// per IP to blunt a CPU/DB DoS even when AI is disabled (the paid path is separately day-capped).
-Route::post('/assistant/chat', [AiAssistantController::class, 'chat'])->middleware('throttle:20,1');
 
 // ---- Public impact leaderboards (gamification) ----
 Route::get('/impact/leaderboard', [ImpactController::class, 'leaderboard']);

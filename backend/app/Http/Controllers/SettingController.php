@@ -10,15 +10,15 @@ class SettingController extends Controller
 {
     /**
      * Keys safe to expose on the unauthenticated public endpoint — branding, contact, hero,
-     * socials, public images, the donation goal, and whether the AI assistant is enabled.
-     * Internal AI config (`ai_persona`, `ai_daily_message_cap`) and `cost_per_meal` are withheld.
+     * socials, public images, and the donation goal. Internal config such as `cost_per_meal`
+     * is withheld.
      */
     private const PUBLIC_KEYS = [
         'shelter_name', 'contact_email', 'contact_phone', 'address',
         'social_facebook', 'social_instagram', 'social_twitter',
         'hero_title', 'hero_subtitle', 'about_us_content', 'adoption_policies',
         'banner_image_path', 'logo_path', 'fund_usage_image_path',
-        'donation_monthly_goal', 'ai_assistant_enabled',
+        'donation_monthly_goal',
     ];
 
     public function publicIndex()
@@ -54,10 +54,6 @@ class SettingController extends Controller
             'cat_goal_transportation' => ['nullable', 'numeric', 'min:0'],
             'cat_goal_animal_care' => ['nullable', 'numeric', 'min:0'],
             'cat_goal_cleaning' => ['nullable', 'numeric', 'min:0'],
-            // AI Shelter Assistant controls (the API key lives in env, never here).
-            'ai_assistant_enabled' => ['nullable', 'in:0,1'],
-            'ai_daily_message_cap' => ['nullable', 'integer', 'min:1', 'max:1000'],
-            'ai_persona' => ['nullable', 'string', 'max:500'],
             // Cost of one meal, used to turn donations into "X meals funded" on the impact page.
             'cost_per_meal' => ['nullable', 'numeric', 'min:1'],
         ]);

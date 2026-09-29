@@ -4,13 +4,12 @@ import './Dashboard.css';
 import { auth } from '../../lib/auth';
 import { listMyAdoptionApplications, listMyFosterApplications } from '../../lib/animalsApi';
 import { updateProfile, changePassword } from '../../lib/profileApi';
-import { getPublicSettings } from '../../lib/settingsApi';
 import Reveal from '../../components/Reveal';
 import PasswordInput from '../../components/PasswordInput';
 import {
   Clock, Heart, User, Pencil, Lock, ClipboardList, Dog, Trophy, LayoutDashboard,
   ArrowLeft, Menu, X, LogOut, MessageSquare, PawPrint, Bell, Inbox, HeartHandshake,
-  Siren, Calendar, Wrench, HandCoins, BarChart3, Users, UsersRound, Brain, Settings,
+  Siren, Calendar, Wrench, HandCoins, BarChart3, Users, UsersRound, Settings,
   ChevronRight, Receipt,
 } from 'lucide-react';
 import AnimalsAdmin from '../admin/AnimalsAdmin';
@@ -26,7 +25,6 @@ import ReportsAdmin from '../admin/ReportsAdmin';
 import AnalyticsAdmin from '../admin/AnalyticsAdmin';
 import Messages from '../Messages';
 import ImpactPanel from './ImpactPanel';
-import FaqTrainingAdmin from '../admin/FaqTrainingAdmin';
 import SettingsAdmin from '../admin/SettingsAdmin';
 import VisitationsAdmin from '../admin/VisitationsAdmin';
 import RemindersAdmin from '../admin/RemindersAdmin';
@@ -42,7 +40,7 @@ const fallbackRole = 'user';
 const ITEM_CATEGORY = {
   animals: 'cat_animals', reminders: 'cat_animals',
   requests: 'cat_requests', rescues: 'cat_requests', visitations: 'cat_requests', messages: 'cat_requests',
-  donations: 'cat_ops', expenses: 'cat_ops', reports: 'cat_ops', users: 'cat_ops', settings: 'cat_ops', volunteers: 'cat_ops', faqs: 'cat_ops',
+  donations: 'cat_ops', expenses: 'cat_ops', reports: 'cat_ops', users: 'cat_ops', settings: 'cat_ops', volunteers: 'cat_ops',
 };
 const NAV_CATEGORY_KEYS = ['cat_animals', 'cat_requests', 'cat_ops'];
 
@@ -60,7 +58,7 @@ const ITEM_MIN_ROLE = {
   // Staff can read the expense ledger; writing to it is admin-only and gated inside the panel
   // (and on the server), the same split as Donations.
   donations: 'staff', expenses: 'staff', reports: 'staff', volunteers: 'staff',
-  users: 'admin', settings: 'admin', faqs: 'admin',
+  users: 'admin', settings: 'admin',
 };
 
 
@@ -434,10 +432,6 @@ export default function Dashboard() {
   const [pendingVisitationCount, setPendingVisitationCount] = useState(0);
   const [overdueReminderCount, setOverdueReminderCount] = useState(0);
   const [pendingVolunteerCount, setPendingVolunteerCount] = useState(0);
-  // Whether the public AI assistant is switched on. When off, the assistant widget renders nothing
-  // (see AiAssistant.jsx), so the "AI Training" (FAQ KB) nav item + panel are hidden. Default true
-  // so a transient settings-fetch failure doesn't wrongly hide it from an admin.
-  const [aiEnabled, setAiEnabled] = useState(true);
 
   // keep empty when data isn't available
   const isAdminRole = role === 'admin';
@@ -474,15 +468,6 @@ export default function Dashboard() {
     return () => {
       mounted = false;
     };
-  }, []);
-
-  // Read whether the AI assistant is on (mirrors AiAssistant.jsx) to gate the "AI Training" nav.
-  useEffect(() => {
-    let mounted = true;
-    getPublicSettings()
-      .then((s) => { if (mounted) setAiEnabled(String(s?.ai_assistant_enabled) === '1'); })
-      .catch(() => { /* leave default (visible) on a transient failure */ });
-    return () => { mounted = false; };
   }, []);
 
   useEffect(() => {
@@ -606,29 +591,21 @@ export default function Dashboard() {
         { key: 'reports', label: 'Reports', icon: BarChart3 },
         { key: 'users', label: 'Users', icon: Users },
         { key: 'volunteers', label: 'Personnel', icon: UsersRound, badge: pendingVolunteerCount },
-        { key: 'faqs', label: 'AI Training', icon: Brain },
         { key: 'settings', label: 'Settings', icon: Settings },
       ],
     },
   ];
 
   // Hide nav items above the current role (e.g. staff never see Users/Settings), then
-  // drop any category left empty. Admin sees everything. "AI Training" (faqs) is also hidden
-  // whenever the AI assistant is switched off — its FAQ KB has no user-facing surface then.
+  // drop any category left empty. Admin sees everything.
   const visibleNavCategories = navCategories
     .map((cat) => ({
       ...cat,
-      items: cat.items.filter((it) =>
-        atLeast(role, ITEM_MIN_ROLE[it.key] || 'admin') && !(it.key === 'faqs' && !aiEnabled)),
+      items: cat.items.filter((it) => atLeast(role, ITEM_MIN_ROLE[it.key] || 'admin')),
     }))
     .filter((cat) => cat.items.length > 0);
 
   const [activeNav, setActiveNav] = useState('dashboard');
-  // If the AI assistant is switched off while the admin is sitting on "AI Training", bounce them
-  // back to the overview so they aren't left on a now-hidden, blank panel.
-  useEffect(() => {
-    if (!aiEnabled && activeNav === 'faqs') setActiveNav('dashboard');
-  }, [aiEnabled, activeNav]);
   // On phones the sidebar collapses behind a ☰ toggle; selecting a nav item closes it (see effect
   // below) so the chosen panel is shown instead of the long nav list.
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -831,11 +808,10 @@ export default function Dashboard() {
               {activeNav === 'volunteers' ? <VolunteersAdmin /> : null}
               {activeNav === 'reports' ? <ReportsAdmin isAdmin={isAdminRole} /> : null}
               {/* Users & Settings are admin-only — guarded here too so a forced nav can't mount them. */}
-              {isAdminRole && aiEnabled && activeNav === 'faqs' ? <FaqTrainingAdmin /> : null}
               {isAdminRole && activeNav === 'users' ? <UsersAdmin currentUserId={user?.id} /> : null}
               {isAdminRole && activeNav === 'settings' ? (
                 <>
-                  <SettingsAdmin onSaved={(f) => setAiEnabled(String(f.ai_assistant_enabled) === '1')} />
+                  <SettingsAdmin />
                   <div style={{ marginTop: 20 }}>
                     <UserProfile key={user?.id} user={user} onProfileUpdated={setUser} />
                   </div>

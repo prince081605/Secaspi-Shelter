@@ -2,7 +2,6 @@ import { Suspense, lazy, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 
 import { auth } from './lib/auth';
-import AiAssistant from './components/AiAssistant';
 import ConfirmProvider from './components/ConfirmDialog';
 
 // Route components are lazy-loaded so each visitor only downloads the chunk for the page they're
@@ -148,7 +147,6 @@ export default function AppRouter() {
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
-        <AiAssistant />
       </ConfirmProvider>
     </BrowserRouter>
   );
