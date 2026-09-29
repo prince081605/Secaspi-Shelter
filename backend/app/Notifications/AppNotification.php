@@ -4,15 +4,14 @@ namespace App\Notifications;
 
 use App\Models\Notification as NotificationRecord;
 use App\Models\User;
-use Illuminate\Notifications\Messages\MailMessage;
+use App\Notifications\Channels\TransactionalMailChannel;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Log;
 
 /**
  * Single source of truth for an event's title/message/data, sent over both channels: a row in
- * `app_notifications` for the in-app bell, and an email via Laravel's mail channel (currently the
- * `log` driver per .env — becomes real delivery the moment MAIL_MAILER/credentials are set, no
- * code change needed).
+ * `app_notifications` for the in-app bell, and an email via TransactionalMailChannel (Brevo's
+ * HTTPS API when BREVO_API_KEY is set, the framework mailer otherwise).
  *
  * NOTE: deliberately NOT `implements ShouldQueue`. Notifications run synchronously so email
  * delivery never depends on a running queue worker — prod uses `QUEUE_CONNECTION=database`
@@ -35,16 +34,15 @@ abstract class AppNotification extends Notification
 
     public function via($notifiable): array
     {
-        return ['mail'];
+        return [TransactionalMailChannel::class];
     }
 
-    public function toMail($notifiable): MailMessage
+    /** The email body, as plain text — the same format as the verification and reset emails. */
+    public function toText($notifiable): string
     {
-        return (new MailMessage)
-            ->subject($this->title())
-            ->greeting('Hi '.$notifiable->full_name.',')
-            ->line($this->message())
-            ->action('View on SECASPI Shelter', rtrim(config('app.frontend_url'), '/').'/dashboard');
+        return 'Hi '.$notifiable->full_name.",\n\n"
+            .$this->message()."\n\n"
+            .'View on SECASPI Shelter: '.rtrim(config('app.frontend_url'), '/').'/dashboard';
     }
 
     /**

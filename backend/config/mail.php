@@ -45,7 +45,12 @@ return [
             'port' => env('MAIL_PORT', 2525),
             'username' => env('MAIL_USERNAME'),
             'password' => env('MAIL_PASSWORD'),
-            'timeout' => null,
+            // Seconds to wait on the SMTP server. Mail sends synchronously inside requests
+            // (see AppNotification), and where SMTP is blocked (Render free tier) an unset
+            // timeout means PHP's 60s socket default — per attempt — which froze the payment
+            // return page for 1–2 minutes. A short cap turns a blocked port into a quick,
+            // logged failure.
+            'timeout' => (int) env('MAIL_TIMEOUT', 10),
             'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
         ],
 
