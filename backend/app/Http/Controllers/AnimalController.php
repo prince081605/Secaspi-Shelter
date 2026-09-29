@@ -246,32 +246,16 @@ class AnimalController extends Controller
         }
     }
 
+    /**
+     * Archiving is the only way an animal leaves the roster: there is deliberately no delete,
+     * so its medical history, vaccinations and adoption/foster applications are never lost.
+     * Restoring is an ordinary status update back to 'available'.
+     */
     public function archive(Animal $animal)
     {
         $animal->update(['status' => 'archived']);
 
         return response()->json(['animal' => $this->toAdminDetail($animal)]);
-    }
-
-    public function destroy(Animal $animal)
-    {
-        // The frontend gates this behind a "type DELETE to confirm" modal, so once the
-        // request reaches here we cascade for real: medical history, vaccinations, and
-        // applications tied to this animal are removed along with it, not just blocked.
-        $animal->medicalRecords()->delete();
-        $animal->vaccinations()->delete();
-        $animal->adoptionApplications()->delete();
-        $animal->fosterApplications()->delete();
-
-        foreach ($animal->photos as $photo) {
-            if ($photo->photo_url) {
-                Storage::delete($photo->photo_url);
-            }
-        }
-        $animal->photos()->delete();
-        $animal->delete();
-
-        return response()->json(['message' => 'Animal deleted']);
     }
 
     public function addPhotos(Request $request, Animal $animal)

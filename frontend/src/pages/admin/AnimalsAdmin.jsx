@@ -7,7 +7,6 @@ import {
   adminCreateAnimal,
   adminUpdateAnimal,
   adminArchiveAnimal,
-  adminDeleteAnimal,
   adminAddAnimalPhotos,
   adminDeleteAnimalPhoto,
   adminCreateMedicalRecord,
@@ -16,7 +15,6 @@ import {
   adminDeleteVaccination,
 } from '../../lib/animalsApi';
 import StatusBadge from '../../components/StatusBadge';
-import TypeToConfirmButton from '../../components/TypeToConfirmButton';
 import useConfirm from '../../lib/useConfirm';
 import Pagination from '../../components/Pagination';
 import DashCard from '../../components/DashCard';
@@ -788,15 +786,6 @@ export default function AnimalsAdmin() {
     }
   };
 
-  const handleDelete = async (animal) => {
-    try {
-      await adminDeleteAnimal(animal.id);
-      refresh();
-    } catch (err) {
-      setError(err?.message || 'Failed to delete animal.');
-    }
-  };
-
   const renderActions = (a) => (
     <>
       <button className="dashBtn" onClick={() => { setEditingAnimal(a); setShowCreate(false); }}>Edit</button>
@@ -808,12 +797,6 @@ export default function AnimalsAdmin() {
       ) : (
         <button className="dashBtn" onClick={() => handleArchive(a)}>Archive</button>
       )}
-      <TypeToConfirmButton
-        warningLabel={`Delete ${a.name}? This cannot be undone.`}
-        onConfirm={() => handleDelete(a)}
-      >
-        Delete
-      </TypeToConfirmButton>
     </>
   );
 

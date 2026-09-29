@@ -65,10 +65,6 @@ export async function adminArchiveAnimal(id) {
   return api.post(`/api/animals/${id}/archive`);
 }
 
-export async function adminDeleteAnimal(id) {
-  return api.delete(`/api/animals/${id}`);
-}
-
 export async function adminAddAnimalPhotos(id, formData) {
   return api.post(`/api/animals/${id}/photos`, formData);
 }

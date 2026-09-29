@@ -130,7 +130,6 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('/animals', [AnimalController::class, 'store'])->middleware('role:staff');
     Route::put('/animals/{animal}', [AnimalController::class, 'update'])->middleware('role:staff');
     Route::post('/animals/{animal}/archive', [AnimalController::class, 'archive'])->middleware('role:staff');
-    Route::delete('/animals/{animal}', [AnimalController::class, 'destroy'])->middleware('role:staff');
     Route::post('/animals/{animal}/photos', [AnimalController::class, 'addPhotos'])->middleware('role:staff');
     Route::delete('/animals/{animal}/photos/{photo}', [AnimalController::class, 'destroyPhoto'])->middleware('role:staff');
 
