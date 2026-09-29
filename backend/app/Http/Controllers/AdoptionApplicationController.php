@@ -6,11 +6,13 @@ use App\Http\Controllers\Concerns\MarksAdminRead;
 use App\Models\AdoptionApplication;
 use App\Models\Animal;
 use App\Notifications\AdoptionStatusChanged;
+use App\Support\ValidIdTypes;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class AdoptionApplicationController extends Controller
 {
@@ -26,6 +28,10 @@ class AdoptionApplicationController extends Controller
             'housing_type' => ['nullable', 'string', 'max:50'],
             'pet_experience' => ['nullable', 'string'],
             'reason' => ['required', 'string'],
+            // An animal is being placed in their care, so the shelter records who they are.
+            // 5 MB matches every other upload in the app.
+            'valid_id_type' => ['required', Rule::in(ValidIdTypes::ALL)],
+            'valid_id_image' => ['required', 'image', 'max:5120'],
         ]);
 
         if ($validator->fails()) {
@@ -49,16 +55,30 @@ class AdoptionApplicationController extends Controller
         }
 
         $referenceNo = 'ADP-'.strtoupper(Str::random(8));
+        // validated() carries the UploadedFile under 'valid_id_image'; only its stored path
+        // belongs on the model, so the file is pulled out rather than spread into create().
+        $data = $validator->validated();
+        unset($data['valid_id_image']);
+        $idPath = null;
 
         try {
+            // Stored after the duplicate guard above, so a refused application never leaves an
+            // orphaned upload on disk.
+            $idPath = $request->file('valid_id_image')->store('adoption-ids');
+
             $application = AdoptionApplication::create([
                 'user_id' => $user->id,
                 'animal_id' => $animal->id,
                 'reference_no' => $referenceNo,
                 'status' => 'pending',
-                ...$validator->validated(),
+                ...$data,
+                'valid_id_path' => $idPath,
             ]);
         } catch (\Throwable $e) {
+            if ($idPath) {
+                Storage::delete($idPath);
+            }
+
             Log::error('Failed to create adoption application', [
                 'user_id' => $user->id,
                 'animal_id' => $animal->id,
@@ -193,6 +213,8 @@ class AdoptionApplicationController extends Controller
             'housing_type' => $a->housing_type,
             'pet_experience' => $a->pet_experience,
             'reason' => $a->reason,
+            'valid_id_type' => $a->valid_id_type,
+            'valid_id_url' => $a->valid_id_path ? Storage::url($a->valid_id_path) : null,
             'created_at' => $a->created_at,
             'animal' => $a->animal ? [
                 'id' => $a->animal->id,

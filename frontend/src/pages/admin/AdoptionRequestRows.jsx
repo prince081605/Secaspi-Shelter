@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { adminUpdateAdoptionApplication, adminMarkAdoptionApplicationRead } from '../../lib/animalsApi';
 import { settingImageUrl } from '../../lib/settingsApi';
+import { labelForIdType } from '../../lib/validIdTypes';
 import StatusBadge from '../../components/StatusBadge';
 import useConfirm from '../../lib/useConfirm';
 import DashCard from '../../components/DashCard';
@@ -295,6 +296,26 @@ export function ApplicationRow({ application, onChanged, onUnreadChanged }) {
           <div className="dashInfoFull"><dt>Pet experience</dt><dd>{application.pet_experience || '—'}</dd></div>
           <div className="dashInfoFull"><dt>Reason</dt><dd>{application.reason || '—'}</dd></div>
         </dl>
+      </div>
+
+      <div className="dashReviewSection">
+        <div className="dashReviewSectionTitle">Valid ID</div>
+        <dl className="dashInfoList">
+          <div><dt>ID type</dt><dd>{application.valid_id_type ? labelForIdType(application.valid_id_type) : '—'}</dd></div>
+        </dl>
+        {application.valid_id_url ? (
+          <a href={photoSrc(application.valid_id_url)} target="_blank" rel="noreferrer" title="Open the full-size ID">
+            <img
+              src={photoSrc(application.valid_id_url)}
+              alt={`Valid ID submitted by ${application.full_name || application.applicant?.full_name || 'the applicant'}`}
+              style={{ maxWidth: 'min(320px, 100%)', marginTop: 10, borderRadius: 8, border: '1px solid var(--line)', display: 'block' }}
+            />
+          </a>
+        ) : (
+          <div className="ui-muted" style={{ marginTop: 10, fontSize: '0.85rem' }}>
+            No ID photo on file — this application predates the ID requirement.
+          </div>
+        )}
       </div>
 
       <div className="dashActionRow">

@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { applyForAdoption } from '../../lib/animalsApi';
+import { ID_TYPES } from '../../lib/validIdTypes';
 import SiteNav from '../../components/SiteNav';
 
 const styles = `
   .applyBody { max-width: 640px; margin: 0 auto; padding: 3rem 1.5rem; }
   .applySuccess { padding: 2.5rem; text-align: center; }
+  .applyIdPreview { display: block; max-width: min(320px, 100%); margin-top: 0.7rem; border: 1px solid var(--line); border-radius: 10px; }
   @media (max-width: 560px) {
     .applyBody { padding: 2rem 1rem; }
     .applySuccess { padding: 1.5rem 1.25rem; }
@@ -16,22 +18,49 @@ export default function AdoptionApply() {
   const { id } = useParams();
   const [form, setForm] = useState({
     full_name: '', contact_number: '', address: '', occupation: '', housing_type: '', pet_experience: '', reason: '',
+    valid_id_type: '',
   });
+  // The ID photo is a File, so it lives outside `form` (which is plain strings).
+  const [idImage, setIdImage] = useState(null);
+  const [idPreviewUrl, setIdPreviewUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
+  // Show the chosen ID before it is sent, so a blurry or wrong-side photo is caught here rather
+  // than by a reviewer later. Minted in the handler, released by the effect below.
+  const chooseIdImage = (e) => {
+    const file = e.target.files?.[0] || null;
+    setIdImage(file);
+    setIdPreviewUrl(file ? URL.createObjectURL(file) : '');
+  };
+
+  useEffect(() => (
+    () => { if (idPreviewUrl) URL.revokeObjectURL(idPreviewUrl); }
+  ), [idPreviewUrl]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!idImage) {
+      setError('Please attach a photo of your ID.');
+      return;
+    }
     setSubmitting(true);
     setError('');
     try {
-      const data = await applyForAdoption(id, form);
+      // FormData rather than JSON now that a file rides along; lib/api.js drops the
+      // Content-Type header for FormData so the browser can set the multipart boundary.
+      const body = new FormData();
+      Object.entries(form).forEach(([key, value]) => body.append(key, value));
+      body.append('valid_id_image', idImage);
+      const data = await applyForAdoption(id, body);
       setResult(data?.application || null);
     } catch (err) {
-      setError(err?.message || 'Failed to submit application. Please try again.');
+      // Laravel's 422 puts the useful sentence in `errors`, not `message`.
+      const fieldError = Object.values(err?.data?.errors || {})[0]?.[0];
+      setError(fieldError || err?.message || 'Failed to submit application. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -41,7 +70,7 @@ export default function AdoptionApply() {
     <div className="ui-page">
       <style>{styles}</style>
 
-      <SiteNav back={{ to: `/adopt/${id}`, label: 'Back to Animal' }} />
+      <SiteNav />
 
       <div className="applyBody">
         {result ? (
@@ -85,6 +114,21 @@ export default function AdoptionApply() {
               <div className="ui-field">
                 <label className="ui-label ui-label-required">Why do you want to adopt?</label>
                 <textarea className="ui-textarea" name="reason" value={form.reason} onChange={handleChange} required />
+              </div>
+              <div className="ui-field">
+                <label className="ui-label ui-label-required">Type of ID</label>
+                <select className="ui-input" name="valid_id_type" value={form.valid_id_type} onChange={handleChange} required>
+                  <option value="">Select an ID</option>
+                  {ID_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
+              </div>
+              <div className="ui-field">
+                <label className="ui-label ui-label-required">Photo of your ID</label>
+                <input className="ui-input" type="file" accept="image/*" onChange={chooseIdImage} required />
+                <p className="ui-muted" style={{ fontSize: '0.82rem', marginTop: '0.4rem' }}>
+                  A clear photo of the ID above, so we can confirm it is yours. JPG or PNG, up to 5 MB.
+                </p>
+                {idPreviewUrl && <img src={idPreviewUrl} alt="Your ID, as it will be submitted" className="applyIdPreview" />}
               </div>
               <button className="ui-btn-primary" style={{ width: '100%' }} type="submit" disabled={submitting}>
                 {submitting ? 'Submitting…' : 'Submit Application'}

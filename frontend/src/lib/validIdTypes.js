@@ -1,9 +1,10 @@
 /*
- * The IDs a volunteer applicant may present, as government-issued or school-issued proof of
- * who they are. Volunteers work with animals and, at adoption events, with the public, so the
- * shelter records an ID rather than taking a name on trust.
+ * The IDs a volunteer or adoption applicant may present, as government-issued or school-issued
+ * proof of who they are. Volunteers work with animals and meet the public, and an adoption
+ * places an animal in someone's care, so the shelter records an ID rather than taking a name
+ * on trust.
  *
- * Kept in sync by hand with VolunteerApplicationController::ID_TYPES on the backend, which
+ * Kept in sync by hand with App\Support\ValidIdTypes::ALL on the backend, which
  * validates against the same keys — same arrangement as donationCategories.js. A backend test
  * rejects an unknown type, so drift shows up as a failing test rather than a silent accept.
  */

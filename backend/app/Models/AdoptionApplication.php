@@ -19,6 +19,8 @@ class AdoptionApplication extends Model
         'housing_type',
         'pet_experience',
         'reason',
+        'valid_id_type',
+        'valid_id_path',
         'home_visit_status',
         'home_visit_date',
         'home_visit_notes',

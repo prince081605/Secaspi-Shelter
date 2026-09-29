@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Volunteer;
 use App\Models\VolunteerApplication;
 use App\Notifications\VolunteerApplicationStatusChanged;
+use App\Support\ValidIdTypes;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -19,22 +20,6 @@ class VolunteerApplicationController extends Controller
 
     private const STATUSES = ['pending', 'approved', 'rejected'];
 
-    /**
-     * The IDs an applicant may present. Kept in sync by hand with frontend/src/lib/validIdTypes.js,
-     * the same arrangement donation categories use; the "unknown id type" test is what catches
-     * the two lists drifting apart.
-     */
-    private const ID_TYPES = [
-        'school_id',
-        'national_id',
-        'umid',
-        'drivers_license',
-        'postal_id',
-        'philhealth',
-        'passport',
-        'other',
-    ];
-
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -43,7 +28,7 @@ class VolunteerApplicationController extends Controller
             'reason' => ['required', 'string'],
             // Volunteers work with the animals and meet the public, so the shelter records who
             // they are. 5 MB matches every other upload in the app.
-            'valid_id_type' => ['required', Rule::in(self::ID_TYPES)],
+            'valid_id_type' => ['required', Rule::in(ValidIdTypes::ALL)],
             'valid_id_image' => ['required', 'image', 'max:5120'],
         ]);
 
