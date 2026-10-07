@@ -184,6 +184,65 @@
 .aa-module .badge.badgeSky { background: var(--aa-terracotta-light); color: var(--aa-terracotta-dark); }
 .aa-module .badge.badgeOrange { background: #E2E2E2; color: var(--aa-ink-soft); }
 
+/* ---------- Import from Excel (AnimalImport.jsx) ---------- */
+.aa-module .aa-import { margin: 10px 0 20px; padding: 22px 24px; }
+.aa-import-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 6px; }
+.aa-import-head h3 { font-size: 19px; }
+.aa-import-head p { margin: 6px 0 0; font-size: 14px; }
+.aa-import-step { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 14px; padding: 18px 0 4px; border-top: 1px solid var(--aa-line); margin-top: 14px; }
+.aa-import-step h3 { font-size: 16px; }
+.aa-import-step p.ui-muted { margin: 6px 0 12px; font-size: 14px; }
+.aa-import-step-num {
+  width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--aa-terracotta-light); color: var(--aa-terracotta-dark); font-weight: 700; font-size: 14px;
+}
+.aa-import-result .aa-import-step-num { background: var(--aa-sage-light); color: #4F5C41; }
+/* The real file input stays in the page (and reachable to assistive tech through the buttons
+   that open it) but is drawn as nothing; the visible controls are ordinary buttons. */
+.aa-import-input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; clip-path: inset(50%); }
+.aa-import-file {
+  display: inline-flex; align-items: center; gap: 12px; flex-wrap: wrap; max-width: 100%;
+  padding: 10px 14px; border: 1px solid var(--aa-line); border-radius: var(--aa-radius-sm); background: var(--aa-cream);
+}
+.aa-import-file > svg { color: var(--aa-terracotta-dark); flex-shrink: 0; }
+.aa-import-file .name { font-weight: 600; color: var(--aa-ink); overflow-wrap: anywhere; }
+.aa-import-file .ui-muted { font-size: 12px; }
+.aa-import-status { display: flex; align-items: center; gap: 8px; margin: 12px 0 0; color: var(--aa-ink-soft); font-size: 14px; }
+.aa-import-spin { animation: aa-spin 0.9s linear infinite; vertical-align: -3px; }
+@keyframes aa-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .aa-import-spin { animation: none; } }
+.aa-import-stats { margin: 4px 0 16px; }
+.aa-stat-card.is-good .num { color: #4F5C41; }
+.aa-stat-card.is-bad .num { color: var(--aa-danger); }
+.aa-import-block { margin-bottom: 18px; }
+.aa-import-block h4 { margin: 0 0 4px; font-size: 14px; color: var(--aa-ink); }
+.aa-import-block p.ui-muted { margin: 0 0 8px; }
+.aa-import-list {
+  list-style: none; padding: 0; margin: 0 0 8px; max-height: 300px; overflow-y: auto;
+  border: 1px solid var(--aa-line); border-radius: var(--aa-radius-sm); background: var(--aa-paper);
+}
+.aa-import-list li { padding: 8px 12px; border-bottom: 1px solid var(--aa-line); font-size: 13px; color: var(--aa-ink-soft); line-height: 1.45; }
+.aa-import-list li:last-child { border-bottom: none; }
+.aa-import-list strong { color: var(--aa-ink); }
+.aa-import-dup { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.aa-import-dup label { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--aa-ink); cursor: pointer; white-space: nowrap; }
+.aa-import-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.aa-import-chips button {
+  border: 1px solid var(--aa-line); background: var(--aa-paper); color: var(--aa-ink-soft); border-radius: 999px;
+  padding: 6px 12px; font-size: 12px; font-weight: 600; font-family: 'Work Sans', sans-serif; cursor: pointer;
+}
+.aa-import-chips button.active { background: var(--aa-terracotta); border-color: var(--aa-terracotta); color: #fff; }
+/* Eleven columns in a panel the width of the dashboard's main column: tighter than the shared
+   table so every column fits on a laptop screen. Name and Breed may wrap; the rest don't. */
+.aa-module .aa-import-table th,
+.aa-module .aa-import-table td { padding: 8px 10px; font-size: 13px; white-space: nowrap; }
+.aa-module .aa-import-table th { font-size: 10.5px; }
+.aa-module .aa-import-table td:nth-child(3),
+.aa-module .aa-import-table td:nth-child(5) { white-space: normal; min-width: 90px; }
+.aa-import-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+.aa-module .aa-import .dashBtn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.aa-module .aa-import .ui-success-msg { margin: 8px 0 14px; }
+
 /* ---------- Responsive ---------- */
 @media (max-width: 980px) {
   .aa-stat-strip { grid-template-columns: repeat(2, 1fr); }
@@ -204,4 +263,6 @@
   .aa-toolbar-left .ui-input { flex: 1 1 0; max-width: none; }
   .aa-view-toggle { width: 100%; }
   .aa-view-toggle button { flex: 1; }
+  .aa-module .aa-import { padding: 16px; }
+  .aa-import-step { grid-template-columns: minmax(0, 1fr); gap: 8px; }
 }

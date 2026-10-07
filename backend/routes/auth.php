@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdoptionApplicationController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AnimalController;
+use App\Http\Controllers\AnimalImportController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
@@ -128,6 +129,11 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('/admin/animals', [AnimalController::class, 'adminIndex'])->middleware('role:staff');
     // Must precede /admin/animals/{animal} so "stats" isn't bound as an animal id.
     Route::get('/admin/animals/stats', [AnimalController::class, 'adminStats'])->middleware('role:staff');
+    // ---- Bulk import from Excel ---- admin-only; preview checks every row and saves nothing.
+    // Kept above /admin/animals/{animal} alongside "stats", for the same reason.
+    Route::get('/admin/animals/import/template', [AnimalImportController::class, 'template'])->middleware('admin');
+    Route::post('/admin/animals/import/preview', [AnimalImportController::class, 'preview'])->middleware(['admin', 'throttle:20,1']);
+    Route::post('/admin/animals/import', [AnimalImportController::class, 'store'])->middleware(['admin', 'throttle:20,1']);
     Route::get('/admin/animals/{animal}', [AnimalController::class, 'adminShow'])->middleware('role:staff');
     Route::post('/animals', [AnimalController::class, 'store'])->middleware('role:staff');
     Route::put('/animals/{animal}', [AnimalController::class, 'update'])->middleware('role:staff');

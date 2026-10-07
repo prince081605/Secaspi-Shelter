@@ -2,6 +2,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Validation\Rule;
 
 class Animal extends Model
 {
@@ -10,6 +11,36 @@ class Animal extends Model
     // The shelter takes in dogs and cats only. Stored lowercase (the Matchmaker filters on it);
     // animals and intakes both validate against this list.
     public const SPECIES = ['dog', 'cat'];
+
+    public const STATUSES = ['available', 'adopted', 'fostered', 'medical', 'quarantine', 'archived'];
+
+    public const GENDERS = ['male', 'female'];
+
+    public const SIZES = ['small', 'medium', 'large'];
+
+    // The behavioral issues the admin form offers as checkboxes (mirrored in AnimalsAdmin.jsx).
+    // The Matchmaker and care guides key off this vocabulary, so the Excel import only accepts
+    // these exact phrases.
+    public const BEHAVIORAL_ISSUES = [
+        'separation anxiety',
+        'aggression & resource guarding',
+        'dog-to-dog aggression',
+        'territorial aggression',
+        'fear aggression',
+        'destructive chewing & digging',
+        'inappropriate elimination',
+        'excessive barking',
+        'excessive vocalization',
+        'jumping/mouthing',
+        'pulling on leash',
+        'excessive energy',
+        'extreme shyness',
+        'fear of strangers',
+        'fear of loud noises',
+        'post-trauma/trust issues',
+        'pain-related aggression',
+        'cognitive issues (senior)',
+    ];
 
     protected $fillable = [
         'name',
@@ -28,6 +59,41 @@ class Animal extends Model
     protected $casts = [
         'behavioral_assessment' => 'array',
     ];
+
+    /**
+     * Validation rules for a new animal's own fields. Shared by the Add Animal form
+     * (AnimalController::store) and the Excel import (AnimalImporter) so a spreadsheet row is held
+     * to exactly the same rules as a hand-entered animal.
+     */
+    public static function rules(): array
+    {
+        return [
+            'name' => ['required', 'string', 'max:100'],
+            'species' => ['required', Rule::in(self::SPECIES)],
+            'breed' => ['nullable', 'string', 'max:100'],
+            'age' => ['nullable', 'integer', 'min:0'],
+            'gender' => ['nullable', Rule::in(self::GENDERS)],
+            'size' => ['nullable', Rule::in(self::SIZES)],
+            // The column is decimal(8,2); anything larger is a typo the database would reject.
+            'weight' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
+            'status' => ['nullable', Rule::in(self::STATUSES)],
+            'rescue_story' => ['nullable', 'string'],
+            'behavioral_assessment' => ['nullable', 'array'],
+            'behavioral_assessment.*' => ['string', 'max:100'],
+        ];
+    }
+
+    /**
+     * An existing animal with the same name and species (case-insensitive, any status) — what
+     * counts as an accidental duplicate, both in the Add Animal form and in an Excel import.
+     */
+    public static function findDuplicate(string $name, string $species): ?self
+    {
+        return self::query()
+            ->whereRaw('LOWER(name) = ?', [mb_strtolower(trim($name))])
+            ->whereRaw('LOWER(species) = ?', [mb_strtolower(trim($species))])
+            ->first();
+    }
 
     /**
      * Human-readable form of the stored status enum, for display to the public.

@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from 'react';
-import { PawPrint, Dog, Syringe, Pill, Search, X, MapPin } from 'lucide-react';
+import { PawPrint, Dog, Syringe, Pill, Search, X, MapPin, FileSpreadsheet } from 'lucide-react';
 import {
   adminListAnimals,
   adminGetAnimalStats,
@@ -25,8 +25,11 @@ import { listShelterLocations } from '../../lib/locationsApi';
 import AnimalLocationPanel from '../../components/AnimalLocationPanel';
 import ShelterLocationsManager from './ShelterLocationsManager';
 import ActionMenu from '../../components/ActionMenu';
+import AnimalImport from './AnimalImport';
 import './AnimalsAdmin.css';
 
+// STATUSES, GENDERS, SIZES and BEHAVIORAL_ISSUES mirror the constants on App\Models\Animal,
+// which the API (and the Excel import) validate against.
 const STATUSES = ['available', 'adopted', 'fostered', 'medical', 'quarantine', 'archived'];
 const GENDERS = ['male', 'female'];
 const SIZES = ['small', 'medium', 'large'];
@@ -715,6 +718,7 @@ export default function AnimalsAdmin({ isAdmin = false }) {
   const [qrOpenFor, setQrOpenFor] = useState(null);
   const [locationOpenFor, setLocationOpenFor] = useState(null);
   const [showLocations, setShowLocations] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [locations, setLocations] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [viewMode, setViewMode] = useState('table');
@@ -867,9 +871,18 @@ export default function AnimalsAdmin({ isAdmin = false }) {
               <MapPin size={15} style={{ verticalAlign: '-3px' }} /> {showLocations ? 'Close areas' : 'Manage locations'}
             </button>
           )}
+          {isAdmin && (
+            <button
+              className="dashBtn"
+              aria-expanded={showImport}
+              onClick={() => { setShowImport((v) => !v); setShowCreate(false); }}
+            >
+              <FileSpreadsheet size={15} style={{ verticalAlign: '-3px' }} /> {showImport ? 'Close import' : 'Import from Excel'}
+            </button>
+          )}
           <button
             className="dashBtn dashBtnPrimary"
-            onClick={() => { setShowCreate((v) => !v); setEditingAnimal(null); }}
+            onClick={() => { setShowCreate((v) => !v); setEditingAnimal(null); setShowImport(false); }}
           >
             {showCreate ? 'Close' : '+ Add Animal'}
           </button>
@@ -877,6 +890,7 @@ export default function AnimalsAdmin({ isAdmin = false }) {
       </div>
 
       {isAdmin && showLocations && <ShelterLocationsManager onChanged={refresh} />}
+      {isAdmin && showImport && <AnimalImport onImported={refresh} onClose={() => setShowImport(false)} />}
 
       {error && <div className="ui-error">{error}</div>}
 

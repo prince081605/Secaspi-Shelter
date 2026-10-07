@@ -17,8 +17,6 @@ use Illuminate\Validation\Rule;
 
 class AnimalController extends Controller
 {
-    private const STATUSES = ['available', 'adopted', 'fostered', 'medical', 'quarantine', 'archived'];
-
     public function index(Request $request)
     {
         // Public adoption browsing should never surface animals that are already adopted
@@ -159,17 +157,7 @@ class AnimalController extends Controller
         self::normalizeSpecies($request);
 
         $validator = Validator::make($request->all(), [
-            'name' => ['required', 'string', 'max:100'],
-            'species' => ['required', Rule::in(Animal::SPECIES)],
-            'breed' => ['nullable', 'string', 'max:100'],
-            'age' => ['nullable', 'integer', 'min:0'],
-            'gender' => ['nullable', 'in:male,female'],
-            'size' => ['nullable', 'in:small,medium,large'],
-            'weight' => ['nullable', 'numeric', 'min:0'],
-            'status' => ['nullable', 'in:'.implode(',', self::STATUSES)],
-            'rescue_story' => ['nullable', 'string'],
-            'behavioral_assessment' => ['nullable', 'array'],
-            'behavioral_assessment.*' => ['string', 'max:100'],
+            ...Animal::rules(),
             'photos' => ['nullable', 'array'],
             'photos.*' => ['image', 'max:5120'],
         ]);
@@ -183,10 +171,7 @@ class AnimalController extends Controller
         // Block accidental duplicates: an animal with the same name + species (case-insensitive)
         // across any status. The admin can knowingly override by resubmitting with force=1.
         if (! $request->boolean('force')) {
-            $existing = Animal::query()
-                ->whereRaw('LOWER(name) = ?', [mb_strtolower($data['name'])])
-                ->whereRaw('LOWER(species) = ?', [mb_strtolower($data['species'])])
-                ->first();
+            $existing = Animal::findDuplicate($data['name'], $data['species']);
 
             if ($existing) {
                 return response()->json([
@@ -226,10 +211,10 @@ class AnimalController extends Controller
             'species' => ['sometimes', Rule::in([...Animal::SPECIES, mb_strtolower((string) $animal->species)])],
             'breed' => ['nullable', 'string', 'max:100'],
             'age' => ['nullable', 'integer', 'min:0'],
-            'gender' => ['nullable', 'in:male,female'],
-            'size' => ['nullable', 'in:small,medium,large'],
-            'weight' => ['nullable', 'numeric', 'min:0'],
-            'status' => ['nullable', 'in:'.implode(',', self::STATUSES)],
+            'gender' => ['nullable', Rule::in(Animal::GENDERS)],
+            'size' => ['nullable', Rule::in(Animal::SIZES)],
+            'weight' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
+            'status' => ['nullable', Rule::in(Animal::STATUSES)],
             'rescue_story' => ['nullable', 'string'],
             'behavioral_assessment' => ['nullable', 'array'],
             'behavioral_assessment.*' => ['string', 'max:100'],
@@ -388,18 +373,9 @@ class AnimalController extends Controller
             ], 422);
         }
 
-        DB::transaction(function () use ($animal, $to, $data, $request) {
-            $log = new AnimalLocationLog([
-                'animal_id' => $animal->id,
-                'from_location_id' => $animal->current_location_id,
-                'to_location_id' => $to,
-                'source' => $data['source'] ?? 'admin',
-                'note' => $data['note'] ?? null,
-            ]);
-            $log->forceFill(['moved_by' => $request->user()->id])->save();
-
-            $animal->forceFill(['current_location_id' => $to])->save();
-        });
+        DB::transaction(fn () => AnimalLocationLog::record(
+            $animal, $to, $request->user(), $data['source'] ?? 'admin', $data['note'] ?? null,
+        ));
 
         return response()->json(['animal' => $this->toAdminDetail($animal->fresh())]);
     }

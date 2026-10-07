@@ -1,4 +1,4 @@
-import { api } from './api';
+import { api, downloadFile } from './api';
 
 export async function browseAnimals(params = {}) {
   const search = new URLSearchParams();
@@ -71,6 +71,28 @@ export async function adminAddAnimalPhotos(id, formData) {
 
 export async function adminDeleteAnimalPhoto(animalId, photoId) {
   return api.delete(`/api/animals/${animalId}/photos/${photoId}`);
+}
+
+// ---- Admin: bulk import from Excel ----
+
+export async function adminDownloadAnimalImportTemplate() {
+  return downloadFile('/api/admin/animals/import/template');
+}
+
+// Reads and checks every row of the workbook; saves nothing.
+export async function adminPreviewAnimalImport(file) {
+  const fd = new FormData();
+  fd.append('file', file);
+  return api.post('/api/admin/animals/import/preview', fd);
+}
+
+// Sends the same file again — the server re-checks it rather than trusting the preview.
+// `allowDuplicateRows` are the Excel row numbers the admin ticked "Import anyway" on.
+export async function adminImportAnimals(file, allowDuplicateRows = []) {
+  const fd = new FormData();
+  fd.append('file', file);
+  allowDuplicateRows.forEach((row) => fd.append('allow_duplicates[]', row));
+  return api.post('/api/admin/animals/import', fd);
 }
 
 // ---- Admin: adoption workflow (Phase 6) ----
