@@ -1,0 +1,40 @@
+/* Breed field with a suggestion list (BreedInput.jsx). Uses the global theme tokens so it fits
+   wherever it's placed; the input itself keeps the surrounding form's .ui-input look. */
+.breed-combo { position: relative; }
+/* Room for the ▾ button. input.ui-input outranks the admin module's own .ui-input padding. */
+.breed-combo > input.ui-input { padding-right: 38px; }
+
+.breed-combo-toggle {
+  position: absolute; top: 0; right: 0; height: 100%; width: 36px;
+  display: grid; place-items: center;
+  border: none; background: transparent; color: var(--muted); cursor: pointer;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.breed-combo-toggle:hover { color: var(--ink); }
+.breed-combo-toggle svg { transition: transform 0.15s ease; }
+.breed-combo.is-open .breed-combo-toggle svg { transform: rotate(180deg); }
+
+.breed-combo-list {
+  position: absolute; z-index: 30; top: calc(100% + 4px); left: 0; right: 0;
+  max-height: 260px; overflow-y: auto; overscroll-behavior: contain;
+  margin: 0; padding: 4px; list-style: none;
+  background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-sm);
+  box-shadow: 0 14px 30px -16px rgba(43, 36, 32, 0.4);
+}
+.breed-combo-list ul { list-style: none; margin: 0; padding: 0; }
+.breed-combo-group {
+  padding: 8px 10px 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--muted);
+}
+.breed-combo-option {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 8px 10px; border-radius: 8px; font-size: 14px; color: var(--ink); cursor: pointer;
+}
+.breed-combo-option.is-active { background: var(--brand-soft); }
+.breed-combo-option.is-current { font-weight: 600; }
+.breed-combo-option mark { background: none; color: var(--brand-2); font-weight: 700; }
+.breed-combo-check { color: var(--brand-2); flex-shrink: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .breed-combo-toggle svg { transition: none; }
+}

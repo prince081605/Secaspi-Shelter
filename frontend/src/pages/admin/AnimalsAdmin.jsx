@@ -26,6 +26,7 @@ import AnimalLocationPanel from '../../components/AnimalLocationPanel';
 import ShelterLocationsManager from './ShelterLocationsManager';
 import ActionMenu from '../../components/ActionMenu';
 import AnimalImport from './AnimalImport';
+import BreedInput from '../../components/BreedInput';
 import './AnimalsAdmin.css';
 
 // STATUSES, GENDERS, SIZES and BEHAVIORAL_ISSUES mirror the constants on App\Models\Animal,
@@ -271,8 +272,13 @@ function AnimalForm({ initial, onCancel, onSaved }) {
           </select>
         </div>
         <div className="ui-field">
-          <label className="ui-label">Breed</label>
-          <input className="ui-input" value={form.breed} onChange={setField('breed')} />
+          <label className="ui-label" htmlFor="animal-breed">Breed</label>
+          <BreedInput
+            id="animal-breed"
+            value={form.breed}
+            species={form.species}
+            onChange={(breed) => setForm((f) => ({ ...f, breed }))}
+          />
         </div>
         <div className="ui-field">
           <label className="ui-label">Age (years)</label>
