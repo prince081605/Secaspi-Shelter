@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { getFeaturedAnimals, getImpactStats } from "../../lib/publicHomeApi.js";
 import { createReport } from "../../lib/rescueApi.js";
 import { getPublicSettings, settingImageUrl } from "../../lib/settingsApi.js";
+import { getHappyTails } from "../../lib/postAdoptionApi.js";
 import SiteNav from "../../components/SiteNav.jsx";
 import useHumanCheck from "../../lib/useHumanCheck.jsx";
 import {
@@ -10,6 +11,7 @@ import {
   Pathways,
   FeaturedAnimals,
   ImpactBand,
+  HappyTails,
   Process,
   RescueForm,
   TopSupporters,
@@ -40,6 +42,7 @@ export default function LandingPage() {
   const [amt, setAmt] = useState(donationAmounts[1]);
   const [animals, setAnimals] = useState(animalsFallback);
   const [impact, setImpact] = useState(null);
+  const [happyTails, setHappyTails] = useState([]);
   const [settings, setSettings] = useState({});
   const [form, setForm] = useState({ name: "", contact: "", location: "", condition: "Injured or sick", details: "", latitude: null, longitude: null });
   const [reportPhoto, setReportPhoto] = useState(null);
@@ -83,6 +86,15 @@ export default function LandingPage() {
         console.error("Failed to load impact stats:", err);
       }
     })();
+    return () => { mounted = false; };
+  }, []);
+
+  // Adopters' stories (post-adoption Happy Tails). The section stays hidden if there are none.
+  useEffect(() => {
+    let mounted = true;
+    getHappyTails()
+      .then((data) => { if (mounted) setHappyTails(data?.stories || []); })
+      .catch(() => {});
     return () => { mounted = false; };
   }, []);
 
@@ -197,6 +209,7 @@ export default function LandingPage() {
         <Pathways onNavigateTo={(id) => scrollTo(id)} />
         <FeaturedAnimals animals={animals} onAdopt={() => navigate("/adopt")} />
         <ImpactBand stats={impactStats} />
+        <HappyTails stories={happyTails} />
         <Process />
         <RescueForm
           form={form}

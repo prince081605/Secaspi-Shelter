@@ -24,6 +24,11 @@ class AdoptionStatusChanged extends AppNotification
     {
         $animal = $this->application->animal->name ?? 'the animal';
 
+        if ($this->application->status === 'completed') {
+            return "Your adoption of {$animal} is complete — welcome home, {$animal}! We will check in after 1 week, "
+                .'1 month, 3 months and 6 months, and you can send us updates and photos any time from My Adopted Pets on your dashboard.';
+        }
+
         return "Your adoption application for {$animal} is now \"{$this->application->status}\".";
     }
 

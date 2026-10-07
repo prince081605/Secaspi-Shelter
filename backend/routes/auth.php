@@ -15,8 +15,10 @@ use App\Http\Controllers\ImpactController;
 use App\Http\Controllers\IntakeController;
 use App\Http\Controllers\MedicalRecordController;
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\MyAdoptionController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PaymentSessionController;
+use App\Http\Controllers\PostAdoptionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReminderController;
 use App\Http\Controllers\ReportController;
@@ -95,6 +97,23 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('/admin/adoption-applications', [AdoptionApplicationController::class, 'adminIndex'])->middleware('role:staff');
     Route::put('/admin/adoption-applications/{application}', [AdoptionApplicationController::class, 'adminUpdate'])->middleware('role:staff');
     Route::post('/admin/adoption-applications/{application}/read', [AdoptionApplicationController::class, 'adminMarkRead'])->middleware('role:staff');
+
+    // ---- Post-adoption care ----
+    // The adopter's side ("My Adopted Pets"): only ever their own completed adoptions, checked in
+    // the controller. Sending an update uploads photos, so it's throttled like other uploads.
+    Route::get('/my-adoptions', [MyAdoptionController::class, 'index']);
+    Route::post('/my-adoptions/{application}/updates', [MyAdoptionController::class, 'storeUpdate'])->middleware('throttle:10,1');
+    Route::post('/my-adoptions/{application}/updates/{update}/stop-sharing', [MyAdoptionController::class, 'stopSharing']);
+    Route::post('/my-adoptions/{application}/return', [MyAdoptionController::class, 'requestReturn'])->middleware('throttle:5,1');
+    // Staff: check-ins, updates and Happy Tails review, return requests.
+    Route::get('/admin/post-adoption/summary', [PostAdoptionController::class, 'summaryIndex'])->middleware('role:staff');
+    Route::get('/admin/post-adoption/check-ins', [PostAdoptionController::class, 'checkIns'])->middleware('role:staff');
+    Route::put('/admin/post-adoption/check-ins/{followUp}', [PostAdoptionController::class, 'recordCheckIn'])->middleware('role:staff');
+    Route::get('/admin/post-adoption/updates', [PostAdoptionController::class, 'updates'])->middleware('role:staff');
+    Route::post('/admin/post-adoption/updates/{update}/read', [PostAdoptionController::class, 'markUpdateRead'])->middleware('role:staff');
+    Route::put('/admin/post-adoption/updates/{update}/story', [PostAdoptionController::class, 'reviewStory'])->middleware('role:staff');
+    Route::get('/admin/post-adoption/returns', [PostAdoptionController::class, 'returns'])->middleware('role:staff');
+    Route::put('/admin/post-adoption/returns/{return}', [PostAdoptionController::class, 'resolveReturn'])->middleware('role:staff');
     Route::get('/admin/foster-applications', [FosterApplicationController::class, 'adminIndex'])->middleware('role:staff');
     Route::put('/admin/foster-applications/{application}', [FosterApplicationController::class, 'adminUpdate'])->middleware('role:staff');
     Route::get('/rescue-reports', [RescueReportController::class, 'index'])->middleware('role:staff');

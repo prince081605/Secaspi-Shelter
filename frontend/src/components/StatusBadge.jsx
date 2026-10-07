@@ -2,6 +2,10 @@ const STATUS_VARIANTS = {
   // positive / completed
   approved: 'badgeGreen',
   completed: 'badgeGreen',
+  done: 'badgeGreen',
+  // A return request the shelter took back; the adoption itself then reads "returned".
+  accepted: 'badgeSky',
+  returned: 'badgeOrange',
   verified: 'badgeGreen',
   resolved: 'badgeGreen',
   converted: 'badgeGreen',

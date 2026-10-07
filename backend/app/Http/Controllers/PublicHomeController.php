@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AdoptionUpdate;
 use App\Models\Animal;
 use App\Models\Expense;
 use App\Support\DonationCategories;
@@ -10,6 +11,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /**
  * Public, unauthenticated home-page analytics (hero stats, impact panel, transparency board,
@@ -297,5 +299,42 @@ class PublicHomeController extends Controller
 
             return response()->json(['message' => 'Failed to load featured animals'], 500);
         }
+    }
+
+    /**
+     * Happy Tails: adopters' updates published as success stories — only those the adopter
+     * offered (share_publicly) AND staff approved, from adoptions still in place (not returned).
+     * The adopter is named by first name only, and no contact details are included.
+     */
+    public function happyTails()
+    {
+        $stories = AdoptionUpdate::query()
+            ->where('share_publicly', true)
+            ->where('story_status', 'approved')
+            // "Where they are now" stops being true once the animal has come back to the shelter.
+            ->whereHas('application', fn ($q) => $q->where('status', 'completed'))
+            ->with(['animal.mainPhoto', 'user'])
+            ->orderByDesc('story_reviewed_at')
+            ->limit(6)
+            ->get();
+
+        return response()->json([
+            'stories' => $stories->map(function (AdoptionUpdate $u) {
+                $photo = $u->photoUrls()[0]
+                    ?? (optional($u->animal?->mainPhoto)->photo_url ? Storage::url($u->animal->mainPhoto->photo_url) : null);
+                // First name only: a surname's "initial" goes wrong for names like "Dela Cruz".
+                $adopter = strtok(trim((string) $u->user?->full_name), ' ') ?: null;
+
+                return [
+                    'id' => $u->id,
+                    'animal_name' => $u->animal?->name,
+                    'species' => $u->animal?->species,
+                    'photo' => $photo,
+                    'story' => Str::limit($u->message, 280),
+                    'adopter' => $adopter,
+                    'shared_at' => $u->created_at,
+                ];
+            })->values(),
+        ]);
     }
 }

@@ -25,11 +25,30 @@ class AdoptionApplication extends Model
         'home_visit_date',
         'home_visit_notes',
         'read_at',
+        'completed_at',
     ];
 
     protected $casts = [
         'read_at' => 'datetime',
+        'completed_at' => 'datetime',
     ];
+
+    // ---- Post-adoption (App\Services\PostAdoption), from the moment the adoption is completed ----
+
+    public function followUps()
+    {
+        return $this->hasMany(AdoptionFollowUp::class, 'adoption_application_id')->orderBy('due_date');
+    }
+
+    public function updates()
+    {
+        return $this->hasMany(AdoptionUpdate::class, 'adoption_application_id')->orderByDesc('id');
+    }
+
+    public function returns()
+    {
+        return $this->hasMany(AdoptionReturn::class, 'adoption_application_id')->orderByDesc('id');
+    }
 
     public function animal()
     {

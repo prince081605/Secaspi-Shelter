@@ -408,6 +408,46 @@ export function RescueForm({ form, reportPhoto, reportState, onChange, onPhotoCh
   );
 }
 
+/**
+ * Happy Tails: updates adopters chose to share and the shelter approved (post-adoption). Shows
+ * nothing until there is at least one story, so the home page never carries an empty section.
+ */
+export function HappyTails({ stories }) {
+  const [headRef, headIn] = useInView();
+  const [gridRef, gridIn] = useInView();
+
+  if (!stories?.length) return null;
+
+  return (
+    <section id="happy-tails" className="lp-section">
+      <div className="lp-container">
+        <div ref={headRef} className={`lp-section-head lp-reveal${headIn ? " is-visible" : ""}`}>
+          <span className="lp-eyebrow">Happy Tails</span>
+          <h2>Where they are now</h2>
+          <p>News from families who adopted from SECASPI, shared with their permission.</p>
+        </div>
+        <div ref={gridRef} className={`lp-tails lp-reveal-group${gridIn ? " is-visible" : ""}`}>
+          {stories.map((s) => {
+            const photo = animalPhotoSrc(s.photo);
+            return (
+              <figure className="lp-tail-card lp-reveal-item" key={s.id}>
+                <div className="lp-tail-photo">
+                  {photo ? <img src={photo} alt={s.animal_name ? `${s.animal_name} at home` : ""} loading="lazy" /> : <PawPrint size={36} aria-hidden="true" />}
+                </div>
+                <blockquote>{s.story}</blockquote>
+                <figcaption>
+                  <span className="name">{s.animal_name}</span>
+                  {s.adopter && <span className="by">with {s.adopter}&apos;s family</span>}
+                </figcaption>
+              </figure>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function TopSupporters({ topDonors }) {
   const [headRef, headIn] = useInView();
   const [gridRef, gridIn] = useInView();

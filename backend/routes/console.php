@@ -2,9 +2,11 @@
 
 use App\Contracts\PaymentGateway;
 use App\Exceptions\PaymentException;
+use App\Models\AdoptionFollowUp;
 use App\Models\PaymentSession;
 use App\Models\Reminder;
 use App\Models\User;
+use App\Notifications\CheckInDue;
 use App\Notifications\ReminderDue;
 use App\Services\PaymongoGateway;
 use Illuminate\Foundation\Inspiring;
@@ -140,6 +142,31 @@ Artisan::command('reminders:dispatch', function () {
 })->purpose('Notify admins of due health reminders');
 
 Schedule::command('reminders:dispatch')->dailyAt('08:00');
+
+/**
+ * Ask adopters for an update when a post-adoption check-in comes due (App\Services\PostAdoption
+ * schedules them at 1 week, 1 month, 3 months and 6 months). Each adopter is asked once per
+ * check-in. Staff see due check-ins on the Post-adoption page whether or not this runs.
+ */
+Artisan::command('post-adoption:ask-for-updates', function () {
+    $due = AdoptionFollowUp::where('status', 'pending')
+        ->whereNull('adopter_notified_at')
+        ->whereDate('due_date', '<=', now())
+        ->whereHas('application', fn ($q) => $q->where('status', 'completed'))
+        ->with(['application.user', 'animal'])
+        ->get();
+
+    foreach ($due as $followUp) {
+        if ($adopter = $followUp->application->user) {
+            (new CheckInDue($followUp))->sendTo($adopter);
+        }
+        $followUp->forceFill(['adopter_notified_at' => now()])->save();
+    }
+
+    $this->info("Asked {$due->count()} adopter(s) for an update.");
+})->purpose('Ask adopters for an update when a post-adoption check-in is due');
+
+Schedule::command('post-adoption:ask-for-updates')->dailyAt('08:05');
 
 /**
  * Database backups (spatie/laravel-backup). Prune old backups first, then take a fresh

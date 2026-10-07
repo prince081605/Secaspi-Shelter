@@ -1,0 +1,94 @@
+/* Post-adoption care: the staff page (PostAdoptionAdmin.jsx) and the adopter's "My Adopted Pets"
+   (pages/user/MyAdoptionsPanel.jsx). Global theme tokens, like the rest of the dashboard. */
+.pa-tab-intro { margin: 0 0 14px; font-size: 14px; max-width: 780px; }
+
+/* ---------- Tabs and filter chips ---------- */
+.pa-tabs, .pa-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.pa-tabs button, .pa-chips button {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--ink-soft);
+  font: 600 13px 'Work Sans', sans-serif; padding: 8px 14px;
+}
+.pa-chips button { padding: 5px 12px; font-size: 12px; }
+.pa-tabs button:hover, .pa-chips button:hover { border-color: var(--ink); }
+.pa-tabs button.active, .pa-chips button.active { background: var(--brand); border-color: var(--brand); color: #fff; }
+.pa-tabs button:focus-visible, .pa-chips button:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.pa-count {
+  min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; display: inline-grid; place-items: center;
+  background: var(--danger); color: #fff; font-size: 11px;
+}
+.pa-tabs button.active .pa-count { background: #fff; color: var(--brand-2); }
+
+/* ---------- Lists of check-ins / updates / returns ---------- */
+.pa-list { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.pa-list > li { padding: 14px 16px; }
+.pa-list > li.is-unread { border-left: 4px solid var(--brand); }
+.pa-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.pa-row-side { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pa-row-foot { margin-top: 8px; }
+.pa-pet-line { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.pa-pet-name { font-weight: 700; color: var(--ink); }
+.pa-sub { font-size: 13px; }
+.pa-due { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; }
+.pa-message { margin: 10px 0 0; color: var(--ink); line-height: 1.5; white-space: pre-line; }
+.pa-recorded { margin: 10px 0 0; font-size: 14px; color: var(--ink-soft); line-height: 1.5; white-space: pre-line; }
+
+.pa-pet-photo {
+  width: 64px; height: 64px; flex-shrink: 0; border-radius: 12px; overflow: hidden; display: grid; place-items: center;
+  background: var(--bg-soft); border: 1px solid var(--line); color: var(--muted);
+}
+.pa-pet-photo.small { width: 44px; height: 44px; border-radius: 10px; }
+.pa-pet-photo img { width: 100%; height: 100%; object-fit: cover; }
+
+.pa-photos { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.pa-photos img { width: 96px; height: 96px; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); display: block; }
+
+/* How the animal is doing: a small coloured tag. */
+.pa-feel { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.pa-feel-doing_well { background: var(--sage-soft); color: var(--sage-dark); }
+.pa-feel-some_concerns, .pa-feel-needs_support { background: var(--amber-soft); color: var(--amber); }
+.pa-feel-need_help, .pa-feel-concern { background: var(--danger-soft); color: var(--danger); }
+
+/* ---------- Forms ---------- */
+.pa-form { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+.pa-inline-form { padding-top: 12px; border-top: 1px solid var(--line); }
+.pa-inline-form label { display: flex; flex-direction: column; gap: 4px; }
+.pa-form-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.pa-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.pa-choice { border: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.pa-choice legend { margin-bottom: 8px; }
+.pa-choice label {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer; padding: 8px 14px;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--paper); font-size: 14px; color: var(--ink);
+}
+.pa-choice label.is-on { border-color: var(--brand); background: var(--brand-soft); }
+.pa-choice input { accent-color: var(--brand); }
+.pa-check { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; color: var(--ink-soft); line-height: 1.45; cursor: pointer; }
+.pa-check input { margin-top: 3px; accent-color: var(--brand); }
+.pa-link {
+  display: inline-flex; align-items: center; gap: 5px; padding: 4px 0; border: none; background: none; cursor: pointer;
+  color: var(--brand-2); font: 600 13px 'Work Sans', sans-serif; text-decoration: underline; text-underline-offset: 3px;
+}
+
+/* ---------- The adopter's "My Adopted Pets" ---------- */
+.pa-adoptions { display: flex; flex-direction: column; gap: 16px; }
+.pa-adoption { padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.pa-adoption-head { display: flex; align-items: center; gap: 14px; }
+.pa-adoption-head > div:nth-child(2) { flex: 1; min-width: 0; }
+.pa-adoption-head h3 { margin: 0; font-family: 'Fraunces', serif; font-size: 20px; color: var(--ink); }
+.pa-adoption-head p { margin: 4px 0 0; font-size: 13px; }
+.pa-next { margin: 0; font-size: 14px; color: var(--ink-soft); }
+.pa-compose { align-self: flex-start; }
+.pa-adoption .ui-notice, .pa-adoption .ui-success-msg { margin-bottom: 0; }
+.pa-history h4 { margin: 4px 0 8px; font-size: 14px; color: var(--ink); }
+.pa-history ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.pa-history li { padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--paper); }
+.pa-history li p { margin: 6px 0 0; color: var(--ink); line-height: 1.5; white-space: pre-line; }
+.pa-history-meta { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
+.pa-story-line { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 8px; font-size: 13px; color: var(--sage-dark); }
+
+@media (max-width: 640px) {
+  .pa-form-row { grid-template-columns: 1fr; }
+  .pa-list > li, .pa-adoption { padding: 14px; }
+  .pa-photos img { width: 80px; height: 80px; }
+}

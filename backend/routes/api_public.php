@@ -58,3 +58,5 @@ Route::get('/home/stats', [PublicHomeController::class, 'stats']);
 Route::get('/home/impact', [PublicHomeController::class, 'impact']);
 Route::get('/home/transparency', [PublicHomeController::class, 'transparency']);
 Route::get('/home/featured-animals', [PublicHomeController::class, 'featuredAnimals']);
+// Adopters' stories they chose to share and staff approved (post-adoption "Happy Tails").
+Route::get('/home/happy-tails', [PublicHomeController::class, 'happyTails']);

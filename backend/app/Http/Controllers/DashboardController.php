@@ -38,6 +38,8 @@ class DashboardController extends Controller
             'reminders_overdue' => Reminder::whereIn('status', ['pending', 'sent'])
                 ->whereDate('reminder_date', '<', $today)
                 ->count(),
+            // Post-adoption: check-ins due, unread adopter updates, stories to review, returns to decide.
+            'post_adoption' => array_sum(PostAdoptionController::summary()),
         ]);
     }
 

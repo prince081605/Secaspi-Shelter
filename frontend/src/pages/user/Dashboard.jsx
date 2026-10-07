@@ -10,7 +10,7 @@ import {
   Clock, Heart, User, Pencil, Lock, ClipboardList, Dog, Trophy, LayoutDashboard,
   ArrowLeft, Menu, X, LogOut, MessageSquare, PawPrint, Bell, Inbox, HeartHandshake,
   Siren, Calendar, Wrench, HandCoins, BarChart3, Users, UsersRound, Settings,
-  ChevronRight, Receipt, Tags,
+  ChevronRight, Receipt, Tags, House,
 } from 'lucide-react';
 import AnimalsAdmin from '../admin/AnimalsAdmin';
 import AdoptionRequestsAdmin from '../admin/AdoptionRequestsAdmin';
@@ -30,6 +30,8 @@ import ImpactPanel from './ImpactPanel';
 import MyDonationsPanel from './MyDonationsPanel';
 import SettingsAdmin from '../admin/SettingsAdmin';
 import CategoriesAdmin from '../admin/CategoriesAdmin';
+import PostAdoptionAdmin from '../admin/PostAdoptionAdmin';
+import MyAdoptionsPanel from './MyAdoptionsPanel';
 import VisitationsAdmin from '../admin/VisitationsAdmin';
 import RemindersAdmin from '../admin/RemindersAdmin';
 import StatusBadge from '../../components/StatusBadge';
@@ -44,6 +46,7 @@ const fallbackRole = 'user';
 const ITEM_CATEGORY = {
   animals: 'cat_animals', reminders: 'cat_animals',
   requests: 'cat_requests', rescues: 'cat_requests', visitations: 'cat_requests', messages: 'cat_requests',
+  postadoption: 'cat_requests',
   donations: 'cat_ops', expenses: 'cat_ops', reports: 'cat_ops', users: 'cat_ops', settings: 'cat_ops', volunteers: 'cat_ops',
   categories: 'cat_ops',
 };
@@ -59,7 +62,7 @@ const atLeast = (r, min) => rankOf(r) >= rankOf(min);
 // Settings stay admin-only. Items missing here default to admin (fail closed).
 const ITEM_MIN_ROLE = {
   animals: 'staff', reminders: 'staff',
-  requests: 'staff', rescues: 'staff', visitations: 'staff', messages: 'staff',
+  requests: 'staff', rescues: 'staff', visitations: 'staff', messages: 'staff', postadoption: 'staff',
   // Staff can read the expense ledger; writing to it is admin-only and gated inside the panel
   // (and on the server), the same split as Donations.
   donations: 'staff', expenses: 'staff', reports: 'staff', volunteers: 'staff',
@@ -382,6 +385,7 @@ export default function Dashboard() {
   const [overview, setOverview] = useState(null);
   const [pendingRescueCount, setPendingRescueCount] = useState(0);
   const [pendingAdoptionCount, setPendingAdoptionCount] = useState(0);
+  const [pendingPostAdoptionCount, setPendingPostAdoptionCount] = useState(0);
   const [pendingFosterCount, setPendingFosterCount] = useState(0);
   const [pendingDonationCount, setPendingDonationCount] = useState(0);
   const [pendingVisitationCount, setPendingVisitationCount] = useState(0);
@@ -486,6 +490,7 @@ export default function Dashboard() {
         setPendingVisitationCount(data?.visitation || 0);
         setOverdueReminderCount(data?.reminders_overdue || 0);
         setPendingVolunteerCount(data?.volunteer || 0);
+        setPendingPostAdoptionCount(data?.post_adoption || 0);
       })
       .catch(() => { /* leave counts unchanged on a transient failure */ });
   }, [isStaffPlus]);
@@ -534,6 +539,7 @@ export default function Dashboard() {
       key: 'cat_requests', label: 'Requests', icon: Inbox,
       items: [
         { key: 'requests', label: 'Adoption & Foster', icon: HeartHandshake, badge: pendingAdoptionCount + pendingFosterCount },
+        { key: 'postadoption', label: 'Post-adoption', icon: House, badge: pendingPostAdoptionCount },
         { key: 'rescues', label: 'Rescue Reports', icon: Siren, badge: pendingRescueCount },
         { key: 'visitations', label: 'Visit Requests', icon: Calendar, badge: pendingVisitationCount },
         { key: 'messages', label: 'Messages', icon: MessageSquare },
@@ -695,6 +701,12 @@ export default function Dashboard() {
                   </button>
                 )}
                 <button
+                  className={'dashNavBtn ' + (activeNav === 'myadoptions' ? 'dashNavBtnActive' : '')}
+                  onClick={() => setActiveNav('myadoptions')}
+                >
+                  <HeartHandshake size={16} style={{ verticalAlign: '-3px' }} /> My Adopted Pets
+                </button>
+                <button
                   className={'dashNavBtn ' + (activeNav === 'impact' ? 'dashNavBtnActive' : '')}
                   onClick={() => setActiveNav('impact')}
                 >
@@ -769,6 +781,7 @@ export default function Dashboard() {
               ) : null}
               {activeNav === 'animals' ? <AnimalsAdmin isAdmin={isAdminRole} /> : null}
               {activeNav === 'requests' ? <AdoptionRequestsAdmin onUnreadChanged={fetchPendingCounts} /> : null}
+              {activeNav === 'postadoption' ? <PostAdoptionAdmin onChanged={fetchPendingCounts} /> : null}
               {activeNav === 'rescues' ? <RescueReportsAdmin onUnreadChanged={fetchPendingCounts} /> : null}
               {activeNav === 'visitations' ? <VisitationsAdmin /> : null}
               {activeNav === 'messages' ? <Messages staff /> : null}
@@ -796,6 +809,7 @@ export default function Dashboard() {
               {/* Volunteers get their own task hub as an extra module on top of the user dashboard. */}
               {activeNav === 'mytasks' && isVolunteer ? <VolunteerTasksPanel /> : null}
               {activeNav === 'messages' ? <Messages /> : null}
+              {activeNav === 'myadoptions' ? <MyAdoptionsPanel /> : null}
               {activeNav === 'impact' ? <ImpactPanel /> : null}
               {activeNav === 'mydonations' ? <MyDonationsPanel /> : null}
               {activeNav === 'profile' ? <UserProfile key={user?.id} user={user} onProfileUpdated={setUser} /> : null}

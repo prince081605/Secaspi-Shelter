@@ -7,6 +7,7 @@ use App\Models\AdoptionApplication;
 use App\Models\Animal;
 use App\Models\CategoryOption;
 use App\Notifications\AdoptionStatusChanged;
+use App\Services\PostAdoption;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -130,8 +131,9 @@ class AdoptionApplicationController extends Controller
         } elseif ($request->boolean('exclude_decided')) {
             // The admin "Application" inbox excludes approved/completed requests — those are
             // tracked in their own "Ongoing" and "Completed" tabs — so the inbox paginates
-            // cleanly server-side instead of relying on a client-side filter.
-            $query->whereNotIn('status', ['approved', 'completed']);
+            // cleanly server-side instead of relying on a client-side filter. Returned adoptions
+            // are decided too (they live on the Post-adoption page).
+            $query->whereNotIn('status', ['approved', 'completed', 'returned']);
         }
 
         if ($request->boolean('unread')) {
@@ -145,7 +147,7 @@ class AdoptionApplicationController extends Controller
         return response()->json($applications);
     }
 
-    public function adminUpdate(Request $request, AdoptionApplication $application)
+    public function adminUpdate(Request $request, AdoptionApplication $application, PostAdoption $postAdoption)
     {
         $validator = Validator::make($request->all(), [
             'status' => ['sometimes', 'in:pending,approved,declined,completed'],
@@ -173,6 +175,14 @@ class AdoptionApplicationController extends Controller
             $application->animal()->update(['status' => 'adopted']);
         } elseif ($statusChanged && $application->status === 'declined' && $previousStatus === 'approved') {
             $application->animal()->update(['status' => 'available']);
+        }
+
+        // Post-adoption care starts when the adoption is completed (check-ins get scheduled), and
+        // stops if it's moved back out of Completed.
+        if ($statusChanged && $application->status === 'completed') {
+            $postAdoption->start($application);
+        } elseif ($statusChanged && $previousStatus === 'completed') {
+            $postAdoption->stop($application);
         }
 
         $application = $application->fresh(['animal.mainPhoto', 'user']);
@@ -216,6 +226,7 @@ class AdoptionApplicationController extends Controller
             'valid_id_type' => $a->valid_id_type,
             'valid_id_url' => $a->valid_id_path ? Storage::url($a->valid_id_path) : null,
             'created_at' => $a->created_at,
+            'completed_at' => $a->completed_at,
             'animal' => $a->animal ? [
                 'id' => $a->animal->id,
                 'name' => $a->animal->name,
