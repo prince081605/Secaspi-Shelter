@@ -168,7 +168,7 @@ export default function MyTaskItem({ task, onUpdated }) {
       <div className="myTaskHead">
         <div>
           <div className="myTaskName">{task.task_name}</div>
-          <div className="myTaskMeta">{[STATUS_LINE[task.status], task.assigned_date && `Scheduled ${task.assigned_date}`].filter(Boolean).join(' · ')}</div>
+          <div className="myTaskMeta">{[task.team && `Team task · ${task.team}`, STATUS_LINE[task.status], task.assigned_date && `Scheduled ${task.assigned_date}`].filter(Boolean).join(' · ')}</div>
         </div>
         <div className="myTaskActions">
           <StatusBadge status={task.status} />

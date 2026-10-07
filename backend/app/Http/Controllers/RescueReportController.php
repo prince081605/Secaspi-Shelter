@@ -4,10 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\MarksAdminRead;
 use App\Models\RescueReport;
+use App\Models\Team;
+use App\Notifications\RescueAssignedToTeam;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class RescueReportController extends Controller
 {
@@ -67,10 +70,14 @@ class RescueReportController extends Controller
 
     public function index(Request $request)
     {
-        $query = RescueReport::query();
+        $query = RescueReport::query()->with('team:id,name');
 
         if ($status = $request->query('status')) {
             $query->where('status', $status);
+        }
+
+        if ($teamId = $request->query('team_id')) {
+            $query->where('team_id', (int) $teamId);
         }
 
         if ($request->boolean('unread')) {
@@ -97,8 +104,10 @@ class RescueReportController extends Controller
         $validator = Validator::make($request->all(), [
             'status' => ['sometimes', 'in:pending,assigned,in_progress,resolved'],
             'assigned_to' => ['nullable', 'string', 'max:150'],
+            // The team sent to handle it — an active one (archived teams can't take new rescues).
+            'team_id' => ['sometimes', 'nullable', 'integer', Rule::exists('teams', 'id')->where('is_active', true)],
             'admin_notes' => ['nullable', 'string'],
-        ]);
+        ], ['team_id.exists' => 'Choose an active team.']);
 
         if ($validator->fails()) {
             return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
@@ -107,6 +116,14 @@ class RescueReportController extends Controller
         $data = $validator->validated();
         if (is_null($report->read_at)) {
             $data['read_at'] = now();
+        }
+
+        $newTeamId = array_key_exists('team_id', $data) && (int) $data['team_id'] !== (int) $report->team_id
+            ? $data['team_id']
+            : null;
+        // Sending a team to a report nobody has picked up yet means it's been assigned.
+        if ($newTeamId && ($data['status'] ?? $report->status) === 'pending') {
+            $data['status'] = 'assigned';
         }
 
         try {
@@ -121,7 +138,17 @@ class RescueReportController extends Controller
             return response()->json(['message' => 'Failed to update report. Please try again.'], 500);
         }
 
-        return response()->json(['report' => $report]);
+        // Tell the newly assigned team's members, so they can coordinate with their leader.
+        if ($newTeamId) {
+            $team = Team::with(['members.user', 'leader.user'])->find($newTeamId);
+            foreach ($team->members as $member) {
+                if ($member->user) {
+                    (new RescueAssignedToTeam($report, $team))->sendTo($member->user);
+                }
+            }
+        }
+
+        return response()->json(['report' => $report->load('team:id,name')]);
     }
 
     /**

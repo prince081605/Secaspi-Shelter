@@ -23,6 +23,7 @@ import { getMyVolunteer } from '../../lib/volunteersApi';
 import VolunteersAdmin from '../admin/VolunteersAdmin';
 import MyTaskItem, { MyTaskList, RequestTaskForm } from '../../components/MyTaskItem';
 import AttendanceCard from '../../components/AttendanceCard';
+import MyTeams from '../../components/MyTeams';
 import ReportsAdmin from '../admin/ReportsAdmin';
 import AnalyticsAdmin from '../admin/AnalyticsAdmin';
 import Messages from '../Messages';
@@ -358,6 +359,7 @@ function VolunteerTasksPanel() {
     <>
       <h2 className="dashSectionTitle"><ClipboardList size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />My Tasks</h2>
       <AttendanceCard />
+      <MyTeams teams={volunteer.teams} />
       <RequestTaskForm onRequested={load} />
       {(!volunteer.tasks || volunteer.tasks.length === 0) ? (
         <div className="ui-empty">No tasks yet. Request one above to get started!</div>

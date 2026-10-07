@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Users, Handshake, Briefcase, ClipboardList, Inbox, X, Clock } from 'lucide-react';
+import { Users, Handshake, Briefcase, ClipboardList, Inbox, X, Clock, UsersRound } from 'lucide-react';
 import AttendanceAdmin from './AttendanceAdmin';
+import TeamsAdmin from './TeamsAdmin';
 import {
   adminListVolunteers,
   adminCreateVolunteer,
@@ -802,6 +803,12 @@ export default function VolunteersAdmin({ isAdmin = false }) {
         >
           <Clock size={16} style={{ verticalAlign: '-3px' }} /> Attendance
         </button>
+        <button
+          className={mode === 'teams' ? 'dashBtn dashBtnPrimary' : 'dashBtn'}
+          onClick={() => setMode('teams')}
+        >
+          <UsersRound size={16} style={{ verticalAlign: '-3px' }} /> Teams
+        </button>
       </div>
 
       {mode === 'volunteers' ? (
@@ -829,6 +836,8 @@ export default function VolunteersAdmin({ isAdmin = false }) {
         </>
       ) : mode === 'attendance' ? (
         <AttendanceAdmin isAdmin={isAdmin} />
+      ) : mode === 'teams' ? (
+        <TeamsAdmin />
       ) : (
         <PersonnelRoster type="staff" isAdmin={isAdmin} />
       )}

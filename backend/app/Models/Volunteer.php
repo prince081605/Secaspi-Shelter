@@ -34,6 +34,11 @@ class Volunteer extends Model
         return $this->hasMany(VolunteerAttendance::class, 'volunteer_id');
     }
 
+    public function teams()
+    {
+        return $this->belongsToMany(Team::class, 'team_members', 'volunteer_id', 'team_id');
+    }
+
     /** Hours backed by closed attendance records. */
     public function attendanceHours(): float
     {

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Team;
 use App\Models\User;
 use App\Models\Volunteer;
 use App\Models\VolunteerTask;
@@ -26,13 +27,13 @@ class VolunteerController extends Controller
      */
     public function me(Request $request)
     {
-        $volunteer = Volunteer::with('tasks.verifier')->where('user_id', $request->user()->id)->first();
+        $volunteer = Volunteer::with(['tasks.verifier', 'tasks.team'])->where('user_id', $request->user()->id)->first();
 
         if (! $volunteer) {
             return response()->json(['volunteer' => null]);
         }
 
-        return response()->json(['volunteer' => $this->toItem($volunteer)]);
+        return response()->json(['volunteer' => [...$this->toItem($volunteer), 'teams' => $this->myTeams($volunteer)]]);
     }
 
     /**
@@ -135,7 +136,7 @@ class VolunteerController extends Controller
 
     public function adminIndex(Request $request)
     {
-        $query = Volunteer::query()->with(['user', 'tasks.verifier']);
+        $query = Volunteer::query()->with(['user', 'tasks.verifier', 'tasks.team']);
 
         if ($type = $request->query('type')) {
             $query->where('type', $type);
@@ -184,7 +185,7 @@ class VolunteerController extends Controller
             $user->forceFill(['role' => $volunteer->type])->save();
         }
 
-        return response()->json(['volunteer' => $this->toItem($volunteer->fresh(['user', 'tasks.verifier']))], 201);
+        return response()->json(['volunteer' => $this->toItem($volunteer->fresh(['user', 'tasks.verifier', 'tasks.team']))], 201);
     }
 
     public function adminUpdate(Request $request, Volunteer $volunteer)
@@ -213,7 +214,7 @@ class VolunteerController extends Controller
 
         $volunteer->update($data);
 
-        return response()->json(['volunteer' => $this->toItem($volunteer->fresh(['user', 'tasks.verifier']))]);
+        return response()->json(['volunteer' => $this->toItem($volunteer->fresh(['user', 'tasks.verifier', 'tasks.team']))]);
     }
 
     public function adminDestroy(Volunteer $volunteer)
@@ -225,6 +226,9 @@ class VolunteerController extends Controller
         }
 
         $user = $volunteer->user;
+        // Off every team too; a team they led is left without a leader until another is chosen.
+        $volunteer->teams()->detach();
+        Team::where('leader_id', $volunteer->id)->update(['leader_id' => null]);
         $volunteer->delete();
 
         if ($user && ($user->role === 'volunteer' || $user->role === 'staff')) {
@@ -342,6 +346,39 @@ class VolunteerController extends Controller
             'proof_submitted_at' => $t->proof_submitted_at,
             'verified_at' => $t->verified_at,
             'verified_by' => $t->verifier?->full_name,
+            // Set when this is the member's copy of a task given to their whole team.
+            'team' => $t->team_id ? $t->team?->name : null,
         ];
+    }
+
+    /**
+     * The active teams someone is on, as they see them on their dashboard: the leader, their
+     * teammates, and the rescues the team is handling right now.
+     */
+    private function myTeams(Volunteer $volunteer): array
+    {
+        return $volunteer->teams()->where('is_active', true)
+            ->with(['members.user', 'leader.user', 'rescueReports' => fn ($q) => $q->where('status', '!=', 'resolved')->orderByDesc('id')])
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Team $team) => [
+                'id' => $team->id,
+                'name' => $team->name,
+                'purpose' => $team->purpose,
+                'leader' => $team->leader?->user?->full_name,
+                'is_leader' => (int) $team->leader_id === (int) $volunteer->id,
+                'members' => $team->members->map(fn (Volunteer $m) => [
+                    'full_name' => $m->user?->full_name,
+                    'phone' => $m->user?->phone,
+                    'is_leader' => (int) $m->id === (int) $team->leader_id,
+                    'is_me' => (int) $m->id === (int) $volunteer->id,
+                ])->values(),
+                'rescues' => $team->rescueReports->map(fn ($r) => [
+                    'id' => $r->id,
+                    'location' => $r->location,
+                    'urgency' => $r->urgency,
+                    'status' => $r->status,
+                ])->values(),
+            ])->values()->all();
     }
 }

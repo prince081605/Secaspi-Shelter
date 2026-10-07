@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MapPin, Siren } from 'lucide-react';
 import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { adminListRescueReports, adminMarkRescueReportRead, adminUpdateRescueReport } from '../../lib/rescueApi';
+import { adminListTeams } from '../../lib/volunteersApi';
 import StatusBadge from '../../components/StatusBadge';
 import useConfirm from '../../lib/useConfirm';
 import Pagination from '../../components/Pagination';
@@ -72,10 +73,17 @@ function DetailPanel({ report }) {
   );
 }
 
-function TriagePanel({ report, onSaved }) {
+// Who's handling a report: its team, or — on reports from before teams existed — the free text
+// that was typed in then.
+const assignedLabel = (report) => report.team?.name || report.assigned_to || '—';
+
+function TriagePanel({ report, teams, onSaved }) {
   const confirm = useConfirm();
-  const [assignedTo, setAssignedTo] = useState(report.assigned_to || '');
+  const [teamId, setTeamId] = useState(report.team_id ? String(report.team_id) : '');
   const [notes, setNotes] = useState(report.admin_notes || '');
+  // Active teams to choose from, plus the report's current team if it has since been archived.
+  const teamChoices = teams.filter((t) => t.is_active || String(t.id) === String(report.team_id));
+  const teamName = teamChoices.find((t) => String(t.id) === teamId)?.name || '';
   const [state, setState] = useState({ status: 'idle', error: '' });
 
   const save = async (extra = {}) => {
@@ -90,7 +98,8 @@ function TriagePanel({ report, onSaved }) {
       confirmLabel: advancing ? NEXT_LABEL[report.status] : 'Save triage',
       summary: [
         { label: 'Location', value: report.location },
-        { label: 'Assigned to', value: assignedTo },
+        { label: 'Team', value: teamName },
+        { label: 'Team notified', value: teamId && String(teamId) !== String(report.team_id || '') ? 'Yes — every member' : '' },
         { label: 'New status', value: advancing ? extra.status.replace('_', ' ') : '' },
       ],
     });
@@ -98,7 +107,7 @@ function TriagePanel({ report, onSaved }) {
     setState({ status: 'loading', error: '' });
     try {
       await adminUpdateRescueReport(report.id, {
-        assigned_to: assignedTo || null,
+        team_id: teamId ? Number(teamId) : null,
         admin_notes: notes || null,
         ...extra,
       });
@@ -124,8 +133,19 @@ function TriagePanel({ report, onSaved }) {
       )}
       <div className="dashFormGrid" style={{ marginTop: 10 }}>
         <div className="ui-field">
-          <label className="ui-label">Assigned team / person</label>
-          <input className="ui-input" value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)} placeholder="e.g. Team Alpha" />
+          <label className="ui-label">Assigned team</label>
+          <select className="ui-input" value={teamId} onChange={(e) => setTeamId(e.target.value)}>
+            <option value="">Not assigned</option>
+            {teamChoices.map((t) => (
+              <option key={t.id} value={t.id}>{t.name}{t.is_active ? '' : ' (archived)'} — {t.members_count} member{t.members_count === 1 ? '' : 's'}</option>
+            ))}
+          </select>
+          {teamChoices.length === 0 && (
+            <span className="ui-muted" style={{ fontSize: 12, marginTop: 4 }}>No teams yet. Create one under Personnel → Teams.</span>
+          )}
+          {report.assigned_to && (
+            <span className="ui-muted" style={{ fontSize: 12, marginTop: 4 }}>Noted before teams existed: {report.assigned_to}</span>
+          )}
         </div>
         <div className="ui-field" style={{ gridColumn: '1 / -1' }}>
           <label className="ui-label">Notes</label>
@@ -146,7 +166,7 @@ function TriagePanel({ report, onSaved }) {
   );
 }
 
-function ReportRow({ report, onChanged, onUnreadChanged, isMobile }) {
+function ReportRow({ report, teams, onChanged, onUnreadChanged, isMobile }) {
   const [mode, setMode] = useState(''); // '' | 'triage' | 'detail'
   const isUnread = !report.read_at;
 
@@ -176,7 +196,7 @@ function ReportRow({ report, onChanged, onUnreadChanged, isMobile }) {
   );
   const panel = mode === 'detail'
     ? <DetailPanel report={report} />
-    : <TriagePanel report={report} onSaved={handleInteracted} />;
+    : <TriagePanel report={report} teams={teams} onSaved={handleInteracted} />;
 
   if (isMobile) {
     return (
@@ -188,7 +208,7 @@ function ReportRow({ report, onChanged, onUnreadChanged, isMobile }) {
           fields={[
             { label: 'Urgency', value: <UrgencyBadge urgency={report.urgency} /> },
             { label: 'Status', value: <StatusBadge status={report.status} /> },
-            { label: 'Assigned to', value: report.assigned_to || '—' },
+            { label: 'Assigned to', value: assignedLabel(report) },
             { label: 'Submitted', value: (report.created_at || '').slice(0, 10) },
           ]}
           actions={actions}
@@ -205,7 +225,7 @@ function ReportRow({ report, onChanged, onUnreadChanged, isMobile }) {
         <td>{report.location}</td>
         <td><UrgencyBadge urgency={report.urgency} /></td>
         <td><StatusBadge status={report.status} /></td>
-        <td>{report.assigned_to || '—'}</td>
+        <td>{assignedLabel(report)}</td>
         <td>{(report.created_at || '').slice(0, 10)}</td>
         <td style={{ whiteSpace: 'nowrap' }}>
           <button className="dashBtn" onClick={() => open('detail')}>{mode === 'detail' ? 'Hide' : 'Detail'}</button>
@@ -227,6 +247,8 @@ export default function RescueReportsAdmin({ onUnreadChanged }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [status, setStatusFilter] = useState('');
+  const [teamFilter, setTeamFilter] = useState('');
+  const [teams, setTeams] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [page, setPage] = useState(1);
   const [meta, setMeta] = useState({ current_page: 1, last_page: 1 });
@@ -237,10 +259,15 @@ export default function RescueReportsAdmin({ onUnreadChanged }) {
     setStatusFilter(value);
   };
 
+  // A refresh after an action (marking a report read, saving triage) reloads quietly: showing
+  // "Loading…" would unmount the table and close the panel the admin just opened.
+  const lastRefreshKey = useRef(refreshKey);
+
   useEffect(() => {
     let mounted = true;
-    setLoading(true);
-    adminListRescueReports({ status, page })
+    if (lastRefreshKey.current === refreshKey) setLoading(true);
+    lastRefreshKey.current = refreshKey;
+    adminListRescueReports({ status, team_id: teamFilter, page })
       .then((data) => {
         if (!mounted) return;
         setReports(data?.data || []);
@@ -255,7 +282,14 @@ export default function RescueReportsAdmin({ onUnreadChanged }) {
         if (mounted) setLoading(false);
       });
     return () => { mounted = false; };
-  }, [status, refreshKey, page]);
+  }, [status, teamFilter, refreshKey, page]);
+
+  // Teams to assign reports to (Personnel → Teams), and to filter by.
+  useEffect(() => {
+    let mounted = true;
+    adminListTeams().then((res) => { if (mounted) setTeams(res?.teams || []); }).catch(() => {});
+    return () => { mounted = false; };
+  }, []);
 
   // Keep the current page on refresh (mark-read / triage) so an open row panel isn't collapsed;
   // only the status filter resets the page (see changeStatus).
@@ -267,10 +301,16 @@ export default function RescueReportsAdmin({ onUnreadChanged }) {
       {error && <div className="ui-error">{error}</div>}
 
       <div className="dashFilterBar">
-        <select className="ui-input" style={{ maxWidth: 180 }} aria-label="Filter rescue reports by status" value={status} onChange={(e) => setStatusFilter(e.target.value)}>
+        <select className="ui-input" style={{ maxWidth: 180 }} aria-label="Filter rescue reports by status" value={status} onChange={(e) => changeStatus(e.target.value)}>
           <option value="">All statuses</option>
           {STATUSES.map((s) => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
         </select>
+        {teams.length > 0 && (
+          <select className="ui-input" style={{ maxWidth: 200 }} aria-label="Filter rescue reports by team" value={teamFilter} onChange={(e) => { setPage(1); setTeamFilter(e.target.value); }}>
+            <option value="">All teams</option>
+            {teams.map((t) => <option key={t.id} value={t.id}>{t.name}{t.is_active ? '' : ' (archived)'}</option>)}
+          </select>
+        )}
       </div>
 
       {loading ? (
@@ -280,7 +320,7 @@ export default function RescueReportsAdmin({ onUnreadChanged }) {
       ) : isMobile ? (
         <div className="dashCardList">
           {reports.map((r) => (
-            <ReportRow key={r.id} report={r} onChanged={refresh} onUnreadChanged={onUnreadChanged} isMobile />
+            <ReportRow key={r.id} report={r} teams={teams} onChanged={refresh} onUnreadChanged={onUnreadChanged} isMobile />
           ))}
         </div>
       ) : (
@@ -299,7 +339,7 @@ export default function RescueReportsAdmin({ onUnreadChanged }) {
             </thead>
             <tbody>
               {reports.map((r) => (
-                <ReportRow key={r.id} report={r} onChanged={refresh} onUnreadChanged={onUnreadChanged} />
+                <ReportRow key={r.id} report={r} teams={teams} onChanged={refresh} onUnreadChanged={onUnreadChanged} />
               ))}
             </tbody>
           </table>

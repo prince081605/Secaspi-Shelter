@@ -25,6 +25,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RescueReportController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\ShelterLocationController;
+use App\Http\Controllers\TeamController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VaccinationController;
 use App\Http\Controllers\VisitationController;
@@ -217,6 +218,15 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('/admin/volunteers/{volunteer}/tasks', [VolunteerController::class, 'storeTask'])->middleware('role:staff');
     Route::put('/admin/volunteer-tasks/{task}', [VolunteerController::class, 'updateTask'])->middleware('role:staff');
     Route::delete('/admin/volunteer-tasks/{task}', [VolunteerController::class, 'destroyTask'])->middleware('role:staff');
+
+    // ---- Teams (Personnel → Teams) ---- staff run personnel, so they run teams too.
+    Route::get('/admin/teams', [TeamController::class, 'index'])->middleware('role:staff');
+    Route::post('/admin/teams', [TeamController::class, 'store'])->middleware('role:staff');
+    Route::get('/admin/teams/{team}', [TeamController::class, 'show'])->middleware('role:staff');
+    Route::put('/admin/teams/{team}', [TeamController::class, 'update'])->middleware('role:staff');
+    Route::post('/admin/teams/{team}/members', [TeamController::class, 'addMember'])->middleware('role:staff');
+    Route::delete('/admin/teams/{team}/members/{volunteer}', [TeamController::class, 'removeMember'])->middleware('role:staff');
+    Route::post('/admin/teams/{team}/tasks', [TeamController::class, 'assignTask'])->middleware('role:staff');
 
     // ---- Attendance ---- people clock themselves in/out (the controller checks they have a
     // personnel record); staff see the log; only admins add, correct or delete records.

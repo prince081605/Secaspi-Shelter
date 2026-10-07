@@ -1,0 +1,83 @@
+/* Personnel → Teams (TeamsAdmin.jsx). Global theme tokens, like the rest of the dashboard. */
+.teams-intro { margin: 0 0 14px; font-size: 14px; max-width: 780px; }
+.teams-layout { display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.teams-side { display: flex; flex-direction: column; gap: 12px; }
+
+.teams-new { display: flex; flex-direction: column; gap: 8px; padding: 14px; }
+.teams-new h3 { margin: 0; font-size: 15px; color: var(--ink); }
+.teams-new .dashBtn { align-self: flex-start; display: inline-flex; align-items: center; gap: 5px; }
+
+.teams-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.teams-card {
+  width: 100%; text-align: left; display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; cursor: pointer;
+  border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--paper); font-family: inherit;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.teams-card:hover { border-color: var(--ink-soft); }
+.teams-card.is-selected { border-color: var(--brand); box-shadow: 0 0 0 2px var(--brand-soft); }
+.teams-card.is-archived .name { color: var(--muted); }
+.teams-card:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.teams-card .name { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--ink); }
+.teams-card .meta { font-size: 12px; }
+.teams-card .meta-strong { font-size: 12px; font-weight: 600; color: var(--brand-2); }
+.teams-archived-toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-soft); cursor: pointer; }
+
+.teams-detail { padding: 18px; }
+.teams-detail-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.teams-detail-head h3 { margin: 0; display: flex; align-items: center; gap: 8px; font-family: 'Fraunces', serif; font-size: 20px; color: var(--ink); }
+.teams-detail-head p { margin: 4px 0 0; font-size: 14px; }
+.teams-edit { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 240px; }
+.teams-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.teams-actions .dashBtn { display: inline-flex; align-items: center; gap: 5px; }
+
+.teams-section { border-top: 1px solid var(--line); padding-top: 14px; margin-top: 14px; }
+.teams-section h4 { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; font-size: 14px; color: var(--ink); }
+.teams-section > p.ui-muted { margin: 0 0 10px; font-size: 14px; }
+.teams-inline { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.teams-inline .ui-input { flex: 1 1 220px; }
+.teams-inline .teams-date { flex: 0 1 170px; }
+.teams-inline .dashBtn { display: inline-flex; align-items: center; gap: 5px; }
+
+.teams-members, .teams-tasks, .teams-rescues { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.teams-members li {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--paper);
+}
+.teams-members .name { font-weight: 600; color: var(--ink); margin-right: 8px; }
+.teams-members .badge { text-transform: capitalize; }
+.teams-members .contact { font-size: 12px; margin-top: 3px; }
+.teams-leader { display: inline-flex; align-items: center; gap: 3px; margin-left: 8px; font-size: 12px; font-weight: 700; color: var(--brand-2); }
+
+.teams-tasks li { padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--paper); }
+.teams-task-head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 14px; }
+.teams-task-head .name { font-weight: 600; color: var(--ink); }
+.teams-progress { height: 8px; margin: 8px 0 6px; border-radius: 999px; background: var(--bg-soft-2); overflow: hidden; }
+.teams-progress span { display: block; height: 100%; border-radius: inherit; background: var(--sage); transition: width .3s ease; }
+.teams-task-foot { font-size: 12px; }
+
+.teams-rescues li {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 14px;
+  padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--paper);
+}
+.teams-rescues li > span:first-child { flex: 1; min-width: 160px; color: var(--ink); }
+
+/* ---------- A member's own teams (components/MyTeams.jsx, under My Tasks) ---------- */
+.my-teams { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+.my-team { padding: 16px; }
+.my-team header { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; }
+.my-team h3 { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 16px; color: var(--ink); }
+.my-team-purpose { margin: 6px 0 0; font-size: 14px; }
+.my-team-members { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.my-team-members li {
+  display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; font-size: 13px; color: var(--ink);
+  border: 1px solid var(--line); border-radius: 999px; background: var(--paper);
+}
+.my-team-members li svg { color: var(--brand-2); }
+.my-team-rescues h4 { display: flex; align-items: center; gap: 6px; margin: 14px 0 8px; font-size: 13px; color: var(--ink); }
+
+@media (max-width: 900px) {
+  .teams-layout { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .teams-card, .teams-progress span { transition: none; }
+}

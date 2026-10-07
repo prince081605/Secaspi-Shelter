@@ -19,6 +19,7 @@ class RescueReport extends Model
         'photo_url',
         'created_at',
         'assigned_to',
+        'team_id',
         'admin_notes',
         'read_at',
     ];
@@ -28,4 +29,10 @@ class RescueReport extends Model
         'latitude' => 'float',
         'longitude' => 'float',
     ];
+
+    /** The team sent to handle it. Older reports may instead carry free text in `assigned_to`. */
+    public function team()
+    {
+        return $this->belongsTo(Team::class, 'team_id');
+    }
 }

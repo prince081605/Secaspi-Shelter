@@ -79,3 +79,15 @@ export async function adminUpdateVolunteerTask(taskId, payload) {
 export async function adminDeleteVolunteerTask(taskId) {
   return api.delete(`/api/admin/volunteer-tasks/${taskId}`);
 }
+
+// ---- Admin: teams (Personnel → Teams) ----
+
+export const adminListTeams = () => api.get('/api/admin/teams');
+export const adminCreateTeam = (payload) => api.post('/api/admin/teams', payload);
+export const adminGetTeam = (id) => api.get(`/api/admin/teams/${id}`);
+// payload: any of { name, purpose, leader_id, is_active }
+export const adminUpdateTeam = (id, payload) => api.put(`/api/admin/teams/${id}`, payload);
+export const adminAddTeamMember = (id, volunteerId) => api.post(`/api/admin/teams/${id}/members`, { volunteer_id: volunteerId });
+export const adminRemoveTeamMember = (id, volunteerId) => api.delete(`/api/admin/teams/${id}/members/${volunteerId}`);
+// One copy of the task per member, each with its own proof and sign-off.
+export const adminAssignTeamTask = (id, payload) => api.post(`/api/admin/teams/${id}/tasks`, payload);

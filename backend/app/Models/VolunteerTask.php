@@ -15,6 +15,8 @@ class VolunteerTask extends Model
         'proof_path',
         'proof_note',
         'proof_submitted_at',
+        'team_id',
+        'team_batch',
     ];
 
     protected $casts = [
@@ -25,6 +27,12 @@ class VolunteerTask extends Model
     public function volunteer()
     {
         return $this->belongsTo(Volunteer::class, 'volunteer_id');
+    }
+
+    /** Set when this is one member's copy of a task given to a whole team. */
+    public function team()
+    {
+        return $this->belongsTo(Team::class, 'team_id');
     }
 
     // The admin who verified the task complete. Not fillable: it is set from the signed-in
