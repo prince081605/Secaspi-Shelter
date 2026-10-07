@@ -28,35 +28,15 @@ import ActionMenu from '../../components/ActionMenu';
 import AnimalImport from './AnimalImport';
 import BreedInput from '../../components/BreedInput';
 import PhotoInput from '../../components/PhotoInput';
+import { optionLabel, useCategories, visibleOptions } from '../../lib/categoriesApi';
 import './AnimalsAdmin.css';
 
-// STATUSES, GENDERS, SIZES and BEHAVIORAL_ISSUES mirror the constants on App\Models\Animal,
-// which the API (and the Excel import) validate against.
+// STATUSES, GENDERS and SIZES mirror the constants on App\Models\Animal, which the API (and the
+// Excel import) validate against. Breeds, behavioral issues and medical record types are
+// admin-managed lists instead (Categories page), read through useCategories().
 const STATUSES = ['available', 'adopted', 'fostered', 'medical', 'quarantine', 'archived'];
 const GENDERS = ['male', 'female'];
 const SIZES = ['small', 'medium', 'large'];
-const RECORD_TYPES = ['vaccination', 'deworming', 'treatment', 'surgery', 'checkup', 'emergency'];
-
-const BEHAVIORAL_ISSUES = [
-  'separation anxiety',
-  'aggression & resource guarding',
-  'dog-to-dog aggression',
-  'territorial aggression',
-  'fear aggression',
-  'destructive chewing & digging',
-  'inappropriate elimination',
-  'excessive barking',
-  'excessive vocalization',
-  'jumping/mouthing',
-  'pulling on leash',
-  'excessive energy',
-  'extreme shyness',
-  'fear of strangers',
-  'fear of loud noises',
-  'post-trauma/trust issues',
-  'pain-related aggression',
-  'cognitive issues (senior)',
-];
 
 const emptyForm = {
   name: '',
@@ -95,6 +75,16 @@ function AnimalForm({ initial, onCancel, onSaved }) {
   });
   const [photoFiles, setPhotoFiles] = useState(null);
   const [state, setState] = useState({ status: 'idle', error: '' });
+  const categories = useCategories();
+  // The admin-managed issue list, plus any issue this animal already has that has since been
+  // hidden on the Categories page — shown (and still ticked) so it can be kept or removed.
+  const listedIssues = visibleOptions(categories.behavioral_issue).map((o) => o.label);
+  const issueChoices = [
+    ...listedIssues.map((issue) => ({ issue, offList: false })),
+    ...(form.behavioral_assessment || [])
+      .filter((issue) => !listedIssues.some((l) => l.toLowerCase() === String(issue).toLowerCase()))
+      .map((issue) => ({ issue, offList: true })),
+  ];
   // Set when a create hits a duplicate (same name + species). Holds the existing animal so
   // we can preview it inline alongside an explicit "add anyway" override. Previewing is
   // non-destructive — it must never discard the in-progress form the admin is filling out.
@@ -314,7 +304,7 @@ function AnimalForm({ initial, onCancel, onSaved }) {
       <div className="ui-field">
         <label className="ui-label">Behavioral issues</label>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.8rem', marginTop: '0.5rem' }}>
-          {BEHAVIORAL_ISSUES.map((issue) => (
+          {issueChoices.map(({ issue, offList }) => (
             <label key={issue} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
               <input
                 type="checkbox"
@@ -322,6 +312,7 @@ function AnimalForm({ initial, onCancel, onSaved }) {
                 onChange={() => toggleBehavioralIssue(issue)}
               />
               <span style={{ textTransform: 'capitalize' }}>{issue}</span>
+              {offList && <span className="ui-muted" style={{ fontSize: '0.75rem' }}>(no longer on the list)</span>}
             </label>
           ))}
         </div>
@@ -474,6 +465,11 @@ function MedicalManager({ animalId, onChanged }) {
   const [state, setState] = useState({ status: 'loading', error: '' });
   const [recordForm, setRecordForm] = useState(emptyRecordForm);
   const [vaccinationForm, setVaccinationForm] = useState(emptyVaccinationForm);
+  // Record types are an admin-managed list (Categories page). Checkup is the default; if an admin
+  // has hidden it, the first type still offered is used instead.
+  const categories = useCategories();
+  const typeOptions = visibleOptions(categories.medical_record_type);
+  const recordType = typeOptions.some((o) => o.value === recordForm.type) ? recordForm.type : (typeOptions[0]?.value || '');
 
   const load = () => {
     setState((s) => ({ ...s, status: 'loading' }));
@@ -495,7 +491,7 @@ function MedicalManager({ animalId, onChanged }) {
       message: 'It joins the animal’s permanent medical history.',
       confirmLabel: 'Add record',
       summary: [
-        { label: 'Type', value: recordForm.type },
+        { label: 'Type', value: optionLabel(typeOptions, recordType) },
         { label: 'Description', value: recordForm.description },
         { label: 'Vet', value: recordForm.vet_name },
         { label: 'Date', value: recordForm.record_date },
@@ -507,6 +503,7 @@ function MedicalManager({ animalId, onChanged }) {
     try {
       await adminCreateMedicalRecord(animalId, {
         ...recordForm,
+        type: recordType,
         cost: recordForm.cost === '' ? null : Number(recordForm.cost),
         follow_up_date: recordForm.follow_up_date || null,
       });
@@ -591,7 +588,7 @@ function MedicalManager({ animalId, onChanged }) {
           {records.map((r) => (
             <DashCard
               key={r.id}
-              title={r.type}
+              title={r.type_label || r.type}
               subtitle={r.record_date}
               fields={[
                 { label: 'Description', value: r.description || '—' },
@@ -612,7 +609,7 @@ function MedicalManager({ animalId, onChanged }) {
             <tbody>
               {records.map((r) => (
                 <tr key={r.id}>
-                  <td>{r.type}</td>
+                  <td>{r.type_label || r.type}</td>
                   <td>{r.description || '—'}</td>
                   <td>{r.vet_name || '—'}</td>
                   <td>{r.cost ?? '—'}</td>
@@ -628,8 +625,8 @@ function MedicalManager({ animalId, onChanged }) {
       <form onSubmit={handleAddRecord} style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8, alignItems: 'flex-end' }}>
         <label className="aa-quickField" style={{ width: 130 }}>
           <span className="ui-label">Type</span>
-          <select className="ui-input" value={recordForm.type} onChange={(e) => setRecordForm((f) => ({ ...f, type: e.target.value }))}>
-            {RECORD_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          <select className="ui-input" value={recordType} onChange={(e) => setRecordForm((f) => ({ ...f, type: e.target.value }))}>
+            {typeOptions.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
         </label>
         <label className="aa-quickField" style={{ width: 160 }}>

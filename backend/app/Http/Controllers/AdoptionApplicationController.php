@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\MarksAdminRead;
 use App\Models\AdoptionApplication;
 use App\Models\Animal;
+use App\Models\CategoryOption;
 use App\Notifications\AdoptionStatusChanged;
-use App\Support\ValidIdTypes;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -30,7 +30,7 @@ class AdoptionApplicationController extends Controller
             'reason' => ['required', 'string'],
             // An animal is being placed in their care, so the shelter records who they are.
             // 5 MB matches every other upload in the app.
-            'valid_id_type' => ['required', Rule::in(ValidIdTypes::ALL)],
+            'valid_id_type' => ['required', Rule::in(CategoryOption::activeValues('valid_id_type'))],
             'valid_id_image' => ['required', 'image', 'max:5120'],
         ]);
 

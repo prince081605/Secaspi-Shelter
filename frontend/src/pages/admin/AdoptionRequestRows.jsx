@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { adminUpdateAdoptionApplication, adminMarkAdoptionApplicationRead } from '../../lib/animalsApi';
 import { settingImageUrl } from '../../lib/settingsApi';
-import { labelForIdType } from '../../lib/validIdTypes';
+import { optionLabel, useCategories } from '../../lib/categoriesApi';
 import StatusBadge from '../../components/StatusBadge';
 import useConfirm from '../../lib/useConfirm';
 import DashCard from '../../components/DashCard';
@@ -229,6 +229,7 @@ const ADOPTION_STATUS_PROMPTS = {
 export function ApplicationRow({ application, onChanged, onUnreadChanged }) {
   const confirm = useConfirm();
   const isMobile = useIsMobile();
+  const categories = useCategories();
   const [expanded, setExpanded] = useState(false);
   const [error, setError] = useState('');
   const isUnread = !application.read_at;
@@ -301,7 +302,7 @@ export function ApplicationRow({ application, onChanged, onUnreadChanged }) {
       <div className="dashReviewSection">
         <div className="dashReviewSectionTitle">Valid ID</div>
         <dl className="dashInfoList">
-          <div><dt>ID type</dt><dd>{application.valid_id_type ? labelForIdType(application.valid_id_type) : '—'}</dd></div>
+          <div><dt>ID type</dt><dd>{application.valid_id_type ? optionLabel(categories.valid_id_type, application.valid_id_type) : '—'}</dd></div>
         </dl>
         {application.valid_id_url ? (
           <a href={photoSrc(application.valid_id_url)} target="_blank" rel="noreferrer" title="Open the full-size ID">

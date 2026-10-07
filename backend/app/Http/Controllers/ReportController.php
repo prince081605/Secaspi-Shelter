@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AdoptionApplication;
 use App\Models\Animal;
+use App\Models\CategoryOption;
 use App\Models\Donation;
 use App\Models\Expense;
 use App\Models\MedicalRecord;
@@ -264,6 +265,8 @@ class ReportController extends Controller
             $recordsQuery->where('type', $type);
         }
         $records = $recordsQuery->get();
+        // Record types are admin-managed (CategoryOption); hidden ones still label old records.
+        $typeLabels = CategoryOption::labels('medical_record_type');
 
         $vaccinationsQuery = Vaccination::query()->with('animal');
         $this->applyDateRange($vaccinationsQuery, $request, 'date_given');
@@ -273,7 +276,7 @@ class ReportController extends Controller
             ->merge($records->map(fn (MedicalRecord $m) => [
                 'animal_name' => $m->animal->name ?? '—',
                 'kind' => 'Medical',
-                'type' => $m->type,
+                'type' => $typeLabels[$m->type] ?? ucfirst((string) $m->type),
                 'date' => (string) $m->record_date,
                 'detail' => $m->description ?: ($m->vet_name ?: '—'),
             ]))
@@ -290,8 +293,8 @@ class ReportController extends Controller
         $typeCounts = $records->countBy('type');
 
         $summary = [];
-        foreach (['vaccination', 'deworming', 'treatment', 'surgery', 'checkup', 'emergency'] as $t) {
-            $summary[] = ['label' => ucfirst($t), 'value' => (int) ($typeCounts[$t] ?? 0)];
+        foreach ($typeLabels as $type => $label) {
+            $summary[] = ['label' => $label, 'value' => (int) ($typeCounts[$type] ?? 0)];
         }
         $summary[] = ['label' => 'Vaccinations given', 'value' => $vaccinations->count()];
         $summary[] = ['label' => 'Total entries', 'value' => $merged->count()];

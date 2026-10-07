@@ -10,7 +10,7 @@ import {
   Clock, Heart, User, Pencil, Lock, ClipboardList, Dog, Trophy, LayoutDashboard,
   ArrowLeft, Menu, X, LogOut, MessageSquare, PawPrint, Bell, Inbox, HeartHandshake,
   Siren, Calendar, Wrench, HandCoins, BarChart3, Users, UsersRound, Settings,
-  ChevronRight, Receipt,
+  ChevronRight, Receipt, Tags,
 } from 'lucide-react';
 import AnimalsAdmin from '../admin/AnimalsAdmin';
 import AdoptionRequestsAdmin from '../admin/AdoptionRequestsAdmin';
@@ -29,6 +29,7 @@ import Messages from '../Messages';
 import ImpactPanel from './ImpactPanel';
 import MyDonationsPanel from './MyDonationsPanel';
 import SettingsAdmin from '../admin/SettingsAdmin';
+import CategoriesAdmin from '../admin/CategoriesAdmin';
 import VisitationsAdmin from '../admin/VisitationsAdmin';
 import RemindersAdmin from '../admin/RemindersAdmin';
 import StatusBadge from '../../components/StatusBadge';
@@ -44,6 +45,7 @@ const ITEM_CATEGORY = {
   animals: 'cat_animals', reminders: 'cat_animals',
   requests: 'cat_requests', rescues: 'cat_requests', visitations: 'cat_requests', messages: 'cat_requests',
   donations: 'cat_ops', expenses: 'cat_ops', reports: 'cat_ops', users: 'cat_ops', settings: 'cat_ops', volunteers: 'cat_ops',
+  categories: 'cat_ops',
 };
 const NAV_CATEGORY_KEYS = ['cat_animals', 'cat_requests', 'cat_ops'];
 
@@ -61,7 +63,7 @@ const ITEM_MIN_ROLE = {
   // Staff can read the expense ledger; writing to it is admin-only and gated inside the panel
   // (and on the server), the same split as Donations.
   donations: 'staff', expenses: 'staff', reports: 'staff', volunteers: 'staff',
-  users: 'admin', settings: 'admin',
+  users: 'admin', settings: 'admin', categories: 'admin',
 };
 
 
@@ -545,6 +547,7 @@ export default function Dashboard() {
         { key: 'reports', label: 'Reports', icon: BarChart3 },
         { key: 'users', label: 'Users', icon: Users },
         { key: 'volunteers', label: 'Personnel', icon: UsersRound, badge: pendingVolunteerCount },
+        { key: 'categories', label: 'Categories', icon: Tags },
         { key: 'settings', label: 'Settings', icon: Settings },
       ],
     },
@@ -775,8 +778,9 @@ export default function Dashboard() {
               {activeNav === 'volunteers' ? <VolunteersAdmin isAdmin={isAdminRole} /> : null}
               {activeNav === 'mytasks' && isStaff ? <VolunteerTasksPanel /> : null}
               {activeNav === 'reports' ? <ReportsAdmin isAdmin={isAdminRole} /> : null}
-              {/* Users & Settings are admin-only — guarded here too so a forced nav can't mount them. */}
+              {/* Users, Categories & Settings are admin-only — guarded here too so a forced nav can't mount them. */}
               {isAdminRole && activeNav === 'users' ? <UsersAdmin currentUserId={user?.id} /> : null}
+              {isAdminRole && activeNav === 'categories' ? <CategoriesAdmin /> : null}
               {isAdminRole && activeNav === 'settings' ? (
                 <>
                   <SettingsAdmin />

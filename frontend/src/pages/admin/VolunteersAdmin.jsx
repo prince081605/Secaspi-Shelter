@@ -19,7 +19,7 @@ import useConfirm from '../../lib/useConfirm';
 import Pagination from '../../components/Pagination';
 import DashCard from '../../components/DashCard';
 import useIsMobile from '../../lib/useIsMobile';
-import { labelForIdType as idLabelFor } from '../../lib/validIdTypes';
+import { optionLabel, useCategories } from '../../lib/categoriesApi';
 
 // 'submitted' is where a task lands once the volunteer sends proof they finished it, so the
 // step after it is signing that proof off. 'ongoing' still leads straight to completed — not
@@ -469,6 +469,7 @@ function PersonnelRow({ personnel, onChanged, isAdmin }) {
 function RequestRow({ application, onChanged }) {
   const confirm = useConfirm();
   const isMobile = useIsMobile();
+  const categories = useCategories();
   const [expanded, setExpanded] = useState(false);
   const [notes, setNotes] = useState(application.admin_notes || '');
   const [error, setError] = useState('');
@@ -533,7 +534,7 @@ function RequestRow({ application, onChanged }) {
       <div className="dashReviewSection">
         <div className="dashReviewSectionTitle">Valid ID</div>
         <dl className="dashInfoList">
-          <div><dt>ID type</dt><dd>{application.valid_id_type ? idLabelFor(application.valid_id_type) : '—'}</dd></div>
+          <div><dt>ID type</dt><dd>{application.valid_id_type ? optionLabel(categories.valid_id_type, application.valid_id_type) : '—'}</dd></div>
         </dl>
         {application.valid_id_url ? (
           <a href={fileSrc(application.valid_id_url)} target="_blank" rel="noreferrer" title="Open the full-size ID">

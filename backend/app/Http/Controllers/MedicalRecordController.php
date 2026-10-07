@@ -3,21 +3,23 @@
 namespace App\Http\Controllers;
 
 use App\Models\Animal;
+use App\Models\CategoryOption;
 use App\Models\MedicalRecord;
 use App\Support\SyncsHealthReminders;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class MedicalRecordController extends Controller
 {
     use SyncsHealthReminders;
 
-    private const TYPES = ['vaccination', 'deworming', 'treatment', 'surgery', 'checkup', 'emergency'];
+    // Record types are an admin-managed list (CategoryOption 'medical_record_type').
 
     public function store(Request $request, Animal $animal)
     {
         $validator = Validator::make($request->all(), [
-            'type' => ['required', 'in:' . implode(',', self::TYPES)],
+            'type' => ['required', Rule::in(CategoryOption::activeValues('medical_record_type'))],
             'description' => ['nullable', 'string'],
             'vet_name' => ['nullable', 'string', 'max:150'],
             'cost' => ['nullable', 'numeric', 'min:0'],
@@ -39,7 +41,8 @@ class MedicalRecordController extends Controller
     public function update(Request $request, MedicalRecord $record)
     {
         $validator = Validator::make($request->all(), [
-            'type' => ['sometimes', 'in:' . implode(',', self::TYPES)],
+            // A record whose type has since been hidden keeps it when its other fields are edited.
+            'type' => ['sometimes', Rule::in([...CategoryOption::activeValues('medical_record_type'), $record->type])],
             'description' => ['nullable', 'string'],
             'vet_name' => ['nullable', 'string', 'max:150'],
             'cost' => ['nullable', 'numeric', 'min:0'],
@@ -73,7 +76,7 @@ class MedicalRecordController extends Controller
     private function syncRecordReminder(MedicalRecord $record): void
     {
         $animal = $record->animal;
-        $title = trim(ucfirst($record->type ?: 'Medical') . ' follow-up'
+        $title = trim((CategoryOption::labelFor('medical_record_type', $record->type) ?: 'Medical') . ' follow-up'
             . ($animal && $animal->name ? " — {$animal->name}" : ''));
 
         $this->syncHealthReminder(

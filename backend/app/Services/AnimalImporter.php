@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Exceptions\AnimalImportException;
 use App\Models\Animal;
 use App\Models\AnimalLocationLog;
+use App\Models\CategoryOption;
 use App\Models\ShelterLocation;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
@@ -196,7 +197,7 @@ class AnimalImporter
     public function validate(array $rows, array $allowDuplicates = []): array
     {
         $areas = ShelterLocation::all(['id', 'name'])->keyBy(fn (ShelterLocation $l) => mb_strtolower(trim($l->name)));
-        $issues = collect(Animal::BEHAVIORAL_ISSUES)->keyBy(fn (string $issue) => mb_strtolower($issue));
+        $issues = collect(CategoryOption::activeValues('behavioral_issue'))->keyBy(fn (string $issue) => mb_strtolower($issue));
 
         $checked = [];
         foreach ($rows as $rowNumber => $row) {
@@ -712,16 +713,20 @@ class AnimalImporter
 
     private function writeExamples(Worksheet $sheet, array $areas): void
     {
+        // Behavioral issues are admin-managed, so the examples only use ones still on the list.
+        $active = CategoryOption::activeValues('behavioral_issue');
+        $issues = fn (array $wanted) => implode(', ', array_intersect($wanted, $active)) ?: ($active[0] ?? null);
+
         $sheet->fromArray([
-            ['Brownie', 'Dog', 'Aspin', 3, 'Male', 'Medium', 12.5, 'Available', $areas[0] ?? null, 'excessive barking, pulling on leash', 'Found wandering near the public market. Friendly with people.'],
-            ['Mingming', 'Cat', 'Puspin', 1, 'Female', 'Small', 3.2, 'Medical', $areas[1] ?? $areas[0] ?? null, 'extreme shyness', 'Rescued from a drainage canal during heavy rain.'],
+            ['Brownie', 'Dog', 'Aspin', 3, 'Male', 'Medium', 12.5, 'Available', $areas[0] ?? null, $issues(['excessive barking', 'pulling on leash']), 'Found wandering near the public market. Friendly with people.'],
+            ['Mingming', 'Cat', 'Puspin', 1, 'Female', 'Small', 3.2, 'Medical', $areas[1] ?? $areas[0] ?? null, $issues(['extreme shyness']), 'Rescued from a drainage canal during heavy rain.'],
             ['Bantay', 'Dog', 'Aspin', 6, 'Male', 'Large', 20, null, null, null, null],
         ], null, 'A2', true);
     }
 
     private function writeAllowedValues(Worksheet $sheet, array $lists): void
     {
-        $columns = [...$lists, 'behavioral_assessment' => Animal::BEHAVIORAL_ISSUES];
+        $columns = [...$lists, 'behavioral_assessment' => CategoryOption::activeValues('behavioral_issue')];
 
         $col = 1;
         foreach ($columns as $key => $values) {

@@ -1,7 +1,20 @@
 import { useId, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
-import { breedGroups } from '../lib/breeds';
+import { useCategories, visibleOptions } from '../lib/categoriesApi';
 import './BreedInput.css';
+
+/**
+ * The suggestion groups for a species ('dog' / 'cat'), from the admin-managed breed lists (the
+ * Categories page); both groups when the species isn't chosen yet.
+ * @returns {{ label: string, breeds: string[] }[]}
+ */
+function breedGroups(species, lists) {
+  const dog = { label: 'Dog breeds', breeds: visibleOptions(lists.dog_breed).map((o) => o.label) };
+  const cat = { label: 'Cat breeds', breeds: visibleOptions(lists.cat_breed).map((o) => o.label) };
+  if (species === 'dog') return [dog];
+  if (species === 'cat') return [cat];
+  return [dog, cat];
+}
 
 /** The option text with the part matching the typed query emphasised ("asp" → <mark>Asp</mark>in). */
 function Highlight({ text, query }) {
@@ -34,12 +47,13 @@ export default function BreedInput({ id, value, onChange, species, className = '
   // opened with the ▾ button, or when the field is empty or already holds a listed breed).
   const [filter, setFilter] = useState('');
   const [active, setActive] = useState(-1);
+  const lists = useCategories();
 
   const query = filter.trim().toLowerCase();
   // Matching breeds per group — those starting with the query first, then those containing it —
   // each with the index its first option has in the flat list the arrow keys move through.
   const groups = useMemo(() => {
-    const matching = breedGroups(species)
+    const matching = breedGroups(species, lists)
       .map((group) => ({
         ...group,
         breeds: !query ? group.breeds : [
@@ -52,14 +66,14 @@ export default function BreedInput({ id, value, onChange, species, className = '
       ...group,
       start: matching.slice(0, g).reduce((sum, earlier) => sum + earlier.breeds.length, 0),
     }));
-  }, [species, query]);
+  }, [species, query, lists]);
 
   const options = groups.flatMap((group) => group.breeds);
   const showList = open && options.length > 0;
   const current = (value || '').trim().toLowerCase();
 
   const openList = () => {
-    const isListed = breedGroups(species).some((g) => g.breeds.some((b) => b.toLowerCase() === current));
+    const isListed = breedGroups(species, lists).some((g) => g.breeds.some((b) => b.toLowerCase() === current));
     setFilter(!current || isListed ? '' : value);
     setActive(-1);
     setOpen(true);

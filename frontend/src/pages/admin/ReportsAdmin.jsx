@@ -4,6 +4,7 @@ import { BarChart3, Download } from 'lucide-react';
 import DashCard from '../../components/DashCard';
 import useIsMobile from '../../lib/useIsMobile';
 import { DONATION_CATEGORIES } from '../../lib/donationCategories';
+import { useCategories } from '../../lib/categoriesApi';
 
 // Mirrors ReportController::FINANCIAL_TYPES — report types that expose shelter finances.
 const FINANCIAL_REPORT_TYPES = ['donations', 'expenses'];
@@ -19,7 +20,9 @@ const FILTER_CONFIG = {
   },
   medical: {
     dateRange: true,
-    recordType: ['vaccination', 'deworming', 'treatment', 'surgery', 'checkup', 'emergency'],
+    // The admin-managed medical record types (Categories page), hidden ones included — older
+    // records may still have them.
+    recordType: true,
   },
   donations: {
     dateRange: true,
@@ -73,6 +76,7 @@ export default function ReportsAdmin({ isAdmin = false }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [exporting, setExporting] = useState('');
+  const categories = useCategories();
 
   const config = FILTER_CONFIG[type] || {};
 
@@ -202,7 +206,9 @@ export default function ReportsAdmin({ isAdmin = false }) {
             <span className="dashFilterLabel">Record type</span>
             <select className="ui-input" style={{ maxWidth: 160 }} value={filters.record_type} onChange={setField('record_type')}>
               <option value="">All record types</option>
-              {config.recordType.map((t) => <option key={t} value={t}>{t}</option>)}
+              {(categories.medical_record_type || []).map((t) => (
+                <option key={t.value} value={t.value}>{t.label}{t.hidden ? ' (hidden)' : ''}</option>
+              ))}
             </select>
           </label>
         )}

@@ -18,29 +18,7 @@ class Animal extends Model
 
     public const SIZES = ['small', 'medium', 'large'];
 
-    // The behavioral issues the admin form offers as checkboxes (mirrored in AnimalsAdmin.jsx).
-    // The Matchmaker and care guides key off this vocabulary, so the Excel import only accepts
-    // these exact phrases.
-    public const BEHAVIORAL_ISSUES = [
-        'separation anxiety',
-        'aggression & resource guarding',
-        'dog-to-dog aggression',
-        'territorial aggression',
-        'fear aggression',
-        'destructive chewing & digging',
-        'inappropriate elimination',
-        'excessive barking',
-        'excessive vocalization',
-        'jumping/mouthing',
-        'pulling on leash',
-        'excessive energy',
-        'extreme shyness',
-        'fear of strangers',
-        'fear of loud noises',
-        'post-trauma/trust issues',
-        'pain-related aggression',
-        'cognitive issues (senior)',
-    ];
+    // Breeds and behavioral issues are admin-managed lists: see CategoryOption.
 
     protected $fillable = [
         'name',

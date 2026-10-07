@@ -6,6 +6,7 @@ use App\Http\Controllers\AnimalController;
 use App\Http\Controllers\AnimalImportController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CategoryOptionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DonationController;
 use App\Http\Controllers\ExpenseController;
@@ -27,6 +28,7 @@ use App\Http\Controllers\VaccinationController;
 use App\Http\Controllers\VisitationController;
 use App\Http\Controllers\VolunteerApplicationController;
 use App\Http\Controllers\VolunteerController;
+use App\Models\CategoryOption;
 use Illuminate\Support\Facades\Route;
 
 // Public routes.
@@ -146,6 +148,14 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('/admin/shelter-locations', [ShelterLocationController::class, 'store'])->middleware('admin');
     Route::put('/admin/shelter-locations/{location}', [ShelterLocationController::class, 'update'])->middleware('admin');
     Route::delete('/admin/shelter-locations/{location}', [ShelterLocationController::class, 'destroy'])->middleware('admin');
+
+    // ---- Categories (admin-managed lists: breeds, behavioral issues, medical record types, ID types) ----
+    // Reading them is public (GET /api/categories); changing them is admin-only, like shelter areas.
+    $categoryTypes = array_keys(CategoryOption::TYPES);
+    Route::get('/admin/categories/{type}', [CategoryOptionController::class, 'adminIndex'])->middleware('admin')->whereIn('type', $categoryTypes);
+    Route::post('/admin/categories/{type}', [CategoryOptionController::class, 'store'])->middleware('admin')->whereIn('type', $categoryTypes);
+    Route::put('/admin/categories/{type}/{option}', [CategoryOptionController::class, 'update'])->middleware('admin')->whereIn('type', $categoryTypes);
+    Route::delete('/admin/categories/{type}/{option}', [CategoryOptionController::class, 'destroy'])->middleware('admin')->whereIn('type', $categoryTypes);
     Route::post('/animals/{animal}/photos', [AnimalController::class, 'addPhotos'])->middleware('role:staff');
     Route::delete('/animals/{animal}/photos/{photo}', [AnimalController::class, 'destroyPhoto'])->middleware('role:staff');
 

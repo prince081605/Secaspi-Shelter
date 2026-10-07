@@ -3,11 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\MarksAdminRead;
+use App\Models\CategoryOption;
 use App\Models\User;
 use App\Models\Volunteer;
 use App\Models\VolunteerApplication;
 use App\Notifications\VolunteerApplicationStatusChanged;
-use App\Support\ValidIdTypes;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -28,7 +28,7 @@ class VolunteerApplicationController extends Controller
             'reason' => ['required', 'string'],
             // Volunteers work with the animals and meet the public, so the shelter records who
             // they are. 5 MB matches every other upload in the app.
-            'valid_id_type' => ['required', Rule::in(ValidIdTypes::ALL)],
+            'valid_id_type' => ['required', Rule::in(CategoryOption::activeValues('valid_id_type'))],
             'valid_id_image' => ['required', 'image', 'max:5120'],
         ]);
 

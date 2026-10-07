@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { applyForAdoption } from '../../lib/animalsApi';
-import { ID_TYPES } from '../../lib/validIdTypes';
+import { useCategories, visibleOptions } from '../../lib/categoriesApi';
 import SiteNav from '../../components/SiteNav';
 import PhotoInput from '../../components/PhotoInput';
 
@@ -23,6 +23,8 @@ export default function AdoptionApply() {
   });
   // The ID photo is a File, so it lives outside `form` (which is plain strings).
   const [idImage, setIdImage] = useState(null);
+  // The ID types are an admin-managed list (Categories page).
+  const categories = useCategories();
   const [idPreviewUrl, setIdPreviewUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -119,7 +121,7 @@ export default function AdoptionApply() {
                 <label className="ui-label ui-label-required">Type of ID</label>
                 <select className="ui-input" name="valid_id_type" value={form.valid_id_type} onChange={handleChange} required>
                   <option value="">Select an ID</option>
-                  {ID_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  {visibleOptions(categories.valid_id_type).map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
               </div>
               <div className="ui-field">

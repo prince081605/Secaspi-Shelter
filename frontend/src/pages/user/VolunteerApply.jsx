@@ -6,7 +6,7 @@ import MyTaskItem, { MyTaskList, RequestTaskForm } from '../../components/MyTask
 import AttendanceCard from '../../components/AttendanceCard';
 import PhotoInput from '../../components/PhotoInput';
 import useLoginGate from '../../lib/useLoginGate';
-import { ID_TYPES } from '../../lib/validIdTypes';
+import { useCategories, visibleOptions } from '../../lib/categoriesApi';
 import {
   submitVolunteerApplication,
   listMyVolunteerApplications,
@@ -56,6 +56,8 @@ export default function VolunteerApply() {
   // screenshot on the Donate page. A visitor who gets bounced to the login page loses a file
   // they had already picked, which is why we never ask for one before they are signed in.
   const [idImage, setIdImage] = useState(null);
+  // The ID types are an admin-managed list (Categories page).
+  const categories = useCategories();
   const [idPreviewUrl, setIdPreviewUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -253,7 +255,7 @@ export default function VolunteerApply() {
                   required
                 >
                   <option value="">Select an ID</option>
-                  {ID_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  {visibleOptions(categories.valid_id_type).map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
               </div>
               {/* Rendered only once signed in — and conditionally, not merely disabled. A

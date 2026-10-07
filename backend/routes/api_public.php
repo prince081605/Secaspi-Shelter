@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AnimalController;
 use App\Http\Controllers\BackupController;
+use App\Http\Controllers\CategoryOptionController;
 use App\Http\Controllers\ImpactController;
 use App\Http\Controllers\MatchmakerController;
 use App\Http\Controllers\PaymongoWebhookController;
@@ -21,6 +22,10 @@ Route::post('/internal/backup', [BackupController::class, 'run']);
 Route::post('/webhooks/paymongo', PaymongoWebhookController::class)->middleware('throttle:120,1');
 
 Route::get('/home/settings', [SettingController::class, 'publicIndex']);
+
+// The admin-managed lists the forms offer (breeds, behavioral issues, medical record types, ID
+// types). Read-only and public: the adoption/volunteer forms need the ID types before sign-in.
+Route::get('/categories', [CategoryOptionController::class, 'index']);
 
 Route::get('/test', function () {
     return response()->json([

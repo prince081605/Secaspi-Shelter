@@ -315,7 +315,7 @@ export default function AnimalDetail() {
         ...(animal.medical_records || []).map((m) => ({
           key: `med-${m.id}`,
           date: m.record_date,
-          label: m.type,
+          label: m.type_label || m.type,
           detail: m.description,
         })),
         ...(animal.vaccinations || []).map((v) => ({

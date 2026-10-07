@@ -6,6 +6,7 @@ use App\Models\Animal;
 use App\Models\AnimalLocationLog;
 use App\Models\AnimalPhoto;
 use App\Models\CareGuide;
+use App\Models\CategoryOption;
 use App\Models\ShelterLocation;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Writer\SvgWriter;
@@ -109,6 +110,7 @@ class AnimalController extends Controller
     {
         $animal->load(['photos', 'medicalRecords', 'vaccinations']);
         $qrCode = $this->ensureQrCode($animal);
+        $typeLabels = CategoryOption::labels('medical_record_type');
 
         return response()->json([
             'animal' => [
@@ -137,6 +139,7 @@ class AnimalController extends Controller
                 'medical_records' => $animal->medicalRecords->map(fn ($m) => [
                     'id' => $m->id,
                     'type' => $m->type,
+                    'type_label' => $typeLabels[$m->type] ?? ucfirst((string) $m->type),
                     'description' => $m->description,
                     'record_date' => $m->record_date,
                 ])->values(),
@@ -389,6 +392,7 @@ class AnimalController extends Controller
     {
         $animal->load(['photos', 'medicalRecords', 'vaccinations', 'currentLocation']);
         $qrCode = $this->ensureQrCode($animal);
+        $typeLabels = CategoryOption::labels('medical_record_type');
 
         $history = $animal->locationLogs()->with(['fromLocation', 'toLocation', 'mover'])
             ->orderByDesc('created_at')->orderByDesc('id')->limit(10)->get();
@@ -424,6 +428,7 @@ class AnimalController extends Controller
             'medical_records' => $animal->medicalRecords->map(fn ($m) => [
                 'id' => $m->id,
                 'type' => $m->type,
+                'type_label' => $typeLabels[$m->type] ?? ucfirst((string) $m->type),
                 'description' => $m->description,
                 'vet_name' => $m->vet_name,
                 'cost' => $m->cost,
