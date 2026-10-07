@@ -14,6 +14,7 @@ import StatusBadge from '../../components/StatusBadge';
 import useConfirm from '../../lib/useConfirm';
 import Pagination from '../../components/Pagination';
 import DashCard from '../../components/DashCard';
+import PhotoInput from '../../components/PhotoInput';
 import useIsMobile from '../../lib/useIsMobile';
 import { SPECIES } from '../../lib/species';
 
@@ -135,7 +136,7 @@ function NewIntakeForm({ onCancel, onCreated }) {
       </div>
       <div className="ui-field">
         <label className="ui-label">Animal photo(s)</label>
-        <input type="file" accept="image/*" multiple onChange={(e) => setFiles(e.target.files)} />
+        <PhotoInput multiple files={files} onChange={setFiles} cameraTitle="Photograph the animal" />
         <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>
           These carry over as the animal's photos when you add this intake to Animals.
         </div>
@@ -281,9 +282,13 @@ function AssessmentPanel({ intake, onChanged }) {
         ))}
         {detail.documents.length === 0 && <div className="ui-empty">No photos uploaded.</div>}
       </div>
-      <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
-        <input type="file" accept="image/*" multiple onChange={(e) => setFiles(e.target.files)} />
-        <button className="dashBtn" type="button" onClick={uploadDocs}>Upload</button>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6, alignItems: 'flex-start' }}>
+        <PhotoInput multiple files={files} onChange={setFiles} disabled={state.status === 'loading'} cameraTitle="Photograph the animal" />
+        {files?.length > 0 && (
+          <button className="dashBtn dashBtnPrimary" type="button" onClick={uploadDocs} disabled={state.status === 'loading'}>
+            Save {files.length} photo{files.length === 1 ? '' : 's'} to this intake
+          </button>
+        )}
       </div>
 
       <div className="dashSectionTitle" style={{ fontSize: 13, marginTop: 12 }}><Stethoscope size={15} style={{ verticalAlign: '-3px', marginRight: 6 }} />Assessment</div>

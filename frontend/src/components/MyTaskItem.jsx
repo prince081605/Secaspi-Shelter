@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { requestVolunteerTask, submitTaskProof } from '../lib/volunteersApi';
 import StatusBadge from './StatusBadge';
+import PhotoInput from './PhotoInput';
 
 const styles = `
   .myTaskList { list-style: none; padding: 0; margin: 0; }
@@ -129,8 +130,7 @@ export default function MyTaskItem({ task, onUpdated }) {
   // Release the previous preview when a new file is picked, and the last one on unmount.
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
 
-  const choose = (e) => {
-    const file = e.target.files?.[0] || null;
+  const choose = ([file = null]) => {
     setImage(file);
     setPreviewUrl(file ? URL.createObjectURL(file) : '');
   };
@@ -208,7 +208,7 @@ export default function MyTaskItem({ task, onUpdated }) {
               {error && <div className="ui-error">{error}</div>}
               <div className="ui-field">
                 <label className="ui-label ui-label-required">Photo of the finished task</label>
-                <input className="ui-input" type="file" accept="image/*" onChange={choose} required />
+                <PhotoInput files={image ? [image] : null} onChange={choose} required thumbnails={false} disabled={sending} cameraTitle="Photograph the finished task" />
                 <p className="ui-muted" style={{ fontSize: '0.8rem', margin: '0.3rem 0 0' }}>JPG or PNG, up to 5 MB.</p>
                 {previewUrl && <img src={previewUrl} alt="Your photo, as it will be sent" className="myTaskPreview" />}
               </div>

@@ -4,6 +4,7 @@ import { PawPrint, PartyPopper } from 'lucide-react';
 import SiteNav from '../../components/SiteNav';
 import MyTaskItem, { MyTaskList, RequestTaskForm } from '../../components/MyTaskItem';
 import AttendanceCard from '../../components/AttendanceCard';
+import PhotoInput from '../../components/PhotoInput';
 import useLoginGate from '../../lib/useLoginGate';
 import { ID_TYPES } from '../../lib/validIdTypes';
 import {
@@ -91,8 +92,7 @@ export default function VolunteerApply() {
   // Show the chosen ID before it is sent, so a blurry or wrong-side photo is caught here rather
   // than by a reviewer days later. The URL is minted in the handler and released by the effect
   // below — doing both in an effect would mean setting state from inside one.
-  const chooseIdImage = (e) => {
-    const file = e.target.files?.[0] || null;
+  const chooseIdImage = ([file = null]) => {
     setIdImage(file);
     setIdPreviewUrl(file ? URL.createObjectURL(file) : '');
   };
@@ -262,12 +262,13 @@ export default function VolunteerApply() {
               {gate.isAuthed ? (
                 <div className="ui-field">
                   <label className="ui-label ui-label-required">Photo of your ID</label>
-                  <input
-                    className="ui-input"
-                    type="file"
-                    accept="image/*"
+                  <PhotoInput
+                    files={idImage ? [idImage] : null}
                     onChange={chooseIdImage}
                     required
+                    thumbnails={false}
+                    label="Photo of your ID"
+                    cameraTitle="Photograph your ID"
                   />
                   <p className="ui-muted" style={{ fontSize: '0.82rem', marginTop: '0.4rem' }}>
                     A clear photo of the ID above, so we can confirm it is yours. JPG or PNG, up to 5 MB.

@@ -5,6 +5,7 @@ import { goToCheckout } from '../../lib/paymentsApi';
 import { getTransparency } from '../../lib/publicHomeApi';
 import { DONATION_CATEGORIES, NEEDED_MOST_LABEL, NEEDED_MOST_VALUE } from '../../lib/donationCategories';
 import SiteNav from '../../components/SiteNav';
+import PhotoInput from '../../components/PhotoInput';
 import useLoginGate from '../../lib/useLoginGate';
 
 const peso = (n) => `₱${Number(n || 0).toLocaleString()}`;
@@ -357,12 +358,13 @@ export default function Donate() {
                     <label className={'ui-label' + (paymentMethod === 'gcash' ? ' ui-label-required' : '')}>
                       Payment proof (screenshot){paymentMethod === 'gcash' ? '' : ' (optional)'}
                     </label>
-                    <input
-                      className="ui-input"
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setProofImage(e.target.files?.[0] || null)}
+                    <PhotoInput
+                      files={proofImage ? [proofImage] : null}
+                      onChange={([file = null]) => setProofImage(file)}
                       required={paymentMethod === 'gcash'}
+                      thumbnails={false}
+                      label="Payment proof"
+                      cameraTitle="Photograph your payment proof"
                     />
                     {proofPreviewUrl && (
                       <img src={proofPreviewUrl} alt="Payment proof preview" className="donateProofPreview" />

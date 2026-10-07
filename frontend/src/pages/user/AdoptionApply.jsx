@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { applyForAdoption } from '../../lib/animalsApi';
 import { ID_TYPES } from '../../lib/validIdTypes';
 import SiteNav from '../../components/SiteNav';
+import PhotoInput from '../../components/PhotoInput';
 
 const styles = `
   .applyBody { max-width: 640px; margin: 0 auto; padding: 3rem 1.5rem; }
@@ -31,8 +32,7 @@ export default function AdoptionApply() {
 
   // Show the chosen ID before it is sent, so a blurry or wrong-side photo is caught here rather
   // than by a reviewer later. Minted in the handler, released by the effect below.
-  const chooseIdImage = (e) => {
-    const file = e.target.files?.[0] || null;
+  const chooseIdImage = ([file = null]) => {
     setIdImage(file);
     setIdPreviewUrl(file ? URL.createObjectURL(file) : '');
   };
@@ -124,7 +124,7 @@ export default function AdoptionApply() {
               </div>
               <div className="ui-field">
                 <label className="ui-label ui-label-required">Photo of your ID</label>
-                <input className="ui-input" type="file" accept="image/*" onChange={chooseIdImage} required />
+                <PhotoInput files={idImage ? [idImage] : null} onChange={chooseIdImage} required thumbnails={false} label="Photo of your ID" cameraTitle="Photograph your ID" />
                 <p className="ui-muted" style={{ fontSize: '0.82rem', marginTop: '0.4rem' }}>
                   A clear photo of the ID above, so we can confirm it is yours. JPG or PNG, up to 5 MB.
                 </p>

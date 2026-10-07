@@ -141,7 +141,7 @@ export default function LandingPage() {
 
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
-  const handlePhotoChange = (e) => setReportPhoto(e.target.files?.[0] || null);
+  const handlePhotoChange = (file) => setReportPhoto(file);
   const handleSubmit = async (e) => {
     e.preventDefault();
     setReportState({ status: "loading", error: "" });

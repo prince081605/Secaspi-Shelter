@@ -27,6 +27,7 @@ import ShelterLocationsManager from './ShelterLocationsManager';
 import ActionMenu from '../../components/ActionMenu';
 import AnimalImport from './AnimalImport';
 import BreedInput from '../../components/BreedInput';
+import PhotoInput from '../../components/PhotoInput';
 import './AnimalsAdmin.css';
 
 // STATUSES, GENDERS, SIZES and BEHAVIORAL_ISSUES mirror the constants on App\Models\Animal,
@@ -99,8 +100,6 @@ function AnimalForm({ initial, onCancel, onSaved }) {
   // non-destructive — it must never discard the in-progress form the admin is filling out.
   const [duplicate, setDuplicate] = useState(null);
   const [showExisting, setShowExisting] = useState(false);
-  // Bumped on Clear to remount the (uncontrolled) file input so its chosen-filename label resets.
-  const [fileInputKey, setFileInputKey] = useState(0);
 
   // The list row (`initial`) only carries a subset of fields — notably it omits weight,
   // rescue_story and behavioral_assessment — so editing straight from it leaves those blank
@@ -214,7 +213,6 @@ function AnimalForm({ initial, onCancel, onSaved }) {
     setDuplicate(null);
     setShowExisting(false);
     setState({ status: 'idle', error: '' });
-    setFileInputKey((k) => k + 1);
   };
 
   return (
@@ -331,7 +329,7 @@ function AnimalForm({ initial, onCancel, onSaved }) {
       {!isEdit && (
         <div className="ui-field">
           <label className="ui-label">Photos</label>
-          <input key={fileInputKey} type="file" accept="image/*" multiple onChange={(e) => setPhotoFiles(e.target.files)} />
+          <PhotoInput multiple files={photoFiles} onChange={setPhotoFiles} cameraTitle="Photograph the animal" />
         </div>
       )}
       <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
@@ -420,11 +418,13 @@ function PhotoManager({ animalId, onChanged }) {
           </div>
         ))}
       </div>
-      <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'center' }}>
-        <input type="file" accept="image/*" multiple onChange={(e) => setFiles(e.target.files)} />
-        <button type="button" className="dashBtn" onClick={handleUpload} disabled={state.status === 'loading'}>
-          {state.status === 'loading' ? 'Uploading…' : 'Upload'}
-        </button>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8, alignItems: 'flex-start' }}>
+        <PhotoInput multiple files={files} onChange={setFiles} disabled={state.status === 'loading'} cameraTitle="Photograph the animal" />
+        {files?.length > 0 && (
+          <button type="button" className="dashBtn dashBtnPrimary" onClick={handleUpload} disabled={state.status === 'loading'}>
+            {state.status === 'loading' ? 'Saving…' : `Save ${files.length} photo${files.length === 1 ? '' : 's'} to profile`}
+          </button>
+        )}
       </div>
     </div>
   );

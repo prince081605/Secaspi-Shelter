@@ -3,6 +3,7 @@ import useInView from "../../lib/useInView";
 import usePrefersReducedMotion from "../../lib/usePrefersReducedMotion";
 import { MapContainer, TileLayer, CircleMarker, useMapEvents, useMap } from "react-leaflet";
 import { Home, PawPrint, MapPin, Check } from "lucide-react";
+import PhotoInput from "../../components/PhotoInput";
 import "leaflet/dist/leaflet.css";
 
 // Presentational sections for the public LandingPage, extracted from LandingPage.jsx (audit §0.2)
@@ -356,8 +357,12 @@ export function RescueForm({ form, reportPhoto, reportState, onChange, onPhotoCh
             <div className="ui-field"><label className="ui-label">Details</label><textarea className="ui-textarea" name="details" value={form.details} onChange={onChange} placeholder="Describe what you see..." /></div>
             <div className="ui-field">
               <label className="ui-label">Photo (optional)</label>
-              <input className="ui-input" type="file" accept="image/*" onChange={onPhotoChange} />
-              {reportPhoto && <span style={{ display: "block", fontSize: 13, color: "var(--lp-ink-soft)", marginTop: 6 }}>Selected: {reportPhoto.name}</span>}
+              <PhotoInput
+                files={reportPhoto ? [reportPhoto] : null}
+                onChange={([file = null]) => onPhotoChange(file)}
+                label="Photo of the animal"
+                cameraTitle="Photograph the animal"
+              />
             </div>
             <button type="submit" className="lp-btn lp-btn-primary lp-report-submit" disabled={reportState.status === "loading"}>
               {reportState.status === "loading" ? "Sending..." : "Send Report"}

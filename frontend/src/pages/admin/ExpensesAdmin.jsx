@@ -9,6 +9,7 @@ import {
 } from '../../lib/expensesApi';
 import Pagination from '../../components/Pagination';
 import DashCard from '../../components/DashCard';
+import PhotoInput from '../../components/PhotoInput';
 import useConfirm from '../../lib/useConfirm';
 import useIsMobile from '../../lib/useIsMobile';
 import { DONATION_CATEGORIES, labelFor } from '../../lib/donationCategories';
@@ -70,8 +71,8 @@ function StatsCards({ stats }) {
 }
 
 /**
- * Create/edit form. Editing prefills everything except the receipt — a file input cannot be
- * given a value, so leaving it empty keeps the existing receipt and choosing a file replaces it.
+ * Create/edit form. Editing prefills everything except the receipt, which starts empty: leaving
+ * it empty keeps the existing receipt, and taking or choosing a photo replaces it.
  *
  * The caller gives this a `key` that changes with the row being edited, so switching rows
  * remounts it and the initialiser below re-runs. That is why there is no effect syncing props
@@ -92,8 +93,7 @@ function ExpenseForm({ editing, onCancel, onSaved, onError }) {
   const [fieldErrors, setFieldErrors] = useState({});
 
   const set = (key) => (e) => {
-    const value = key === 'receipt' ? e.target.files?.[0] || null : e.target.value;
-    setForm((f) => ({ ...f, [key]: value }));
+    setForm((f) => ({ ...f, [key]: e.target.value }));
   };
 
   const submit = async (e) => {
@@ -176,7 +176,12 @@ function ExpenseForm({ editing, onCancel, onSaved, onError }) {
 
         <div className="ui-field">
           <label className="ui-label">Receipt {editing ? '(leave empty to keep)' : '(optional)'}</label>
-          <input className="ui-input" type="file" accept="image/*" onChange={set('receipt')} />
+          <PhotoInput
+            files={form.receipt ? [form.receipt] : null}
+            onChange={([file = null]) => setForm((f) => ({ ...f, receipt: file }))}
+            label="Receipt"
+            cameraTitle="Photograph the receipt"
+          />
           {errorFor('receipt') && <div className="ui-error">{errorFor('receipt')}</div>}
         </div>
       </div>
