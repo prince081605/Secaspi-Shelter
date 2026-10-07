@@ -80,16 +80,16 @@ class HealthReminderTest extends TestCase
         // First shot with a booster due date → one pending reminder.
         $this->postJson("/api/animals/{$animal->id}/vaccinations", [
             'vaccine_name' => 'Rabies',
-            'date_given' => '2026-01-01',
-            'next_due' => '2027-01-01',
+            'date_given' => '2025-01-01',
+            'next_due' => '2026-01-01',
         ])->assertCreated();
         $firstId = Vaccination::first()->id;
 
         // The booster is administered (a new Rabies shot) → the prior reminder is now done.
         $this->postJson("/api/animals/{$animal->id}/vaccinations", [
             'vaccine_name' => 'rabies', // case-insensitive match
-            'date_given' => '2027-01-02',
-            'next_due' => '2028-01-02',
+            'date_given' => '2026-01-02',
+            'next_due' => '2027-01-02',
         ])->assertCreated();
 
         $this->assertDatabaseHas('reminders', [

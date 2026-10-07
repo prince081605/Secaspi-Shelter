@@ -7,6 +7,7 @@ use App\Models\AdoptionApplication;
 use App\Models\Animal;
 use App\Models\CategoryOption;
 use App\Notifications\AdoptionStatusChanged;
+use App\Rules\PhilippinePhone;
 use App\Services\PostAdoption;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -23,7 +24,7 @@ class AdoptionApplicationController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'full_name' => ['required', 'string', 'max:150'],
-            'contact_number' => ['required', 'string', 'max:50'],
+            'contact_number' => ['required', 'string', 'max:50', new PhilippinePhone],
             'address' => ['required', 'string'],
             'occupation' => ['nullable', 'string', 'max:100'],
             'housing_type' => ['nullable', 'string', 'max:50'],
@@ -36,7 +37,7 @@ class AdoptionApplicationController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
         $user = $request->user();
@@ -157,7 +158,7 @@ class AdoptionApplicationController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
         $data = $validator->validated();

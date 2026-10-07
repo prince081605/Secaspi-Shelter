@@ -22,13 +22,17 @@ function SettlementTag({ settlement }) {
   );
 }
 
-// Fixed layout at 100% width so all columns fit the panel with no horizontal scroll: columns take
-// their assigned share, and long values (emails, category labels, references) wrap inside their
-// cell instead of forcing the table wider than its container.
+// Short values (reference, amount, method) and the badges stay on one line; the donor and
+// category columns take what's left and wrap, an email breaking anywhere if it has to. On a
+// narrow panel the wrapper scrolls sideways rather than splitting "₱3,200.00" across lines.
 const TABLE_STYLES = `
-  table.donAdminTable { table-layout: fixed; width: 100%; min-width: 0; }
-  table.donAdminTable th, table.donAdminTable td { padding: 10px 10px; overflow-wrap: anywhere; white-space: normal; vertical-align: top; }
+  table.donAdminTable { width: 100%; min-width: 0; }
+  table.donAdminTable th, table.donAdminTable td { padding: 10px 8px; vertical-align: top; }
   table.donAdminTable td { font-size: 0.9rem; }
+  table.donAdminTable .donEmail { overflow-wrap: anywhere; }
+  table.donAdminTable .donRef { font-size: 0.8rem; letter-spacing: 0.02em; }
+  table.donAdminTable td:nth-child(2) { min-width: 150px; }
+  table.donAdminTable .donPay { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 4px; white-space: nowrap; }
 `;
 
 function fileSrc(path) {
@@ -156,12 +160,12 @@ function DonationRow({ donation: d, isAdmin, onChanged }) {
   return (
     <>
       <tr>
-        <td>{d.reference_no}</td>
-        <td>{d.donor?.full_name || '—'}<br /><span style={{ fontSize: 12, color: 'var(--muted)' }}>{d.donor?.email}</span></td>
-        <td>{money(d.amount)}</td>
+        <td className="dashNowrap donRef">{d.reference_no}</td>
+        <td>{d.donor?.full_name || '—'}<br /><span className="donEmail" style={{ fontSize: 12, color: 'var(--muted)' }}>{d.donor?.email}</span></td>
+        <td className="dashNowrap">{money(d.amount)}</td>
         <td>{labelFor(d.category)}</td>
-        <td>{d.payment_method}</td>
-        <td><SettlementTag settlement={d.settlement} /></td>
+        {/* Method and how it was paid share a column, which leaves the donor name room to breathe. */}
+        <td><span className="donPay">{d.payment_method}<SettlementTag settlement={d.settlement} /></span></td>
         <td><StatusBadge status={d.status} /></td>
         <td className="dashActionsCell">
           <span className="dashActionsRow">{detailsBtn}</span>
@@ -169,7 +173,7 @@ function DonationRow({ donation: d, isAdmin, onChanged }) {
       </tr>
       {expanded && (
         <tr>
-          <td colSpan={8} className="dashExpandPanel">{panel}</td>
+          <td colSpan={7} className="dashExpandPanel">{panel}</td>
         </tr>
       )}
     </>
@@ -289,18 +293,16 @@ export default function DonationsAdmin({ isAdmin = false }) {
           <table className="dashTable donAdminTable">
             <thead>
               <tr>
-                {/* Widths must keep summing to 100 — table-layout: fixed divides the panel by
-                    these shares. Proof is gone as a column: the screenshot now opens in the
-                    panel, and a peek from the row was the thing this change set out to stop. */}
-                <th style={{ width: '12%' }}>Reference</th>
-                <th style={{ width: '21%' }}>Donor</th>
-                <th style={{ width: '9%' }}>Amount</th>
-                <th style={{ width: '16%' }}>Category</th>
-                <th style={{ width: '9%' }}>Method</th>
-                <th style={{ width: '9%' }}>Paid</th>
-                <th style={{ width: '12%' }}>Status</th>
+                {/* Proof is not a column: the screenshot opens in the panel, and a peek from
+                    the row was the thing that change set out to stop. */}
+                <th>Reference</th>
+                <th>Donor</th>
+                <th>Amount</th>
+                <th>Category</th>
+                <th>Payment</th>
+                <th>Status</th>
                 {/* Not gated on isAdmin: staff can read a donation, they just cannot decide it. */}
-                <th style={{ width: '12%' }}>Actions</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>

@@ -26,7 +26,7 @@ class DonationController extends Controller
         $rails = config('payments.gateway_rails', []);
 
         $validator = Validator::make($request->all(), [
-            'amount'         => ['required', 'numeric', 'min:1'],
+            'amount'         => ['required', 'numeric', 'min:1', 'max:99999999.99'],
             'payment_method' => ['required', 'in:gcash,cash,bank'],
             // How the donor intends to settle: pay through the checkout now, or send the
             // money themselves and upload a screenshot for staff to verify. Optional, and
@@ -52,7 +52,7 @@ class DonationController extends Controller
         });
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
         $user = $request->user();
@@ -180,7 +180,7 @@ class DonationController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
         try {

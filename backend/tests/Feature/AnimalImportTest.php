@@ -104,6 +104,14 @@ class AnimalImportTest extends TestCase
         $allowed = $book->getSheetByName('Allowed Values')->toArray();
         $this->assertContains('Kennel 1', array_column($allowed, 4));
         $this->assertContains('excessive barking', array_column($allowed, 5));
+
+        // Breed suggests the common dog and cat breeds, but still takes any breed typed in.
+        $this->assertSame('Common Breeds', $allowed[0][6]);
+        $this->assertContains('Aspin', array_column($allowed, 6));
+        $this->assertContains('Puspin', array_column($allowed, 6));
+        $breed = $animals->getDataValidationCollection()['C2:C1001'] ?? null;
+        $this->assertNotNull($breed, 'Breed has a dropdown');
+        $this->assertFalse($breed->getShowErrorMessage(), 'an unlisted breed is still accepted');
     }
 
     public function test_the_templates_own_example_rows_pass_the_check(): void

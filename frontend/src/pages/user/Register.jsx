@@ -88,8 +88,8 @@ export default function Register() {
         footer={<>Already verified? <Link to="/login" state={{ from }}>Log in</Link></>}
       >
         <div className="ui-field">
-          <label className="ui-label">Your username</label>
-          <input className="ui-input" value={created.username || ''} readOnly />
+          <label htmlFor="register-your-username" className="ui-label">Your username</label>
+          <input id="register-your-username" className="ui-input" value={created.username || ''} readOnly />
           <p className="ui-muted" style={{ marginTop: '0.4rem', fontSize: '0.85rem' }}>
             This is your unique display name. You log in with your email.
           </p>
@@ -123,23 +123,23 @@ export default function Register() {
       {error ? <div className="ui-error">{error}</div> : null}
       <form onSubmit={onSubmit}>
         <div className="ui-field">
-          <label className="ui-label ui-label-required">Full name</label>
-          <input className="ui-input" value={name} onChange={(e) => setName(e.target.value)} type="text" autoComplete="name" required />
+          <label htmlFor="register-full-name" className="ui-label ui-label-required">Full name</label>
+          <input id="register-full-name" className="ui-input" value={name} onChange={(e) => setName(e.target.value)} type="text" autoComplete="name" required />
         </div>
         <div className="ui-field">
-          <label className="ui-label">Username (auto-generated)</label>
-          <input className="ui-input" value={username} placeholder="Filled in from your name" readOnly />
+          <label htmlFor="register-username" className="ui-label">Username (auto-generated)</label>
+          <input id="register-username" className="ui-input" value={username} placeholder="Filled in from your name" readOnly />
           <p className="ui-muted" style={{ marginTop: '0.4rem', fontSize: '0.85rem' }}>
             We create a unique username for you from your name.
           </p>
         </div>
         <div className="ui-field">
-          <label className="ui-label ui-label-required">Email</label>
-          <input className="ui-input" value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="email" required />
+          <label htmlFor="register-email" className="ui-label ui-label-required">Email</label>
+          <input id="register-email" className="ui-input" value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="email" required />
         </div>
         <div className="ui-field">
-          <label className="ui-label ui-label-required">Password</label>
-          <PasswordInput
+          <label htmlFor="register-password" className="ui-label ui-label-required">Password</label>
+          <PasswordInput id="register-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="new-password"
@@ -148,8 +148,8 @@ export default function Register() {
           />
         </div>
         <div className="ui-field">
-          <label className="ui-label ui-label-required">Confirm password</label>
-          <PasswordInput
+          <label htmlFor="register-confirm-password" className="ui-label ui-label-required">Confirm password</label>
+          <PasswordInput id="register-confirm-password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             autoComplete="new-password"

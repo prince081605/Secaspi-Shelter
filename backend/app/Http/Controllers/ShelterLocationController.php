@@ -28,7 +28,7 @@ class ShelterLocationController extends Controller
             'name' => ['required', 'string', 'max:100', Rule::unique('shelter_locations', 'name')],
         ]);
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
         $location = ShelterLocation::create(['name' => trim($validator->validated()['name'])]);
@@ -42,7 +42,7 @@ class ShelterLocationController extends Controller
             'name' => ['required', 'string', 'max:100', Rule::unique('shelter_locations', 'name')->ignore($location->id)],
         ]);
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
         $location->update(['name' => trim($validator->validated()['name'])]);

@@ -235,7 +235,7 @@ export default function Donate() {
 
             <form onSubmit={handleSubmit}>
               <div className="ui-field">
-                <label className="ui-label">Amount (₱)</label>
+                <label htmlFor="donate-amount" className="ui-label">Amount (₱)</label>
                 <div className="donateAmounts">
                   {PRESET_AMOUNTS.map((a) => (
                     <button
@@ -249,6 +249,7 @@ export default function Donate() {
                   ))}
                 </div>
                 <input
+                  id="donate-amount"
                   className="ui-input"
                   type="number"
                   min="1"
@@ -259,8 +260,8 @@ export default function Donate() {
               </div>
 
               <div className="ui-field">
-                <label className="ui-label ui-label-required">Where should your gift go?</label>
-                <select className="ui-select" value={category} onChange={(e) => setCategory(e.target.value)} required>
+                <label htmlFor="donate-where-should-your-gift-go" className="ui-label ui-label-required">Where should your gift go?</label>
+                <select id="donate-where-should-your-gift-go" className="ui-select" value={category} onChange={(e) => setCategory(e.target.value)} required>
                   <option value="" disabled>Choose a category…</option>
                   {DONATION_CATEGORIES.map((c) => (
                     <option key={c.key} value={c.key}>{c.label}</option>
@@ -289,8 +290,8 @@ export default function Donate() {
               </div>
 
               <div className="ui-field">
-                <label className="ui-label">Payment method</label>
-                <select className="ui-select" value={paymentMethod} onChange={(e) => handleMethodChange(e.target.value)}>
+                <label htmlFor="donate-payment-method" className="ui-label">Payment method</label>
+                <select id="donate-payment-method" className="ui-select" value={paymentMethod} onChange={(e) => handleMethodChange(e.target.value)}>
                   <option value="gcash">GCash</option>
                   <option value="cash">Cash</option>
                   <option value="bank">Bank Transfer</option>

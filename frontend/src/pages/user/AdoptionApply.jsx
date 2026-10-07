@@ -90,36 +90,36 @@ export default function AdoptionApply() {
 
             <form onSubmit={handleSubmit}>
               <div className="ui-field">
-                <label className="ui-label ui-label-required">Full name</label>
-                <input className="ui-input" name="full_name" value={form.full_name} onChange={handleChange} required />
+                <label htmlFor="adopt-full-name" className="ui-label ui-label-required">Full name</label>
+                <input id="adopt-full-name" className="ui-input" name="full_name" value={form.full_name} onChange={handleChange} required />
               </div>
               <div className="ui-field">
-                <label className="ui-label ui-label-required">Contact number</label>
-                <input className="ui-input" name="contact_number" type="tel" value={form.contact_number} onChange={handleChange} placeholder="e.g. 09XX XXX XXXX" required />
+                <label htmlFor="adopt-contact-number" className="ui-label ui-label-required">Contact number</label>
+                <input id="adopt-contact-number" className="ui-input" name="contact_number" type="tel" inputMode="tel" autoComplete="tel" value={form.contact_number} onChange={handleChange} placeholder="e.g. 0917 123 4567" required />
               </div>
               <div className="ui-field">
-                <label className="ui-label ui-label-required">Address</label>
-                <input className="ui-input" name="address" value={form.address} onChange={handleChange} required />
+                <label htmlFor="adopt-address" className="ui-label ui-label-required">Address</label>
+                <input id="adopt-address" className="ui-input" name="address" value={form.address} onChange={handleChange} required />
               </div>
               <div className="ui-field">
-                <label className="ui-label">Occupation</label>
-                <input className="ui-input" name="occupation" value={form.occupation} onChange={handleChange} />
+                <label htmlFor="adopt-occupation" className="ui-label">Occupation</label>
+                <input id="adopt-occupation" className="ui-input" name="occupation" value={form.occupation} onChange={handleChange} />
               </div>
               <div className="ui-field">
-                <label className="ui-label">Housing type</label>
-                <input className="ui-input" name="housing_type" value={form.housing_type} onChange={handleChange} placeholder="e.g. Apartment, House with yard" />
+                <label htmlFor="adopt-housing-type" className="ui-label">Housing type</label>
+                <input id="adopt-housing-type" className="ui-input" name="housing_type" value={form.housing_type} onChange={handleChange} placeholder="e.g. Apartment, House with yard" />
               </div>
               <div className="ui-field">
-                <label className="ui-label">Pet experience</label>
-                <textarea className="ui-textarea" name="pet_experience" value={form.pet_experience} onChange={handleChange} />
+                <label htmlFor="adopt-pet-experience" className="ui-label">Pet experience</label>
+                <textarea id="adopt-pet-experience" className="ui-textarea" name="pet_experience" value={form.pet_experience} onChange={handleChange} />
               </div>
               <div className="ui-field">
-                <label className="ui-label ui-label-required">Why do you want to adopt?</label>
-                <textarea className="ui-textarea" name="reason" value={form.reason} onChange={handleChange} required />
+                <label htmlFor="adopt-why-do-you-want-to-adopt" className="ui-label ui-label-required">Why do you want to adopt?</label>
+                <textarea id="adopt-why-do-you-want-to-adopt" className="ui-textarea" name="reason" value={form.reason} onChange={handleChange} required />
               </div>
               <div className="ui-field">
-                <label className="ui-label ui-label-required">Type of ID</label>
-                <select className="ui-input" name="valid_id_type" value={form.valid_id_type} onChange={handleChange} required>
+                <label htmlFor="adopt-type-of-id" className="ui-label ui-label-required">Type of ID</label>
+                <select id="adopt-type-of-id" className="ui-input" name="valid_id_type" value={form.valid_id_type} onChange={handleChange} required>
                   <option value="">Select an ID</option>
                   {visibleOptions(categories.valid_id_type).map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>

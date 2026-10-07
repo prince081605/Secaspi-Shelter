@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { browseAnimals } from '../../lib/animalsApi';
-import { Sparkles, Dog } from 'lucide-react';
+import { Sparkles, Dog, Cat } from 'lucide-react';
 import Reveal from '../../components/Reveal';
 import SiteNav from '../../components/SiteNav';
 
@@ -95,6 +95,14 @@ function tagVariant(status) {
   return 'ui-tag-muted';
 }
 
+// "Under 1 yr" for 0, nothing at all when the age isn't known (rather than "N/A").
+function ageLabel(age) {
+  if (age === null || age === undefined || age === '') return null;
+  const n = Number(age);
+  if (n === 0) return 'Under 1 yr';
+  return `${n} yr${n === 1 ? '' : 's'}`;
+}
+
 const STATUS_OPTIONS = ['available', 'fostered', 'medical', 'quarantine'];
 const GENDER_OPTIONS = ['male', 'female'];
 const SIZE_OPTIONS = ['small', 'medium', 'large'];
@@ -158,7 +166,7 @@ export default function Adoption() {
         <p className="ui-eyebrow" style={{ marginBottom: '1rem' }}>Available for Adoption</p>
         <h1 className="ui-h1" style={{ marginBottom: '0.6rem' }}>Meet your new best friend</h1>
         <p className="ui-muted" style={{ maxWidth: 640, marginBottom: '1.2rem' }}>
-          Browse dogs in our database and start an adoption or foster request.
+          Browse the dogs and cats in our care and start an adoption or foster request.
         </p>
         <button className="ui-btn-primary" style={{ marginBottom: '2rem' }} onClick={() => navigate('/matchmaker')}>
           <Sparkles size={16} style={{ verticalAlign: '-3px' }} /> Not sure who fits? Find your match
@@ -168,27 +176,29 @@ export default function Adoption() {
           <div className="adoptSearch">
             <input
               className="ui-input"
+              type="search"
+              aria-label="Search animals"
               value={query}
               onChange={(e) => updateFilter(setQuery)(e.target.value)}
               placeholder="Search by name, species, or breed"
             />
           </div>
 
-          <select className="ui-select" style={{ width: 'auto' }} value={statusFilter} onChange={(e) => updateFilter(setStatusFilter)(e.target.value)}>
+          <select className="ui-select" style={{ width: 'auto' }} aria-label="Filter by status" value={statusFilter} onChange={(e) => updateFilter(setStatusFilter)(e.target.value)}>
             <option value="all">All statuses</option>
             {STATUS_OPTIONS.map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
 
-          <select className="ui-select" style={{ width: 'auto' }} value={genderFilter} onChange={(e) => updateFilter(setGenderFilter)(e.target.value)}>
+          <select className="ui-select" style={{ width: 'auto' }} aria-label="Filter by gender" value={genderFilter} onChange={(e) => updateFilter(setGenderFilter)(e.target.value)}>
             <option value="all">All genders</option>
             {GENDER_OPTIONS.map((g) => (
               <option key={g} value={g}>{g}</option>
             ))}
           </select>
 
-          <select className="ui-select" style={{ width: 'auto' }} value={sizeFilter} onChange={(e) => updateFilter(setSizeFilter)(e.target.value)}>
+          <select className="ui-select" style={{ width: 'auto' }} aria-label="Filter by size" value={sizeFilter} onChange={(e) => updateFilter(setSizeFilter)(e.target.value)}>
             <option value="all">All sizes</option>
             {SIZE_OPTIONS.map((s) => (
               <option key={s} value={s}>{s}</option>
@@ -231,10 +241,10 @@ export default function Adoption() {
                             ? a.photo
                             : `${import.meta.env.VITE_API_BASE_URL}/storage/${a.photo}`
                         }
-                        alt={a.name || 'dog'}
+                        alt={a.name || 'Adoptable animal'}
                       />
                     ) : (
-                      <Dog size={40} />
+                      a?.species === 'cat' ? <Cat size={40} aria-hidden="true" /> : <Dog size={40} aria-hidden="true" />
                     )}
                   </div>
                   <div className="adoptScrim" aria-hidden="true" />
@@ -256,7 +266,7 @@ export default function Adoption() {
                     <div className="adoptName">{a?.name || 'Unnamed'}</div>
                     <div className="adoptMeta">
                       <span>{a?.species || 'Unknown species'}</span>
-                      <span>{a?.age ? `${a.age} yrs` : 'N/A'}</span>
+                      {ageLabel(a?.age) && <span>{ageLabel(a.age)}</span>}
                     </div>
                     {/* Hidden until hover/focus. stopPropagation stays: the card itself is
                         also clickable, and without it the card's handler would fire too. */}

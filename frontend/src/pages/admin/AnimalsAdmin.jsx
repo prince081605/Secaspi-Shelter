@@ -19,6 +19,7 @@ import useConfirm from '../../lib/useConfirm';
 import Pagination from '../../components/Pagination';
 import DashCard from '../../components/DashCard';
 import useIsMobile from '../../lib/useIsMobile';
+import { todayLocal } from '../../lib/dates';
 import IntakesAdmin from './IntakesAdmin';
 import { SPECIES, isKnownSpecies } from '../../lib/species';
 import { listShelterLocations } from '../../lib/locationsApi';
@@ -643,11 +644,11 @@ function MedicalManager({ animalId, onChanged }) {
         </label>
         <label className="aa-quickField" style={{ width: 150 }}>
           <span className="ui-label ui-label-required">Record date</span>
-          <input className="ui-input" type="date" required value={recordForm.record_date} onChange={(e) => setRecordForm((f) => ({ ...f, record_date: e.target.value }))} />
+          <input className="ui-input" type="date" required max={todayLocal()} value={recordForm.record_date} onChange={(e) => setRecordForm((f) => ({ ...f, record_date: e.target.value }))} />
         </label>
         <label className="aa-quickField" style={{ width: 160 }}>
           <span className="ui-label">Follow-up date</span>
-          <input className="ui-input" type="date" title="Optional — auto-creates a health reminder for this date" value={recordForm.follow_up_date} onChange={(e) => setRecordForm((f) => ({ ...f, follow_up_date: e.target.value }))} />
+          <input className="ui-input" type="date" min={recordForm.record_date || undefined} title="Optional — auto-creates a health reminder for this date" value={recordForm.follow_up_date} onChange={(e) => setRecordForm((f) => ({ ...f, follow_up_date: e.target.value }))} />
         </label>
         <button className="dashBtn dashBtnPrimary" type="submit" disabled={state.status === 'loading'}>+ Add</button>
       </form>
@@ -695,11 +696,11 @@ function MedicalManager({ animalId, onChanged }) {
         </label>
         <label className="aa-quickField" style={{ width: 150 }}>
           <span className="ui-label ui-label-required">Date given</span>
-          <input className="ui-input" type="date" required value={vaccinationForm.date_given} onChange={(e) => setVaccinationForm((f) => ({ ...f, date_given: e.target.value }))} />
+          <input className="ui-input" type="date" required max={todayLocal()} value={vaccinationForm.date_given} onChange={(e) => setVaccinationForm((f) => ({ ...f, date_given: e.target.value }))} />
         </label>
         <label className="aa-quickField" style={{ width: 150 }}>
           <span className="ui-label">Next due</span>
-          <input className="ui-input" type="date" title="Optional — when the next dose is due" value={vaccinationForm.next_due} onChange={(e) => setVaccinationForm((f) => ({ ...f, next_due: e.target.value }))} />
+          <input className="ui-input" type="date" min={vaccinationForm.date_given || undefined} title="Optional — when the next dose is due" value={vaccinationForm.next_due} onChange={(e) => setVaccinationForm((f) => ({ ...f, next_due: e.target.value }))} />
         </label>
         <button className="dashBtn dashBtnPrimary" type="submit" disabled={state.status === 'loading'}>+ Add</button>
       </form>

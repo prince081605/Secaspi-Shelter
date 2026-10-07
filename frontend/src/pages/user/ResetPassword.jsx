@@ -85,8 +85,8 @@ export default function ResetPassword() {
           <input className="ui-input" type="email" value={email} readOnly />
         </div>
         <div className="ui-field">
-          <label className="ui-label ui-label-required">New password</label>
-          <PasswordInput
+          <label htmlFor="reset-new-password" className="ui-label ui-label-required">New password</label>
+          <PasswordInput id="reset-new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="new-password"
@@ -95,8 +95,8 @@ export default function ResetPassword() {
           />
         </div>
         <div className="ui-field">
-          <label className="ui-label ui-label-required">Confirm new password</label>
-          <PasswordInput
+          <label htmlFor="reset-confirm-new-password" className="ui-label ui-label-required">Confirm new password</label>
+          <PasswordInput id="reset-confirm-new-password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             autoComplete="new-password"

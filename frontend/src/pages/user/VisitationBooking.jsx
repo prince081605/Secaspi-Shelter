@@ -137,8 +137,8 @@ export default function VisitationBooking() {
 
             <form onSubmit={handleSubmit}>
               <div className="ui-field">
-                <label className="ui-label ui-label-required">Preferred date</label>
-                <input
+                <label htmlFor="visit-preferred-date" className="ui-label ui-label-required">Preferred date</label>
+                <input id="visit-preferred-date"
                   className="ui-input"
                   type="date"
                   min={minDate}
@@ -167,8 +167,8 @@ export default function VisitationBooking() {
               </div>
 
               <div className="ui-field">
-                <label className="ui-label ui-label-required">Number of visitors</label>
-                <input
+                <label htmlFor="visit-number-of-visitors" className="ui-label ui-label-required">Number of visitors</label>
+                <input id="visit-number-of-visitors"
                   className="ui-input"
                   type="number"
                   min="1"
@@ -180,8 +180,8 @@ export default function VisitationBooking() {
               </div>
 
               <div className="ui-field">
-                <label className="ui-label">Anything we should know? (optional)</label>
-                <textarea
+                <label htmlFor="visit-anything-we-should-know" className="ui-label">Anything we should know? (optional)</label>
+                <textarea id="visit-anything-we-should-know"
                   className="ui-input"
                   rows={3}
                   value={notes}

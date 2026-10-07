@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\MarksAdminRead;
 use App\Models\RescueReport;
 use App\Models\Team;
 use App\Notifications\RescueAssignedToTeam;
+use App\Rules\PhilippinePhone;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -20,7 +21,7 @@ class RescueReportController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'reporter_name' => ['nullable', 'string', 'max:150'],
-            'contact_number' => ['nullable', 'string', 'max:20'],
+            'contact_number' => ['nullable', 'string', 'max:20', new PhilippinePhone],
             'location' => ['required', 'string'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
@@ -30,7 +31,7 @@ class RescueReportController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
         try {
@@ -110,7 +111,7 @@ class RescueReportController extends Controller
         ], ['team_id.exists' => 'Choose an active team.']);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
         $data = $validator->validated();

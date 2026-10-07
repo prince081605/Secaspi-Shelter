@@ -61,7 +61,7 @@ class PaymentSessionController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
         return $this->run(fn () => $this->gateway->authorize($session, [
@@ -81,7 +81,7 @@ class PaymentSessionController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
         return $this->run(fn () => $this->gateway->confirm($session, (string) $request->input('otp')));

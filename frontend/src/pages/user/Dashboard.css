@@ -482,7 +482,7 @@
 
 .dashTable th,
 .dashTable td {
-  padding: 12px 16px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--line);
   text-align: left;
   vertical-align: middle;
@@ -507,6 +507,12 @@
 .dashTable tbody tr:hover { background: var(--bg-soft); }
 
 .dashTable tr:last-child td { border-bottom: none; }
+
+/* Badges and short values (dates, amounts, references — give the cell .dashNowrap) stay on
+   one line, so "2026-07-08" or "₱3,200.00" never splits in two; the free-text columns next to
+   them wrap instead. */
+.dashTable .badge,
+.dashTable .dashNowrap { white-space: nowrap; }
 
 /* Unread row indicator (e.g. new adoption/rescue submissions) — a plain red left
    border on the row's first cell, so it doesn't clash with StatusBadge colors or

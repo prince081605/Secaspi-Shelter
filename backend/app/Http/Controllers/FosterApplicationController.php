@@ -25,13 +25,16 @@ class FosterApplicationController extends Controller
             'housing_type' => ['nullable', 'string', 'max:100'],
             'pet_experience' => ['nullable', 'string'],
             'reason' => ['required', 'string'],
-            'start_date' => ['required', 'date'],
+            'start_date' => ['required', 'date', 'after_or_equal:today'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'notes' => ['nullable', 'string'],
+        ], [
+            'start_date.after_or_equal' => 'The start date cannot be in the past.',
+            'end_date.after_or_equal' => 'The end date cannot be before the start date.',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
         $user = $request->user();
@@ -130,7 +133,7 @@ class FosterApplicationController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
         $previousStatus = $application->status;

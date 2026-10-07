@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Rules\PhilippinePhone;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -14,11 +15,11 @@ class ProfileController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'full_name' => ['required', 'string', 'max:150'],
-            'phone' => ['nullable', 'string', 'max:20'],
+            'phone' => ['nullable', 'string', 'max:20', new PhilippinePhone],
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
         $user = $request->user();
@@ -53,14 +54,14 @@ class ProfileController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
         $user = $request->user();
 
         if (! Hash::check($request->input('current_password'), $user->password)) {
             return response()->json([
-                'message' => 'Validation failed',
+                'message' => 'The current password is incorrect.',
                 'errors' => ['current_password' => ['The current password is incorrect.']],
             ], 422);
         }

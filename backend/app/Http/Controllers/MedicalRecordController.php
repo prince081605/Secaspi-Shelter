@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Animal;
 use App\Models\CategoryOption;
 use App\Models\MedicalRecord;
+use App\Rules\NotInFuture;
 use App\Support\SyncsHealthReminders;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -22,14 +23,14 @@ class MedicalRecordController extends Controller
             'type' => ['required', Rule::in(CategoryOption::activeValues('medical_record_type'))],
             'description' => ['nullable', 'string'],
             'vet_name' => ['nullable', 'string', 'max:150'],
-            'cost' => ['nullable', 'numeric', 'min:0'],
-            'record_date' => ['required', 'date'],
+            'cost' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
+            'record_date' => ['required', 'date', new NotInFuture],
             'follow_up_date' => ['nullable', 'date', 'after_or_equal:record_date'],
             'notes' => ['nullable', 'string'],
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
         $record = $animal->medicalRecords()->create($validator->validated());
@@ -45,14 +46,14 @@ class MedicalRecordController extends Controller
             'type' => ['sometimes', Rule::in([...CategoryOption::activeValues('medical_record_type'), $record->type])],
             'description' => ['nullable', 'string'],
             'vet_name' => ['nullable', 'string', 'max:150'],
-            'cost' => ['nullable', 'numeric', 'min:0'],
-            'record_date' => ['sometimes', 'date'],
+            'cost' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
+            'record_date' => ['sometimes', 'date', new NotInFuture],
             'follow_up_date' => ['nullable', 'date', 'after_or_equal:record_date'],
             'notes' => ['nullable', 'string'],
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
         $record->update($validator->validated());

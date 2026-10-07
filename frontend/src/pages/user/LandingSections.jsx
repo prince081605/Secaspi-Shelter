@@ -343,18 +343,18 @@ export function RescueForm({ form, reportPhoto, reportState, onChange, onPhotoCh
         <form onSubmit={onSubmit} className="lp-report-grid">
           <div className="lp-report-card">
             <div className="lp-field-pair">
-              <div><label className="ui-label">Your name</label><input className="ui-input" name="name" value={form.name} onChange={onChange} placeholder="Juan dela Cruz" /></div>
-              <div><label className="ui-label">Contact</label><input className="ui-input" name="contact" value={form.contact} onChange={onChange} placeholder="09XX XXX XXXX" /></div>
+              <div><label htmlFor="rescue-your-name" className="ui-label">Your name</label><input id="rescue-your-name" className="ui-input" name="name" value={form.name} onChange={onChange} placeholder="Juan dela Cruz" /></div>
+              <div><label htmlFor="rescue-contact" className="ui-label">Contact</label><input id="rescue-contact" className="ui-input" name="contact" type="tel" inputMode="tel" autoComplete="tel" value={form.contact} onChange={onChange} placeholder="0917 123 4567" /></div>
             </div>
             <div className="ui-field">
-              <label className="ui-label ui-label-required">Location</label>
-              <input className="ui-input" name="location" required value={form.location} onChange={onChange} placeholder="Be specific: house no. / street, landmark, barangay, city" />
+              <label htmlFor="rescue-location" className="ui-label ui-label-required">Location</label>
+              <input id="rescue-location" className="ui-input" name="location" required value={form.location} onChange={onChange} placeholder="Be specific: house no. / street, landmark, barangay, city" />
               <div style={{ fontSize: 12, color: "var(--lp-ink-soft)", marginTop: 6 }}>
                 The more detailed, the faster our team finds the animal. Pin the exact spot on the map <MapPin size={14} style={{ verticalAlign: '-2px' }} />
               </div>
             </div>
-            <div className="ui-field"><label className="ui-label">Condition</label><select className="ui-select" name="condition" value={form.condition} onChange={onChange}><option>Injured or sick</option><option>Stray / no owner</option><option>Abandoned</option><option>In immediate danger</option><option>Other</option></select></div>
-            <div className="ui-field"><label className="ui-label">Details</label><textarea className="ui-textarea" name="details" value={form.details} onChange={onChange} placeholder="Describe what you see..." /></div>
+            <div className="ui-field"><label htmlFor="rescue-condition" className="ui-label">Condition</label><select id="rescue-condition" className="ui-select" name="condition" value={form.condition} onChange={onChange}><option>Injured or sick</option><option>Stray / no owner</option><option>Abandoned</option><option>In immediate danger</option><option>Other</option></select></div>
+            <div className="ui-field"><label htmlFor="rescue-details" className="ui-label">Details</label><textarea id="rescue-details" className="ui-textarea" name="details" value={form.details} onChange={onChange} placeholder="Describe what you see..." /></div>
             <div className="ui-field">
               <label className="ui-label">Photo (optional)</label>
               <PhotoInput

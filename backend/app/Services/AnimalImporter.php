@@ -55,7 +55,7 @@ class AnimalImporter
     private const COLUMNS = [
         'name' => ['Name *', false, 22, "Required. The animal's name."],
         'species' => ['Species *', true, 12, 'Required. Dog or Cat.'],
-        'breed' => ['Breed', false, 18, 'Optional, e.g. Aspin, Puspin, Shih Tzu mix.'],
+        'breed' => ['Breed', false, 18, 'Optional. Pick a common breed from the list, or type any breed, e.g. Shih Tzu mix.'],
         'age' => ['Age (years)', false, 12, 'Optional. Whole years, e.g. 3. Use 0 for under a year.'],
         'gender' => ['Gender', true, 11, 'Optional. Male or Female.'],
         'size' => ['Size', true, 11, 'Optional. Small, Medium or Large.'],
@@ -108,13 +108,14 @@ class AnimalImporter
 
         $animals = $book->createSheet()->setTitle(self::SHEET);
         $this->writeHeader($animals);
-        $this->addDropdowns($animals, $lists);
+        $breeds = $this->commonBreeds();
+        $this->addDropdowns($animals, $lists, $breeds);
 
         $example = $book->createSheet()->setTitle('Example');
         $this->writeHeader($example);
         $this->writeExamples($example, $areas);
 
-        $this->writeAllowedValues($book->createSheet()->setTitle('Allowed Values'), $lists);
+        $this->writeAllowedValues($book->createSheet()->setTitle('Allowed Values'), $lists, $breeds);
 
         $book->setActiveSheetIndex(0);
 
@@ -545,6 +546,7 @@ class AnimalImporter
             'breed.max' => 'Breed is longer than 100 characters.',
             'age.integer' => 'Age '.$said('age').' must be a whole number of years, e.g. 3.',
             'age.min' => 'Age cannot be negative.',
+            'age.max' => 'Age '.$said('age').' is more than 40 years. Check the number.',
             'gender.in' => 'Gender '.$said('gender').' is not valid. Use '.$this->choices(Animal::GENDERS).'.',
             'size.in' => 'Size '.$said('size').' is not valid. Use '.$this->choices(Animal::SIZES).'.',
             'weight.numeric' => 'Weight '.$said('weight').' must be a number of kilograms, e.g. 12.5.',
@@ -637,7 +639,7 @@ class AnimalImporter
      * for Age and Weight. These only help whoever fills the sheet in — every value is checked
      * again on upload regardless.
      */
-    private function addDropdowns(Worksheet $sheet, array $lists): void
+    private function addDropdowns(Worksheet $sheet, array $lists, array $breeds): void
     {
         $listColumn = 1;
         foreach ($lists as $key => $values) {
@@ -654,12 +656,25 @@ class AnimalImporter
             $this->applyRule($sheet, $key, $validation);
         }
 
-        foreach (['age' => DataValidation::TYPE_WHOLE, 'weight' => DataValidation::TYPE_DECIMAL] as $key => $type) {
+        // Breed suggests the common breeds but accepts anything typed (no error on an unlisted
+        // breed). Its list is the Allowed Values column after Behavioral Issues.
+        if ($breeds) {
+            $source = Coordinate::stringFromColumnIndex(count($lists) + 2);
+            $validation = $this->cellRule('breed', DataValidation::TYPE_LIST)
+                ->setShowDropDown(true)
+                ->setShowErrorMessage(false)
+                ->setFormula1(sprintf("'Allowed Values'!\$%s\$2:\$%s\$%d", $source, $source, count($breeds) + 1));
+            $this->applyRule($sheet, 'breed', $validation);
+        }
+
+        // Same limits as Animal::rules().
+        foreach (['age' => [DataValidation::TYPE_WHOLE, '40'], 'weight' => [DataValidation::TYPE_DECIMAL, '200']] as $key => [$type, $max]) {
             $validation = $this->cellRule($key, $type)
-                ->setOperator(DataValidation::OPERATOR_GREATERTHANOREQUAL)
+                ->setOperator(DataValidation::OPERATOR_BETWEEN)
                 ->setFormula1('0')
+                ->setFormula2($max)
                 ->setErrorTitle('Not a valid number')
-                ->setError($key === 'age' ? 'Age is a whole number of years, 0 or more.' : 'Weight is a number of kilograms, 0 or more.');
+                ->setError($key === 'age' ? 'Age is a whole number of years, from 0 to 40.' : 'Weight is a number of kilograms, from 0 to 200.');
             $this->applyRule($sheet, $key, $validation);
         }
     }
@@ -689,7 +704,7 @@ class AnimalImporter
             '',
             '1. Go to the "'.self::SHEET.'" sheet and fill in one animal per row, starting on row 2. Keep the header row as it is.',
             '2. Name and Species are required. Every other column is optional and can be left blank.',
-            '3. Use the dropdowns for Species, Gender, Size, Status and Shelter Area. The full lists are on the "Allowed Values" sheet.',
+            '3. Use the dropdowns for Species, Gender, Size, Status and Shelter Area. The full lists are on the "Allowed Values" sheet. Breed also lists common breeds, but you can type any breed.',
             '4. Age is in whole years (e.g. 3; use 0 for under a year). Weight is in kilograms (e.g. 12.5).',
             '5. Status: leave it blank for Available. Available animals appear on the public adoption page as soon as they are imported.',
             '6. Behavioral Issues: type one or more issues exactly as written on the "Allowed Values" sheet, separated by commas.',
@@ -724,15 +739,28 @@ class AnimalImporter
         ], null, 'A2', true);
     }
 
-    private function writeAllowedValues(Worksheet $sheet, array $lists): void
+    /** Dog breeds then cat breeds from the managed lists, each name once. */
+    private function commonBreeds(): array
     {
-        $columns = [...$lists, 'behavioral_assessment' => CategoryOption::activeValues('behavioral_issue')];
+        $breeds = [];
+        foreach ([...CategoryOption::activeValues('dog_breed'), ...CategoryOption::activeValues('cat_breed')] as $breed) {
+            $breeds[mb_strtolower($breed)] ??= $breed;
+        }
+
+        return array_values($breeds);
+    }
+
+    private function writeAllowedValues(Worksheet $sheet, array $lists, array $breeds): void
+    {
+        $columns = [...$lists, 'behavioral_assessment' => CategoryOption::activeValues('behavioral_issue'), 'breed' => $breeds];
+
+        $widths = ['behavioral_assessment' => 34, 'breed' => 24];
 
         $col = 1;
         foreach ($columns as $key => $values) {
             $letter = Coordinate::stringFromColumnIndex($col++);
-            $sheet->setCellValue("{$letter}1", $this->label($key));
-            $sheet->getColumnDimension($letter)->setWidth($key === 'behavioral_assessment' ? 34 : 16);
+            $sheet->setCellValue("{$letter}1", $key === 'breed' ? 'Common Breeds' : $this->label($key));
+            $sheet->getColumnDimension($letter)->setWidth($widths[$key] ?? 16);
 
             foreach ($values ?: ['(none set up yet)'] as $i => $value) {
                 $sheet->setCellValueExplicit($letter.($i + 2), $value, DataType::TYPE_STRING);

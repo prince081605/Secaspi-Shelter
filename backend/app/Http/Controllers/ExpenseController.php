@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Expense;
+use App\Rules\NotInFuture;
 use App\Support\DonationCategories;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -50,7 +51,7 @@ class ExpenseController extends Controller
         $validator = Validator::make($request->all(), $this->rules());
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
         try {
@@ -84,7 +85,7 @@ class ExpenseController extends Controller
         $validator = Validator::make($request->all(), $this->rules());
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
         try {
@@ -170,9 +171,9 @@ class ExpenseController extends Controller
     {
         return [
             'category'    => ['required', Rule::in(DonationCategories::keys())],
-            'amount'      => ['required', 'numeric', 'min:0.01'],
+            'amount'      => ['required', 'numeric', 'min:0.01', 'max:99999999.99'],
             'description' => ['required', 'string', 'max:255'],
-            'spent_at'    => ['required', 'date'],
+            'spent_at'    => ['required', 'date', new NotInFuture],
             'receipt'     => ['nullable', 'image', 'max:5120'],
         ];
     }

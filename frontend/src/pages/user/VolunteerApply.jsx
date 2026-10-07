@@ -215,8 +215,8 @@ export default function VolunteerApply() {
 
             <form onSubmit={handleSubmit}>
               <div className="ui-field">
-                <label className="ui-label ui-label-required">Availability</label>
-                <input
+                <label htmlFor="volunteer-availability" className="ui-label ui-label-required">Availability</label>
+                <input id="volunteer-availability"
                   className="ui-input"
                   name="availability"
                   value={form.availability}
@@ -226,8 +226,8 @@ export default function VolunteerApply() {
                 />
               </div>
               <div className="ui-field">
-                <label className="ui-label">Prior experience (optional)</label>
-                <textarea
+                <label htmlFor="volunteer-prior-experience" className="ui-label">Prior experience (optional)</label>
+                <textarea id="volunteer-prior-experience"
                   className="ui-textarea"
                   name="experience"
                   value={form.experience}
@@ -236,8 +236,8 @@ export default function VolunteerApply() {
                 />
               </div>
               <div className="ui-field">
-                <label className="ui-label ui-label-required">Why do you want to volunteer?</label>
-                <textarea
+                <label htmlFor="volunteer-why-do-you-want-to-volunteer" className="ui-label ui-label-required">Why do you want to volunteer?</label>
+                <textarea id="volunteer-why-do-you-want-to-volunteer"
                   className="ui-textarea"
                   name="reason"
                   value={form.reason}
@@ -246,8 +246,8 @@ export default function VolunteerApply() {
                 />
               </div>
               <div className="ui-field">
-                <label className="ui-label ui-label-required">Type of ID</label>
-                <select
+                <label htmlFor="volunteer-type-of-id" className="ui-label ui-label-required">Type of ID</label>
+                <select id="volunteer-type-of-id"
                   className="ui-input"
                   name="valid_id_type"
                   value={form.valid_id_type}

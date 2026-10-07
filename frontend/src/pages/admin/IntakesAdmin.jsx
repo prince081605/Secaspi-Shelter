@@ -15,7 +15,9 @@ import useConfirm from '../../lib/useConfirm';
 import Pagination from '../../components/Pagination';
 import DashCard from '../../components/DashCard';
 import PhotoInput from '../../components/PhotoInput';
+import BreedInput from '../../components/BreedInput';
 import useIsMobile from '../../lib/useIsMobile';
+import { todayLocal } from '../../lib/dates';
 import { SPECIES } from '../../lib/species';
 
 // The intake queue (rescue/surrender/stray triage → "Add to Animals" conversion) was extracted
@@ -86,53 +88,58 @@ function NewIntakeForm({ onCancel, onCreated }) {
       {state.status === 'error' && <div className="ui-error">{state.error}</div>}
       <div className="dashFormGrid">
         <div className="ui-field">
-          <label className="ui-label">Intake type</label>
-          <select className="ui-input" value={form.intake_type} onChange={setField('intake_type')}>
+          <label htmlFor="intake-intake-type" className="ui-label">Intake type</label>
+          <select id="intake-intake-type" className="ui-input" value={form.intake_type} onChange={setField('intake_type')}>
             {INTAKE_TYPES.map((t) => <option key={t} value={t}>{t.replace('_', ' ')}</option>)}
           </select>
         </div>
         <div className="ui-field">
-          <label className="ui-label">Reporter / surrenderer name</label>
-          <input className="ui-input" value={form.reporter_name} onChange={setField('reporter_name')} />
+          <label htmlFor="intake-reporter-surrenderer-name" className="ui-label">Reporter / surrenderer name</label>
+          <input id="intake-reporter-surrenderer-name" className="ui-input" value={form.reporter_name} onChange={setField('reporter_name')} />
         </div>
         <div className="ui-field">
-          <label className="ui-label">Contact number</label>
-          <input className="ui-input" value={form.contact_number} onChange={setField('contact_number')} />
+          <label htmlFor="intake-contact-number" className="ui-label">Contact number</label>
+          <input id="intake-contact-number" className="ui-input" type="tel" inputMode="tel" value={form.contact_number} onChange={setField('contact_number')} placeholder="0917 123 4567" />
         </div>
         <div className="ui-field">
-          <label className="ui-label">Location</label>
-          <input className="ui-input" value={form.location} onChange={setField('location')} />
+          <label htmlFor="intake-location" className="ui-label">Location</label>
+          <input id="intake-location" className="ui-input" value={form.location} onChange={setField('location')} />
         </div>
         <div className="ui-field">
-          <label className="ui-label">Animal name (if known)</label>
-          <input className="ui-input" value={form.animal_name} onChange={setField('animal_name')} />
+          <label htmlFor="intake-animal-name" className="ui-label">Animal name (if known)</label>
+          <input id="intake-animal-name" className="ui-input" value={form.animal_name} onChange={setField('animal_name')} />
         </div>
         <div className="ui-field">
-          <label className="ui-label">Species</label>
-          <select className="ui-input" value={form.species} onChange={setField('species')}>
+          <label htmlFor="intake-species" className="ui-label">Species</label>
+          <select id="intake-species" className="ui-input" value={form.species} onChange={setField('species')}>
             <option value="">Not sure yet</option>
             {SPECIES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>
         </div>
         <div className="ui-field">
-          <label className="ui-label">Breed</label>
-          <input className="ui-input" value={form.breed} onChange={setField('breed')} />
+          <label className="ui-label" htmlFor="intake-breed">Breed</label>
+          <BreedInput
+            id="intake-breed"
+            value={form.breed}
+            species={form.species}
+            onChange={(breed) => setForm((f) => ({ ...f, breed }))}
+          />
         </div>
         <div className="ui-field">
-          <label className="ui-label">Estimated age</label>
-          <input className="ui-input" placeholder="e.g. ~2 years" value={form.estimated_age} onChange={setField('estimated_age')} />
+          <label htmlFor="intake-estimated-age" className="ui-label">Estimated age</label>
+          <input id="intake-estimated-age" className="ui-input" placeholder="e.g. ~2 years" value={form.estimated_age} onChange={setField('estimated_age')} />
         </div>
         <div className="ui-field">
-          <label className="ui-label">Gender</label>
-          <select className="ui-input" value={form.gender} onChange={setField('gender')}>
+          <label htmlFor="intake-gender" className="ui-label">Gender</label>
+          <select id="intake-gender" className="ui-input" value={form.gender} onChange={setField('gender')}>
             <option value="">—</option>
             {GENDERS.map((g) => <option key={g} value={g}>{g}</option>)}
           </select>
         </div>
       </div>
       <div className="ui-field">
-        <label className="ui-label">Description / circumstances</label>
-        <textarea className="ui-input" rows={3} value={form.description} onChange={setField('description')} />
+        <label htmlFor="intake-description-circumstances" className="ui-label">Description / circumstances</label>
+        <textarea id="intake-description-circumstances" className="ui-input" rows={3} value={form.description} onChange={setField('description')} />
       </div>
       <div className="ui-field">
         <label className="ui-label">Animal photo(s)</label>
@@ -294,22 +301,22 @@ function AssessmentPanel({ intake, onChanged }) {
       <div className="dashSectionTitle" style={{ fontSize: 13, marginTop: 12 }}><Stethoscope size={15} style={{ verticalAlign: '-3px', marginRight: 6 }} />Assessment</div>
       <div className="dashFormGrid">
         <div className="ui-field">
-          <label className="ui-label">Status</label>
-          <select className="ui-input" value={status} disabled={detail.status === 'converted'} onChange={(e) => setStatus(e.target.value)}>
+          <label htmlFor="intake-status" className="ui-label">Status</label>
+          <select id="intake-status" className="ui-input" value={status} disabled={detail.status === 'converted'} onChange={(e) => setStatus(e.target.value)}>
             {INTAKE_STATUSES.filter((s) => s !== 'converted').map((s) => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
           </select>
         </div>
         <div className="ui-field">
-          <label className="ui-label">Assessed by</label>
-          <input className="ui-input" value={assessedBy} onChange={(e) => setAssessedBy(e.target.value)} />
+          <label htmlFor="intake-assessed-by" className="ui-label">Assessed by</label>
+          <input id="intake-assessed-by" className="ui-input" value={assessedBy} onChange={(e) => setAssessedBy(e.target.value)} />
         </div>
         <div className="ui-field">
-          <label className="ui-label">Assessment date</label>
-          <input className="ui-input" type="date" value={assessmentDate || ''} onChange={(e) => setAssessmentDate(e.target.value)} />
+          <label htmlFor="intake-assessment-date" className="ui-label">Assessment date</label>
+          <input id="intake-assessment-date" className="ui-input" type="date" max={todayLocal()} value={assessmentDate || ''} onChange={(e) => setAssessmentDate(e.target.value)} />
         </div>
         <div className="ui-field" style={{ gridColumn: '1 / -1' }}>
-          <label className="ui-label">Notes</label>
-          <textarea className="ui-input" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+          <label htmlFor="intake-notes" className="ui-label">Notes</label>
+          <textarea id="intake-notes" className="ui-input" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
         </div>
       </div>
       <div style={{ display: 'flex', gap: 8 }}>

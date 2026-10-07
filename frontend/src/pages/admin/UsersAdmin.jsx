@@ -208,7 +208,7 @@ export default function UsersAdmin({ currentUserId }) {
                     <td>
                       <select
                         className="ui-input"
-                        style={{ maxWidth: 130 }}
+                        style={{ minWidth: 125, maxWidth: 140 }}
                         value={u.role}
                         disabled={isSelf}
                         aria-label={`Change role for ${u.full_name}`}

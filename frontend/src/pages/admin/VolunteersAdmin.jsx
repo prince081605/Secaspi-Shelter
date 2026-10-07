@@ -406,7 +406,7 @@ function PersonnelRow({ personnel, onChanged, isAdmin }) {
   // Hours come from attendance; only an admin can override the total (the backend enforces it).
   const hoursControl = isAdmin ? (
     <span className="dashActionsRow">
-      <input className="ui-input" type="number" min="0" step="0.25" style={{ width: 90 }} value={hours} onChange={(e) => setHours(e.target.value)} />
+      <input className="ui-input" type="number" min="0" step="0.25" style={{ width: 90 }} aria-label={`Hours rendered by ${personnel.user?.full_name || 'this person'}`} value={hours} onChange={(e) => setHours(e.target.value)} />
       <button className="dashBtn" onClick={saveHours}>Save</button>
     </span>
   ) : (

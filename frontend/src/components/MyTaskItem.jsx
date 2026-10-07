@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { requestVolunteerTask, submitTaskProof } from '../lib/volunteersApi';
+import { todayLocal } from '../lib/dates';
 import StatusBadge from './StatusBadge';
 import PhotoInput from './PhotoInput';
 
@@ -39,12 +40,6 @@ function formatDateTime(value) {
   if (!value) return '—';
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
-}
-
-// Today in the viewer's own timezone, as YYYY-MM-DD for the date input's `min`.
-function todayLocal() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 /**

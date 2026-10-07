@@ -1,0 +1,16 @@
+/* Settings page (SettingsPage.jsx): an underlined section bar above the section, so it reads as
+   a level above the pill tabs inside System data. Uses the global theme tokens. */
+.set-sections {
+  display: flex; gap: 4px; margin-bottom: 18px; border-bottom: 1px solid var(--line);
+  overflow-x: auto; scrollbar-width: none;
+}
+.set-sections::-webkit-scrollbar { display: none; }
+.set-sections button {
+  display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto;
+  padding: 10px 14px; margin-bottom: -1px; cursor: pointer;
+  border: 0; border-bottom: 3px solid transparent; background: none; color: var(--ink-soft);
+  font: 600 14px 'Work Sans', sans-serif;
+}
+.set-sections button:hover { color: var(--ink); }
+.set-sections button.active { color: var(--brand); border-bottom-color: var(--brand); }
+.set-sections button:focus-visible { outline: 3px solid var(--brand); outline-offset: -3px; border-radius: 6px; }

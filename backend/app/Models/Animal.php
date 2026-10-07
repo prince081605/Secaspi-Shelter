@@ -49,11 +49,12 @@ class Animal extends Model
             'name' => ['required', 'string', 'max:100'],
             'species' => ['required', Rule::in(self::SPECIES)],
             'breed' => ['nullable', 'string', 'max:100'],
-            'age' => ['nullable', 'integer', 'min:0'],
+            // Whole years. No dog or cat on record has lived past 40, so more is a typo.
+            'age' => ['nullable', 'integer', 'min:0', 'max:40'],
             'gender' => ['nullable', Rule::in(self::GENDERS)],
             'size' => ['nullable', Rule::in(self::SIZES)],
-            // The column is decimal(8,2); anything larger is a typo the database would reject.
-            'weight' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
+            // Kilograms. The heaviest breeds top out near 100 kg, so anything past 200 is a typo.
+            'weight' => ['nullable', 'numeric', 'min:0', 'max:200'],
             'status' => ['nullable', Rule::in(self::STATUSES)],
             'rescue_story' => ['nullable', 'string'],
             'behavioral_assessment' => ['nullable', 'array'],

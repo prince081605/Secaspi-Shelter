@@ -13,12 +13,13 @@ import PhotoInput from '../../components/PhotoInput';
 import useConfirm from '../../lib/useConfirm';
 import useIsMobile from '../../lib/useIsMobile';
 import { DONATION_CATEGORIES, labelFor } from '../../lib/donationCategories';
+import { todayLocal } from '../../lib/dates';
 
-// Same fixed layout as the donations table: columns take their assigned share and long values
-// wrap inside their cell instead of forcing the table wider than the panel.
+// Same approach as the donations table: the date and amount stay on one line, and the
+// category and description columns take what's left and wrap.
 const TABLE_STYLES = `
-  table.expAdminTable { table-layout: fixed; width: 100%; min-width: 0; }
-  table.expAdminTable th, table.expAdminTable td { padding: 10px 10px; overflow-wrap: anywhere; white-space: normal; vertical-align: top; }
+  table.expAdminTable { width: 100%; min-width: 0; }
+  table.expAdminTable th, table.expAdminTable td { padding: 10px 10px; vertical-align: top; }
   table.expAdminTable td { font-size: 0.9rem; }
 `;
 
@@ -34,13 +35,12 @@ function money(n) {
   return `₱${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-const today = () => new Date().toISOString().slice(0, 10);
 
 const emptyForm = () => ({
   category: DONATION_CATEGORIES[0].key,
   amount: '',
   description: '',
-  spent_at: today(),
+  spent_at: todayLocal(),
   receipt: null,
 });
 
@@ -145,8 +145,8 @@ function ExpenseForm({ editing, onCancel, onSaved, onError }) {
     <form className="dashCard" onSubmit={submit} style={{ marginTop: 10, marginBottom: 12 }}>
       <div className="dashFormGrid">
         <div className="ui-field">
-          <label className="ui-label">Category</label>
-          <select className="ui-input" value={form.category} onChange={set('category')} required>
+          <label htmlFor="expense-category" className="ui-label">Category</label>
+          <select id="expense-category" className="ui-input" value={form.category} onChange={set('category')} required>
             {DONATION_CATEGORIES.map((c) => (
               <option key={c.key} value={c.key}>{c.label}</option>
             ))}
@@ -155,8 +155,8 @@ function ExpenseForm({ editing, onCancel, onSaved, onError }) {
         </div>
 
         <div className="ui-field">
-          <label className="ui-label">Amount (₱)</label>
-          <input
+          <label htmlFor="expense-amount" className="ui-label">Amount (₱)</label>
+          <input id="expense-amount"
             className="ui-input"
             type="number"
             min="0.01"
@@ -169,8 +169,8 @@ function ExpenseForm({ editing, onCancel, onSaved, onError }) {
         </div>
 
         <div className="ui-field">
-          <label className="ui-label">Date spent</label>
-          <input className="ui-input" type="date" value={form.spent_at} onChange={set('spent_at')} required />
+          <label htmlFor="expense-date-spent" className="ui-label">Date spent</label>
+          <input id="expense-date-spent" className="ui-input" type="date" max={todayLocal()} value={form.spent_at} onChange={set('spent_at')} required />
           {errorFor('spent_at') && <div className="ui-error">{errorFor('spent_at')}</div>}
         </div>
 
@@ -187,8 +187,8 @@ function ExpenseForm({ editing, onCancel, onSaved, onError }) {
       </div>
 
       <div className="ui-field">
-        <label className="ui-label">Description</label>
-        <input
+        <label htmlFor="expense-description" className="ui-label">Description</label>
+        <input id="expense-description"
           className="ui-input"
           type="text"
           maxLength={255}
@@ -422,22 +422,22 @@ export default function ExpensesAdmin({ isAdmin = false }) {
           <table className="dashTable expAdminTable">
             <thead>
               <tr>
-                <th style={{ width: '11%' }}>Date</th>
-                <th style={{ width: '18%' }}>Category</th>
-                <th style={{ width: '27%' }}>Description</th>
-                <th style={{ width: '12%' }}>Amount</th>
-                <th style={{ width: '9%' }}>Receipt</th>
-                <th style={{ width: '13%' }}>Recorded by</th>
-                {isAdmin && <th style={{ width: '16%' }}>Actions</th>}
+                <th>Date</th>
+                <th>Category</th>
+                <th>Description</th>
+                <th>Amount</th>
+                <th>Receipt</th>
+                <th>Recorded by</th>
+                {isAdmin && <th>Actions</th>}
               </tr>
             </thead>
             <tbody>
               {expenses.map((e) => (
                 <tr key={e.id}>
-                  <td>{e.spent_at}</td>
+                  <td className="dashNowrap">{e.spent_at}</td>
                   <td>{labelFor(e.category)}</td>
                   <td>{e.description}</td>
-                  <td>{money(e.amount)}</td>
+                  <td className="dashNowrap">{money(e.amount)}</td>
                   <td>
                     {e.receipt_url
                       ? <a href={fileSrc(e.receipt_url)} target="_blank" rel="noreferrer">View</a>

@@ -46,7 +46,7 @@ class AttendanceController extends Controller
             'notes' => ['nullable', 'string', 'max:255'],
         ]);
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
         // Locked so a double-tap can't open two shifts at once.
@@ -134,7 +134,7 @@ class AttendanceController extends Controller
     {
         $validator = $this->recordValidator($request);
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
         $data = $validator->validated();
 
@@ -154,7 +154,7 @@ class AttendanceController extends Controller
     {
         $validator = $this->recordValidator($request);
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
         $data = $validator->validated();
 

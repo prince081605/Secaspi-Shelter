@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { applyForFoster } from '../../lib/animalsApi';
+import { todayLocal } from '../../lib/dates';
 import SiteNav from '../../components/SiteNav';
 
 const styles = `
@@ -61,42 +62,42 @@ export default function FosterApply() {
 
             <form onSubmit={handleSubmit}>
               <div className="ui-field">
-                <label className="ui-label ui-label-required">Full name</label>
-                <input className="ui-input" name="full_name" value={form.full_name} onChange={handleChange} required />
+                <label htmlFor="foster-full-name" className="ui-label ui-label-required">Full name</label>
+                <input id="foster-full-name" className="ui-input" name="full_name" value={form.full_name} onChange={handleChange} required />
               </div>
               <div className="ui-field">
-                <label className="ui-label ui-label-required">Address</label>
-                <input className="ui-input" name="address" value={form.address} onChange={handleChange} required />
+                <label htmlFor="foster-address" className="ui-label ui-label-required">Address</label>
+                <input id="foster-address" className="ui-input" name="address" value={form.address} onChange={handleChange} required />
               </div>
               <div className="ui-field">
-                <label className="ui-label">Occupation</label>
-                <input className="ui-input" name="occupation" value={form.occupation} onChange={handleChange} />
+                <label htmlFor="foster-occupation" className="ui-label">Occupation</label>
+                <input id="foster-occupation" className="ui-input" name="occupation" value={form.occupation} onChange={handleChange} />
               </div>
               <div className="ui-field">
-                <label className="ui-label">Housing type</label>
-                <input className="ui-input" name="housing_type" value={form.housing_type} onChange={handleChange} placeholder="e.g. Apartment, House with yard" />
+                <label htmlFor="foster-housing-type" className="ui-label">Housing type</label>
+                <input id="foster-housing-type" className="ui-input" name="housing_type" value={form.housing_type} onChange={handleChange} placeholder="e.g. Apartment, House with yard" />
               </div>
               <div className="ui-field">
-                <label className="ui-label">Pet experience</label>
-                <textarea className="ui-textarea" name="pet_experience" value={form.pet_experience} onChange={handleChange} />
+                <label htmlFor="foster-pet-experience" className="ui-label">Pet experience</label>
+                <textarea id="foster-pet-experience" className="ui-textarea" name="pet_experience" value={form.pet_experience} onChange={handleChange} />
               </div>
               <div className="ui-field">
-                <label className="ui-label ui-label-required">Why do you want to foster?</label>
-                <textarea className="ui-textarea" name="reason" value={form.reason} onChange={handleChange} required />
+                <label htmlFor="foster-why-do-you-want-to-foster" className="ui-label ui-label-required">Why do you want to foster?</label>
+                <textarea id="foster-why-do-you-want-to-foster" className="ui-textarea" name="reason" value={form.reason} onChange={handleChange} required />
               </div>
               <div className="applyRow">
                 <div className="ui-field">
-                  <label className="ui-label ui-label-required">Start date</label>
-                  <input className="ui-input" type="date" name="start_date" value={form.start_date} onChange={handleChange} required />
+                  <label htmlFor="foster-start-date" className="ui-label ui-label-required">Start date</label>
+                  <input id="foster-start-date" className="ui-input" type="date" name="start_date" min={todayLocal()} value={form.start_date} onChange={handleChange} required />
                 </div>
                 <div className="ui-field">
-                  <label className="ui-label">End date</label>
-                  <input className="ui-input" type="date" name="end_date" value={form.end_date} onChange={handleChange} />
+                  <label htmlFor="foster-end-date" className="ui-label">End date</label>
+                  <input id="foster-end-date" className="ui-input" type="date" name="end_date" min={form.start_date || todayLocal()} value={form.end_date} onChange={handleChange} />
                 </div>
               </div>
               <div className="ui-field">
-                <label className="ui-label">Notes</label>
-                <textarea className="ui-textarea" name="notes" value={form.notes} onChange={handleChange} placeholder="Anything else we should know?" />
+                <label htmlFor="foster-notes" className="ui-label">Notes</label>
+                <textarea id="foster-notes" className="ui-textarea" name="notes" value={form.notes} onChange={handleChange} placeholder="Anything else we should know?" />
               </div>
               <button className="ui-btn-primary" style={{ width: '100%' }} type="submit" disabled={submitting}>
                 {submitting ? 'Submitting…' : 'Submit Foster Application'}

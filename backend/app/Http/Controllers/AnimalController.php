@@ -166,7 +166,7 @@ class AnimalController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
         $data = $validator->validated();
@@ -213,10 +213,10 @@ class AnimalController extends Controller
             // editing its other fields doesn't fail — but it can't be changed to anything new.
             'species' => ['sometimes', Rule::in([...Animal::SPECIES, mb_strtolower((string) $animal->species)])],
             'breed' => ['nullable', 'string', 'max:100'],
-            'age' => ['nullable', 'integer', 'min:0'],
+            'age' => ['nullable', 'integer', 'min:0', 'max:40'],
             'gender' => ['nullable', Rule::in(Animal::GENDERS)],
             'size' => ['nullable', Rule::in(Animal::SIZES)],
-            'weight' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
+            'weight' => ['nullable', 'numeric', 'min:0', 'max:200'],
             'status' => ['nullable', Rule::in(Animal::STATUSES)],
             'rescue_story' => ['nullable', 'string'],
             'behavioral_assessment' => ['nullable', 'array'],
@@ -224,7 +224,7 @@ class AnimalController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
         $animal->update($validator->validated());
@@ -278,7 +278,7 @@ class AnimalController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
         $hasMain = $animal->photos()->where('is_main', true)->exists();
@@ -364,7 +364,7 @@ class AnimalController extends Controller
             'source' => ['nullable', Rule::in(AnimalLocationLog::SOURCES)],
         ]);
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
         $data = $validator->validated();
         $to = $data['location_id'] ?? null;

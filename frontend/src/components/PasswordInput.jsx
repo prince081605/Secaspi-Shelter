@@ -43,8 +43,8 @@ export default function PasswordInput({ value, onChange, ...inputProps }) {
         aria-label={show ? 'Hide password' : 'Show password'}
         aria-pressed={show}
         style={{
-          position: 'absolute', right: '0.9rem', top: '50%', transform: 'translateY(-50%)',
-          background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+          position: 'absolute', right: '0.4rem', top: '50%', transform: 'translateY(-50%)',
+          background: 'none', border: 'none', cursor: 'pointer', padding: 8, borderRadius: 8,
           display: 'flex', alignItems: 'center', lineHeight: 1, color: 'var(--muted)',
         }}
       >

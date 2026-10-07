@@ -47,8 +47,8 @@ export default function ForgotPassword() {
 
       <form onSubmit={onSubmit}>
         <div className="ui-field">
-          <label className="ui-label ui-label-required">Email</label>
-          <input className="ui-input" value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="email" required />
+          <label htmlFor="forgot-email" className="ui-label ui-label-required">Email</label>
+          <input id="forgot-email" className="ui-input" value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="email" required />
         </div>
         {human.widget}
         <button className="ui-btn-primary" style={{ width: '100%' }} disabled={loading}>

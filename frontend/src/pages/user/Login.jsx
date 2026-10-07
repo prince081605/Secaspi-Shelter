@@ -48,12 +48,12 @@ export default function Login() {
       {error ? <div className="ui-error">{error}</div> : null}
       <form onSubmit={onSubmit}>
         <div className="ui-field">
-          <label className="ui-label ui-label-required">Email</label>
-          <input className="ui-input" value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="email" required />
+          <label htmlFor="login-email" className="ui-label ui-label-required">Email</label>
+          <input id="login-email" className="ui-input" value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="email" required />
         </div>
         <div className="ui-field">
-          <label className="ui-label ui-label-required">Password</label>
-          <PasswordInput
+          <label htmlFor="login-password" className="ui-label ui-label-required">Password</label>
+          <PasswordInput id="login-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="current-password"

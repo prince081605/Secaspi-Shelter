@@ -109,74 +109,74 @@ export default function SettingsAdmin({ onSaved } = {}) {
         {saveState.status === 'error' && <div className="ui-error">{saveState.error}</div>}
         <form onSubmit={handleSubmit}>
           <div className="ui-field">
-            <label className="ui-label">Shelter name</label>
-            <input className="ui-input" value={form.shelter_name} onChange={handleChange('shelter_name')} placeholder="SECASPI Shelter" />
+            <label htmlFor="settings-shelter-name" className="ui-label">Shelter name</label>
+            <input id="settings-shelter-name" className="ui-input" value={form.shelter_name} onChange={handleChange('shelter_name')} placeholder="SECASPI Shelter" />
           </div>
           <div className="ui-field">
-            <label className="ui-label">Contact email</label>
-            <input className="ui-input" type="email" value={form.contact_email} onChange={handleChange('contact_email')} placeholder="contact@example.com" />
+            <label htmlFor="settings-contact-email" className="ui-label">Contact email</label>
+            <input id="settings-contact-email" className="ui-input" type="email" value={form.contact_email} onChange={handleChange('contact_email')} placeholder="contact@example.com" />
           </div>
           <div className="ui-field">
-            <label className="ui-label">Phone number</label>
-            <input className="ui-input" value={form.contact_phone} onChange={handleChange('contact_phone')} placeholder="09XX XXX XXXX" />
+            <label htmlFor="settings-phone-number" className="ui-label">Phone number</label>
+            <input id="settings-phone-number" className="ui-input" type="tel" inputMode="tel" value={form.contact_phone} onChange={handleChange('contact_phone')} placeholder="0917 123 4567" />
           </div>
           <div className="ui-field">
-            <label className="ui-label">Address</label>
-            <input className="ui-input" value={form.address} onChange={handleChange('address')} placeholder="Calamba, Laguna, Philippines" />
+            <label htmlFor="settings-address" className="ui-label">Address</label>
+            <input id="settings-address" className="ui-input" value={form.address} onChange={handleChange('address')} placeholder="Calamba, Laguna, Philippines" />
           </div>
           <div className="ui-field">
-            <label className="ui-label">Facebook URL</label>
-            <input className="ui-input" value={form.social_facebook} onChange={handleChange('social_facebook')} placeholder="https://facebook.com/yourpage" />
+            <label htmlFor="settings-facebook-url" className="ui-label">Facebook URL</label>
+            <input id="settings-facebook-url" className="ui-input" value={form.social_facebook} onChange={handleChange('social_facebook')} placeholder="https://facebook.com/yourpage" />
           </div>
           <div className="ui-field">
-            <label className="ui-label">Instagram URL</label>
-            <input className="ui-input" value={form.social_instagram} onChange={handleChange('social_instagram')} placeholder="https://instagram.com/yourpage" />
+            <label htmlFor="settings-instagram-url" className="ui-label">Instagram URL</label>
+            <input id="settings-instagram-url" className="ui-input" value={form.social_instagram} onChange={handleChange('social_instagram')} placeholder="https://instagram.com/yourpage" />
           </div>
           <div className="ui-field">
-            <label className="ui-label">Twitter / X URL</label>
-            <input className="ui-input" value={form.social_twitter} onChange={handleChange('social_twitter')} placeholder="https://x.com/yourpage" />
+            <label htmlFor="settings-twitter-x-url" className="ui-label">Twitter / X URL</label>
+            <input id="settings-twitter-x-url" className="ui-input" value={form.social_twitter} onChange={handleChange('social_twitter')} placeholder="https://x.com/yourpage" />
           </div>
 
           <h3 className="dashSubSectionTitle" style={{ marginTop: 20 }}><Globe size={16} style={{ verticalAlign: '-3px', marginRight: 6 }} />Website Settings</h3>
 
           <div className="ui-field">
-            <label className="ui-label">Logo</label>
-            <input className="ui-input" type="file" accept="image/*" onChange={handleImageUpload('logo_path')} />
+            <label htmlFor="settings-logo" className="ui-label">Logo</label>
+            <input id="settings-logo" className="ui-input" type="file" accept="image/*" onChange={handleImageUpload('logo_path')} />
             {images.logo_path && (
               <img src={settingImageUrl(images.logo_path)} alt="Shelter logo" style={{ height: 48, marginTop: 8 }} />
             )}
             {imageState.key === 'logo_path' && imageState.status === 'error' && <div className="ui-error">{imageState.error}</div>}
           </div>
           <div className="ui-field">
-            <label className="ui-label">Homepage banner image</label>
-            <input className="ui-input" type="file" accept="image/*" onChange={handleImageUpload('banner_image_path')} />
+            <label htmlFor="settings-homepage-banner-image" className="ui-label">Homepage banner image</label>
+            <input id="settings-homepage-banner-image" className="ui-input" type="file" accept="image/*" onChange={handleImageUpload('banner_image_path')} />
             {images.banner_image_path && (
               <img src={settingImageUrl(images.banner_image_path)} alt="Homepage banner" style={{ maxWidth: 240, marginTop: 8 }} />
             )}
             {imageState.key === 'banner_image_path' && imageState.status === 'error' && <div className="ui-error">{imageState.error}</div>}
           </div>
           <div className="ui-field">
-            <label className="ui-label">Hero title</label>
-            <input className="ui-input" value={form.hero_title} onChange={handleChange('hero_title')} placeholder="Every Aspin deserves a forever home." />
+            <label htmlFor="settings-hero-title" className="ui-label">Hero title</label>
+            <input id="settings-hero-title" className="ui-input" value={form.hero_title} onChange={handleChange('hero_title')} placeholder="Every Aspin deserves a forever home." />
           </div>
           <div className="ui-field">
-            <label className="ui-label">Hero subtitle</label>
-            <textarea className="ui-input" rows={2} value={form.hero_subtitle} onChange={handleChange('hero_subtitle')} placeholder="We rescue, rehabilitate, and rehome native Philippine dogs..." />
+            <label htmlFor="settings-hero-subtitle" className="ui-label">Hero subtitle</label>
+            <textarea id="settings-hero-subtitle" className="ui-input" rows={2} value={form.hero_subtitle} onChange={handleChange('hero_subtitle')} placeholder="We rescue, rehabilitate, and rehome native Philippine dogs..." />
           </div>
           <div className="ui-field">
-            <label className="ui-label">About Us content</label>
-            <textarea className="ui-input" rows={4} value={form.about_us_content} onChange={handleChange('about_us_content')} placeholder="Tell visitors about your shelter's story..." />
+            <label htmlFor="settings-about-us-content" className="ui-label">About Us content</label>
+            <textarea id="settings-about-us-content" className="ui-input" rows={4} value={form.about_us_content} onChange={handleChange('about_us_content')} placeholder="Tell visitors about your shelter's story..." />
           </div>
           <div className="ui-field">
-            <label className="ui-label">Adoption policies</label>
-            <textarea className="ui-input" rows={4} value={form.adoption_policies} onChange={handleChange('adoption_policies')} placeholder="Outline your adoption requirements and process..." />
+            <label htmlFor="settings-adoption-policies" className="ui-label">Adoption policies</label>
+            <textarea id="settings-adoption-policies" className="ui-input" rows={4} value={form.adoption_policies} onChange={handleChange('adoption_policies')} placeholder="Outline your adoption requirements and process..." />
           </div>
 
           <h3 className="dashSubSectionTitle" style={{ marginTop: 20 }}><Heart size={16} style={{ verticalAlign: '-3px', marginRight: 6 }} />Donations / Transparency</h3>
 
           <div className="ui-field">
-            <label className="ui-label">Monthly fundraising goal (₱)</label>
-            <input className="ui-input" type="number" min="0" value={form.donation_monthly_goal} onChange={handleChange('donation_monthly_goal')} placeholder="80220" />
+            <label htmlFor="settings-monthly-fundraising-goal" className="ui-label">Monthly fundraising goal (₱)</label>
+            <input id="settings-monthly-fundraising-goal" className="ui-input" type="number" min="0" value={form.donation_monthly_goal} onChange={handleChange('donation_monthly_goal')} placeholder="80220" />
           </div>
 
           <div className="ui-field">
@@ -202,8 +202,8 @@ export default function SettingsAdmin({ onSaved } = {}) {
             ))}
           </div>
           <div className="ui-field">
-            <label className="ui-label">"Where your donations go" image</label>
-            <input className="ui-input" type="file" accept="image/*" onChange={handleImageUpload('fund_usage_image_path')} />
+            <label htmlFor="settings-where-your-donations-go-imag" className="ui-label">"Where your donations go" image</label>
+            <input id="settings-where-your-donations-go-imag" className="ui-input" type="file" accept="image/*" onChange={handleImageUpload('fund_usage_image_path')} />
             {images.fund_usage_image_path && (
               <img src={settingImageUrl(images.fund_usage_image_path)} alt="How donations are used" style={{ maxWidth: 240, marginTop: 8 }} />
             )}

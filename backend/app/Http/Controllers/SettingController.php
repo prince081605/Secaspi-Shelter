@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Setting;
+use App\Rules\PhilippinePhone;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -38,7 +39,7 @@ class SettingController extends Controller
         $validator = Validator::make($request->all(), [
             'shelter_name' => ['nullable', 'string', 'max:150'],
             'contact_email' => ['nullable', 'email', 'max:150'],
-            'contact_phone' => ['nullable', 'string', 'max:30'],
+            'contact_phone' => ['nullable', 'string', 'max:30', new PhilippinePhone],
             'address' => ['nullable', 'string', 'max:255'],
             'social_facebook' => ['nullable', 'string', 'max:255'],
             'social_instagram' => ['nullable', 'string', 'max:255'],
@@ -59,7 +60,7 @@ class SettingController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
         Setting::setMany($validator->validated());
@@ -75,7 +76,7 @@ class SettingController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
         $path = $request->file('image')->store('settings');

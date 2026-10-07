@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Animal;
 use App\Models\Intake;
 use App\Models\IntakeDocument;
+use App\Rules\NotInFuture;
+use App\Rules\PhilippinePhone;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -50,7 +52,7 @@ class IntakeController extends Controller
         $validator = Validator::make($request->all(), [
             'intake_type' => ['required', 'in:' . implode(',', self::TYPES)],
             'reporter_name' => ['nullable', 'string', 'max:150'],
-            'contact_number' => ['nullable', 'string', 'max:50'],
+            'contact_number' => ['nullable', 'string', 'max:50', new PhilippinePhone],
             'location' => ['nullable', 'string'],
             'animal_name' => ['nullable', 'string', 'max:100'],
             'species' => ['nullable', Rule::in(Animal::SPECIES)],
@@ -63,7 +65,7 @@ class IntakeController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
         $data = $validator->validated();
@@ -91,7 +93,7 @@ class IntakeController extends Controller
         $validator = Validator::make($request->all(), [
             'intake_type' => ['sometimes', 'in:' . implode(',', self::TYPES)],
             'reporter_name' => ['nullable', 'string', 'max:150'],
-            'contact_number' => ['nullable', 'string', 'max:50'],
+            'contact_number' => ['nullable', 'string', 'max:50', new PhilippinePhone],
             'location' => ['nullable', 'string'],
             'animal_name' => ['nullable', 'string', 'max:100'],
             // An intake logged before species became dog/cat-only may keep what it has.
@@ -103,11 +105,11 @@ class IntakeController extends Controller
             'status' => ['sometimes', 'in:' . implode(',', self::STATUSES)],
             'assessment_notes' => ['nullable', 'string'],
             'assessed_by' => ['nullable', 'string', 'max:150'],
-            'assessment_date' => ['nullable', 'date'],
+            'assessment_date' => ['nullable', 'date', new NotInFuture],
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
         if ($request->input('status') === 'converted') {
@@ -178,7 +180,7 @@ class IntakeController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
         $created = [];

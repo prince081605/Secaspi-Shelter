@@ -226,7 +226,7 @@ function ReportRow({ report, teams, onChanged, onUnreadChanged, isMobile }) {
         <td><UrgencyBadge urgency={report.urgency} /></td>
         <td><StatusBadge status={report.status} /></td>
         <td>{assignedLabel(report)}</td>
-        <td>{(report.created_at || '').slice(0, 10)}</td>
+        <td className="dashNowrap">{(report.created_at || '').slice(0, 10)}</td>
         <td style={{ whiteSpace: 'nowrap' }}>
           <button className="dashBtn" onClick={() => open('detail')}>{mode === 'detail' ? 'Hide' : 'Detail'}</button>
           <button className="dashBtn" style={{ marginLeft: 6 }} onClick={() => open('triage')}>{mode === 'triage' ? 'Hide' : 'Triage'}</button>

@@ -238,14 +238,15 @@ function CategoryList({ list }) {
 /**
  * Categories: one place for the lists the rest of the system offers as choices — breeds,
  * behavioral issues, medical record types, valid ID types, and the shelter's areas. Admin-only.
+ * It has its own nav item and is also Settings → System data, which passes its own title.
  */
-export default function CategoriesAdmin() {
+export default function CategoriesAdmin({ title = 'Categories', icon: TitleIcon = Tags }) {
   const [active, setActive] = useState(LISTS[0].type);
   const list = LISTS.find((l) => l.type === active);
 
   return (
     <div className="cat-module">
-      <h2 className="dashSectionTitle"><Tags size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />Categories</h2>
+      <h2 className="dashSectionTitle"><TitleIcon size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />{title}</h2>
       <p className="ui-muted cat-intro">
         The lists the system offers as choices. Hiding an entry takes it off the forms without changing any record that already uses it.
         An entry can only be deleted while nothing uses it.

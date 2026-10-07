@@ -29,7 +29,7 @@ import AnalyticsAdmin from '../admin/AnalyticsAdmin';
 import Messages from '../Messages';
 import ImpactPanel from './ImpactPanel';
 import MyDonationsPanel from './MyDonationsPanel';
-import SettingsAdmin from '../admin/SettingsAdmin';
+import SettingsPage from '../admin/SettingsPage';
 import CategoriesAdmin from '../admin/CategoriesAdmin';
 import PostAdoptionAdmin from '../admin/PostAdoptionAdmin';
 import MyAdoptionsPanel from './MyAdoptionsPanel';
@@ -292,12 +292,12 @@ function UserProfile({ user, onProfileUpdated }) {
       {profileState.status === 'error' && <div className="ui-error">{profileState.error}</div>}
       <form onSubmit={handleProfileSubmit}>
         <div className="ui-field">
-          <label className="ui-label">Full name</label>
-          <input className="ui-input" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+          <label htmlFor="profile-full-name" className="ui-label">Full name</label>
+          <input id="profile-full-name" className="ui-input" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
         </div>
         <div className="ui-field">
-          <label className="ui-label">Phone</label>
-          <input className="ui-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="09XX XXX XXXX" />
+          <label htmlFor="profile-phone" className="ui-label">Phone</label>
+          <input id="profile-phone" className="ui-input" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0917 123 4567" />
         </div>
         <button className="ui-btn-primary" type="submit" disabled={profileState.status === 'loading'}>
           {profileState.status === 'loading' ? 'Saving…' : 'Save changes'}
@@ -309,16 +309,16 @@ function UserProfile({ user, onProfileUpdated }) {
       {passwordState.status === 'error' && <div className="ui-error">{passwordState.error}</div>}
       <form onSubmit={handlePasswordSubmit}>
         <div className="ui-field">
-          <label className="ui-label">Current password</label>
-          <PasswordInput value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} autoComplete="current-password" required />
+          <label htmlFor="profile-current-password" className="ui-label">Current password</label>
+          <PasswordInput id="profile-current-password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} autoComplete="current-password" required />
         </div>
         <div className="ui-field">
-          <label className="ui-label">New password</label>
-          <PasswordInput value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" required minLength={8} />
+          <label htmlFor="profile-new-password" className="ui-label">New password</label>
+          <PasswordInput id="profile-new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" required minLength={8} />
         </div>
         <div className="ui-field">
-          <label className="ui-label">Confirm new password</label>
-          <PasswordInput value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" required minLength={8} />
+          <label htmlFor="profile-confirm-new-password" className="ui-label">Confirm new password</label>
+          <PasswordInput id="profile-confirm-new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" required minLength={8} />
         </div>
         <button className="ui-btn-primary" type="submit" disabled={passwordState.status === 'loading'}>
           {passwordState.status === 'loading' ? 'Updating…' : 'Change password'}
@@ -797,12 +797,7 @@ export default function Dashboard() {
               {isAdminRole && activeNav === 'users' ? <UsersAdmin currentUserId={user?.id} /> : null}
               {isAdminRole && activeNav === 'categories' ? <CategoriesAdmin /> : null}
               {isAdminRole && activeNav === 'settings' ? (
-                <>
-                  <SettingsAdmin />
-                  <div style={{ marginTop: 20 }}>
-                    <UserProfile key={user?.id} user={user} onProfileUpdated={setUser} />
-                  </div>
-                </>
+                <SettingsPage account={<UserProfile key={user?.id} user={user} onProfileUpdated={setUser} />} />
               ) : null}
             </div>
           ) : (

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Animal;
 use App\Models\Reminder;
 use App\Models\Vaccination;
+use App\Rules\NotInFuture;
 use App\Support\SyncsHealthReminders;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -17,12 +18,12 @@ class VaccinationController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'vaccine_name' => ['required', 'string', 'max:150'],
-            'date_given' => ['required', 'date'],
+            'date_given' => ['required', 'date', new NotInFuture],
             'next_due' => ['nullable', 'date', 'after:date_given'],
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
         $vaccination = $animal->vaccinations()->create($validator->validated());
@@ -36,12 +37,12 @@ class VaccinationController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'vaccine_name' => ['sometimes', 'string', 'max:150'],
-            'date_given' => ['sometimes', 'date'],
+            'date_given' => ['sometimes', 'date', new NotInFuture],
             'next_due' => ['nullable', 'date', 'after:date_given'],
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
         $vaccination->update($validator->validated());
