@@ -1,0 +1,10 @@
+/* The "Verify you are human" box and its hidden honeypot (HumanCheck.jsx). */
+/* Keep the box's space while Cloudflare's script loads, so the submit button doesn't jump. */
+.human-check-box { min-height: 65px; margin: 0.25rem 0 1rem; }
+.human-check-error { margin: 0.4rem 0 0; font-size: 0.85rem; color: var(--danger); }
+
+/* Off-screen rather than display:none — some bots skip fields that are display:none. */
+.human-check-trap {
+  position: absolute; left: -10000px; top: auto;
+  width: 1px; height: 1px; overflow: hidden;
+}

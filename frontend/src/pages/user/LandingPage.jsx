@@ -4,6 +4,7 @@ import { getFeaturedAnimals, getImpactStats } from "../../lib/publicHomeApi.js";
 import { createReport } from "../../lib/rescueApi.js";
 import { getPublicSettings, settingImageUrl } from "../../lib/settingsApi.js";
 import SiteNav from "../../components/SiteNav.jsx";
+import useHumanCheck from "../../lib/useHumanCheck.jsx";
 import {
   Hero,
   Pathways,
@@ -43,6 +44,7 @@ export default function LandingPage() {
   const [form, setForm] = useState({ name: "", contact: "", location: "", condition: "Injured or sick", details: "", latitude: null, longitude: null });
   const [reportPhoto, setReportPhoto] = useState(null);
   const [reportState, setReportState] = useState({ status: "idle", error: "" });
+  const human = useHumanCheck();
 
   // Arriving from another page's nav — "Report a stray" sends you to /#report — lands here
   // with a hash. The browser only resolves a hash against markup that already exists, and
@@ -144,6 +146,10 @@ export default function LandingPage() {
   const handlePhotoChange = (file) => setReportPhoto(file);
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!human.ready) {
+      setReportState({ status: "error", error: human.notReadyMessage });
+      return;
+    }
     setReportState({ status: "loading", error: "" });
     try {
       const fd = new FormData();
@@ -157,6 +163,7 @@ export default function LandingPage() {
         fd.append("longitude", form.longitude);
       }
       if (reportPhoto) fd.append("photo", reportPhoto);
+      Object.entries(human.fields).forEach(([key, value]) => fd.append(key, value));
 
       await createReport(fd);
 
@@ -165,6 +172,8 @@ export default function LandingPage() {
       setReportPhoto(null);
     } catch (err) {
       setReportState({ status: "error", error: err?.message || "Failed to submit report. Please try again." });
+    } finally {
+      human.reset(); // each verification token works once
     }
   };
 
@@ -195,6 +204,7 @@ export default function LandingPage() {
           reportState={reportState}
           onChange={handleChange}
           onPhotoChange={handlePhotoChange}
+          humanCheck={human.widget}
           onPinLocation={(lat, lng) => setForm((f) => ({ ...f, latitude: lat, longitude: lng }))}
           onSubmit={handleSubmit}
         />

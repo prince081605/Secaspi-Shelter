@@ -29,6 +29,14 @@ return [
         'key' => env('BREVO_API_KEY'),
     ],
 
+    // Cloudflare Turnstile — the "Verify you are human" check on the public forms (login,
+    // register, forgot password, rescue report); see App\Support\Captcha. The check is on only
+    // when BOTH keys are set, so local dev and tests run without it.
+    'turnstile' => [
+        'site_key' => env('TURNSTILE_SITE_KEY'),
+        'secret_key' => env('TURNSTILE_SECRET_KEY'),
+    ],
+
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),

@@ -29,6 +29,8 @@
         <env name="MAIL_MAILER" value="array"/>
         <!-- Never reach real providers from tests, whatever the developer .env holds. -->
         <env name="BREVO_API_KEY" value="" force="true"/>
+        <env name="TURNSTILE_SITE_KEY" value="" force="true"/>
+        <env name="TURNSTILE_SECRET_KEY" value="" force="true"/>
         <env name="PAYMENTS_DRIVER" value="simulated" force="true"/>
         <env name="PAYMONGO_SECRET_KEY" value="" force="true"/>
         <env name="PAYMONGO_WEBHOOK_SECRET" value="" force="true"/>

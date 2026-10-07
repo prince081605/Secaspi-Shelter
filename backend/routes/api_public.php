@@ -8,6 +8,7 @@ use App\Http\Controllers\PaymongoWebhookController;
 use App\Http\Controllers\PublicHomeController;
 use App\Http\Controllers\RescueReportController;
 use App\Http\Controllers\SettingController;
+use App\Support\Captcha;
 use Illuminate\Support\Facades\Route;
 
 // Token-guarded backup trigger, driven by an external scheduler (GitHub Actions cron) so
@@ -33,9 +34,13 @@ Route::get('/animals/{animal}', [AnimalController::class, 'show']);
 
 // ---- Rescue report submission (Phase 4) ----
 // Anonymous write that creates rows and accepts a 5 MB upload — throttle per IP so a bot can't
-// flood the triage queue or fill storage (a 429 is returned past the cap). A honeypot/captcha
-// remains a separate, complementary hardening step.
-Route::post('/rescue-reports', [RescueReportController::class, 'store'])->middleware('throttle:5,1');
+// flood the triage queue or fill storage (a 429 is returned past the cap), then the honeypot +
+// CAPTCHA check ('human', App\Http\Middleware\VerifyHuman).
+Route::post('/rescue-reports', [RescueReportController::class, 'store'])->middleware(['throttle:5,1', 'human']);
+
+// The public half of the CAPTCHA key pair, so the frontend can draw the "Verify you are human"
+// box; null while the check is switched off. Served from here so both keys live in one place.
+Route::get('/captcha', fn () => response()->json(['site_key' => Captcha::siteKey()]));
 
 // ---- Smart adoption matchmaker (lifestyle quiz -> ranked animals) ----
 Route::post('/matchmaker', [MatchmakerController::class, 'match']);

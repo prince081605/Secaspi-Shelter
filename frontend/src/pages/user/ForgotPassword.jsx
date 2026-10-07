@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { auth } from '../../lib/auth';
 import AuthLayout from '../../components/AuthLayout';
+import useHumanCheck from '../../lib/useHumanCheck';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -9,21 +10,28 @@ export default function ForgotPassword() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [devToken, setDevToken] = useState('');
+  const human = useHumanCheck();
 
   const onSubmit = async (e) => {
     e.preventDefault();
+    if (!human.ready) {
+      setError(human.notReadyMessage);
+      return;
+    }
     setLoading(true);
     setError('');
     setSuccess('');
     setDevToken('');
 
     try {
-      const res = await auth.forgotPassword(email);
+      const res = await auth.forgotPassword(email, human.fields);
       setSuccess(res.message || 'Request submitted');
       if (res.token) setDevToken(res.token);
     } catch (err) {
       setError(err.message || 'Request failed');
     } finally {
+      // The form stays on screen either way, so a second request needs a fresh check.
+      human.reset();
       setLoading(false);
     }
   };
@@ -42,6 +50,7 @@ export default function ForgotPassword() {
           <label className="ui-label ui-label-required">Email</label>
           <input className="ui-input" value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="email" required />
         </div>
+        {human.widget}
         <button className="ui-btn-primary" style={{ width: '100%' }} disabled={loading}>
           {loading ? 'Sending...' : 'Send Reset Link'}
         </button>

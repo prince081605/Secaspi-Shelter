@@ -3,6 +3,7 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { auth } from '../../lib/auth';
 import AuthLayout from '../../components/AuthLayout';
 import PasswordInput from '../../components/PasswordInput';
+import useHumanCheck from '../../lib/useHumanCheck';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [created, setCreated] = useState(null);
+  const human = useHumanCheck();
 
   // Resend-verification state for the success card.
   const [resending, setResending] = useState(false);
@@ -48,13 +50,18 @@ export default function Register() {
       setError('Passwords do not match.');
       return;
     }
+    if (!human.ready) {
+      setError(human.notReadyMessage);
+      return;
+    }
 
     setLoading(true);
     try {
-      const data = await auth.register(name, email, password, confirmPassword);
+      const data = await auth.register(name, email, password, confirmPassword, human.fields);
       setCreated(data?.user || null);
     } catch (err) {
       setError(err.message || 'Register failed');
+      human.reset();
     } finally {
       setLoading(false);
     }
@@ -155,6 +162,7 @@ export default function Register() {
             </p>
           ) : null}
         </div>
+        {human.widget}
         <button className="ui-btn-primary" style={{ width: '100%' }} disabled={loading}>
           {loading ? 'Creating...' : 'Create Account'}
         </button>

@@ -34,14 +34,16 @@ use Illuminate\Support\Facades\Route;
 // and namespaces the counter per route) to blunt brute force, credential stuffing, and reset
 // -email bombing — a 429 is returned past the cap. forgot-password is tighter since each hit can
 // send an email. `username/suggest` is a live keystroke preview, so it stays unthrottled.
-Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
-Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:10,1');
+// Login, register and forgot-password also need the honeypot + CAPTCHA check ('human',
+// App\Http\Middleware\VerifyHuman), which runs after the rate limit.
+Route::post('/login', [AuthController::class, 'login'])->middleware(['throttle:10,1', 'human']);
+Route::post('/register', [AuthController::class, 'register'])->middleware(['throttle:10,1', 'human']);
 Route::post('/username/suggest', [AuthController::class, 'suggestUsername']);
 // Email verification. `verify-email` takes a token from the emailed link; `resend-verification`
 // re-issues one and is tighter (like forgot-password) since each hit can send an email.
 Route::post('/verify-email', [AuthController::class, 'verifyEmail'])->middleware('throttle:10,1');
 Route::post('/resend-verification', [AuthController::class, 'resendVerification'])->middleware('throttle:5,1');
-Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:5,1');
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware(['throttle:5,1', 'human']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:10,1');
 
 // Protected routes. `active` runs after `auth:sanctum` so a suspended user holding

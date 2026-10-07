@@ -318,7 +318,7 @@ export function Process() {
   );
 }
 
-export function RescueForm({ form, reportPhoto, reportState, onChange, onPhotoChange, onPinLocation, onSubmit }) {
+export function RescueForm({ form, reportPhoto, reportState, onChange, onPhotoChange, onPinLocation, onSubmit, humanCheck }) {
   const [ref, inView] = useInView();
 
   return (
@@ -364,6 +364,8 @@ export function RescueForm({ form, reportPhoto, reportState, onChange, onPhotoCh
                 cameraTitle="Photograph the animal"
               />
             </div>
+            {/* Anti-spam: "Verify you are human" box + hidden honeypot, from useHumanCheck(). */}
+            {humanCheck}
             <button type="submit" className="lp-btn lp-btn-primary lp-report-submit" disabled={reportState.status === "loading"}>
               {reportState.status === "loading" ? "Sending..." : "Send Report"}
             </button>

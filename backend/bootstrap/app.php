@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnsureActive;
 use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureRole;
+use App\Http\Middleware\VerifyHuman;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -31,6 +32,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'active' => EnsureActive::class,
             // Parameterised minimum-role gate, e.g. ->middleware('role:staff').
             'role' => EnsureRole::class,
+            // Honeypot + CAPTCHA on the public forms.
+            'human' => VerifyHuman::class,
         ]);
         // API-only app with no `login` route. Returning null here stops the auth middleware from
         // trying to redirect unauthenticated guests to route('login') (which would throw a 500);
