@@ -6,6 +6,7 @@ use App\Models\AdoptionApplication;
 use App\Models\Animal;
 use App\Models\CategoryOption;
 use App\Models\MedicalRecord;
+use App\Models\Volunteer;
 use App\Models\VolunteerApplication;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -27,6 +28,7 @@ class CategoryOptionController extends Controller
         'behavioral_issue' => 'animal',
         'medical_record_type' => 'medical record',
         'valid_id_type' => 'application',
+        'volunteer_category' => 'person',
     ];
 
     /**
@@ -226,6 +228,7 @@ class CategoryOptionController extends Controller
                 $grouped(AdoptionApplication::query(), 'valid_id_type'),
                 $grouped(VolunteerApplication::query(), 'valid_id_type'),
             ),
+            'volunteer_category' => $this->volunteerCategoryUsage(),
         };
     }
 
@@ -239,6 +242,23 @@ class CategoryOptionController extends Controller
                     $issues = array_filter((array) $animal->behavioral_assessment, 'is_string');
                     foreach (array_unique(array_map('mb_strtolower', $issues)) as $issue) {
                         $counts[$issue] = ($counts[$issue] ?? 0) + 1;
+                    }
+                }
+            });
+
+        return $counts;
+    }
+
+    /** Personnel keep their categories as a JSON list of keys, so they're tallied here too. */
+    private function volunteerCategoryUsage(): array
+    {
+        $counts = [];
+        Volunteer::query()->whereNotNull('categories')->select(['id', 'categories'])
+            ->chunkById(500, function ($people) use (&$counts) {
+                foreach ($people as $person) {
+                    foreach (array_unique(array_filter((array) $person->categories, 'is_string')) as $key) {
+                        $key = mb_strtolower($key);
+                        $counts[$key] = ($counts[$key] ?? 0) + 1;
                     }
                 }
             });

@@ -2,15 +2,23 @@ import { useEffect, useRef, useState } from 'react';
 import { MapPin, Siren } from 'lucide-react';
 import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { adminListRescueReports, adminMarkRescueReportRead, adminUpdateRescueReport } from '../../lib/rescueApi';
+import {
+  adminBlockReporter,
+  adminListBlockedReporters,
+  adminListRescueReports,
+  adminMarkRescueReportRead,
+  adminUnblockReporter,
+  adminUpdateRescueReport,
+} from '../../lib/rescueApi';
 import { adminListTeams } from '../../lib/volunteersApi';
 import StatusBadge from '../../components/StatusBadge';
 import useConfirm from '../../lib/useConfirm';
 import Pagination from '../../components/Pagination';
 import DashCard from '../../components/DashCard';
 import useIsMobile from '../../lib/useIsMobile';
+import './RescueReportsAdmin.css';
 
-const STATUSES = ['pending', 'assigned', 'in_progress', 'resolved'];
+const STATUSES = ['pending', 'assigned', 'in_progress', 'resolved', 'invalid'];
 const NEXT_STATUS = { pending: 'assigned', assigned: 'in_progress', in_progress: 'resolved' };
 const NEXT_LABEL = { pending: 'Mark assigned', assigned: 'Mark in progress', in_progress: 'Mark resolved' };
 const URGENCY_COLOR = { critical: '#c0392b', high: '#e67e22', medium: '#d8a657', low: '#7c8b6b' };
@@ -26,6 +34,248 @@ function UrgencyBadge({ urgency }) {
   return <span className={cls}>{urgency}</span>;
 }
 
+const INVALID_REASONS = [
+  ['fake', 'Fake report'],
+  ['duplicate', 'Duplicate'],
+  ['not_found', 'Animal not found'],
+];
+
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+const shortDate = (value) => (value || '').slice(0, 10);
+
+// What staff should know before acting on a report: who sent it (as far as can be told without
+// an account), how their earlier reports turned out, and whether it repeats an open one.
+function ScreeningNotes({ report }) {
+  const h = report.reporter_history || {};
+  const basis = {
+    contact: 'By this contact number',
+    account: `From ${report.reporter_account || 'this'} account`,
+    connection: 'From this internet connection (it may be shared)',
+  }[h.basis];
+  const warn = h.fake > 0 || report.reporter_blocked;
+
+  let history;
+  if (!basis) {
+    history = 'No contact number or account, so this reporter can’t be recognised again.';
+  } else if (!h.earlier) {
+    history = `${basis}: first report.`;
+  } else {
+    history = `${basis}: ${plural(h.earlier, 'earlier report')}`
+      + (h.invalid ? ` — ${h.invalid} closed as invalid${h.fake ? ` (${h.fake} fake)` : ''}.` : ', none closed as invalid.');
+  }
+
+  return (
+    <div className={`rr-screening${warn ? ' rr-screening-warn' : ''}`}>
+      <div><strong>Reporter:</strong> {history}</div>
+      {report.reporter_blocked && <div><strong>Blocked:</strong> this reporter’s new reports are refused.</div>}
+      {report.status !== 'invalid' && report.possible_duplicate && (
+        <div>
+          <strong>Possible duplicate</strong> of report #{report.possible_duplicate.id} — {report.possible_duplicate.location || 'no location'},
+          {' '}{shortDate(report.possible_duplicate.created_at)} ({String(report.possible_duplicate.status).replace('_', ' ')}).
+        </div>
+      )}
+      {report.status === 'invalid' && (
+        <div>
+          <strong>Closed as:</strong> {report.invalid_reason_label}
+          {report.duplicate_of && <> of report #{report.duplicate_of.id} ({report.duplicate_of.location || 'no location'})</>}
+          {report.invalid_note && <> — {report.invalid_note}</>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Staff close a report that needs no rescue: fake, a duplicate, or the animal wasn't there. It
+// leaves the queue and never counts as a rescue; it can be reopened.
+function InvalidForm({ report, onSaved, onCancel }) {
+  const confirm = useConfirm();
+  const [reason, setReason] = useState(report.possible_duplicate ? 'duplicate' : '');
+  const [duplicateOf, setDuplicateOf] = useState(report.possible_duplicate ? String(report.possible_duplicate.id) : '');
+  const [note, setNote] = useState('');
+  const [state, setState] = useState({ status: 'idle', error: '' });
+
+  const submit = async (e) => {
+    e.preventDefault();
+    const label = INVALID_REASONS.find(([key]) => key === reason)?.[1];
+    const ok = await confirm({
+      title: 'Close this report as invalid?',
+      message: 'It leaves the rescue queue and isn’t counted as a rescue. You can reopen it later.',
+      confirmLabel: 'Close as invalid',
+      tone: 'danger',
+      summary: [
+        { label: 'Report', value: `#${report.id} — ${report.location || 'no location'}` },
+        { label: 'Reason', value: label },
+        { label: 'Repeats report', value: reason === 'duplicate' && duplicateOf ? `#${duplicateOf}` : '' },
+        { label: 'Note', value: note.trim() },
+      ],
+    });
+    if (!ok) return;
+    setState({ status: 'loading', error: '' });
+    try {
+      await adminUpdateRescueReport(report.id, {
+        status: 'invalid',
+        invalid_reason: reason,
+        invalid_note: note.trim() || null,
+        duplicate_of_id: reason === 'duplicate' ? Number(duplicateOf) : null,
+      });
+      onSaved();
+    } catch (err) {
+      setState({ status: 'error', error: err?.message || 'Failed to close the report.' });
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className="rr-invalid-form">
+      {state.status === 'error' && <div className="ui-error">{state.error}</div>}
+      <div className="dashFormGrid">
+        <div className="ui-field">
+          <label htmlFor={`rr-reason-${report.id}`} className="ui-label ui-label-required">Why is it invalid?</label>
+          <select id={`rr-reason-${report.id}`} className="ui-input" required value={reason} onChange={(e) => setReason(e.target.value)}>
+            <option value="" disabled>Choose a reason…</option>
+            {INVALID_REASONS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+          </select>
+        </div>
+        {reason === 'duplicate' && (
+          <div className="ui-field">
+            <label htmlFor={`rr-dup-${report.id}`} className="ui-label ui-label-required">Report it repeats (#)</label>
+            <input id={`rr-dup-${report.id}`} className="ui-input" type="number" min="1" required value={duplicateOf} onChange={(e) => setDuplicateOf(e.target.value)} />
+          </div>
+        )}
+        <div className="ui-field" style={{ gridColumn: '1 / -1' }}>
+          <label htmlFor={`rr-note-${report.id}`} className="ui-label">Note</label>
+          <textarea id={`rr-note-${report.id}`} className="ui-input" rows={2} maxLength={1000} placeholder="e.g. Called the number — nobody had seen a dog there" value={note} onChange={(e) => setNote(e.target.value)} />
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button className="dashBtn dashBtnDanger" type="submit" disabled={state.status === 'loading'}>
+          {state.status === 'loading' ? 'Closing…' : 'Close as invalid'}
+        </button>
+        <button className="dashBtn" type="button" onClick={onCancel}>Cancel</button>
+      </div>
+    </form>
+  );
+}
+
+// Admins only: the contact number and/or account behind a report — never a shared connection —
+// so a reporter who keeps sending fake reports is turned away with the shelter's number.
+function BlockReporterButton({ report, onBlocked }) {
+  const confirm = useConfirm();
+  const [error, setError] = useState('');
+
+  if (report.reporter_blocked) return null;
+
+  const block = async () => {
+    const ok = await confirm({
+      title: 'Block this reporter?',
+      message: 'Their new rescue reports will be refused, with the shelter’s phone number to call instead. Earlier reports are kept. You can unblock them from the list below.',
+      confirmLabel: 'Block reporter',
+      tone: 'danger',
+      summary: [
+        { label: 'Contact', value: report.contact_number || '' },
+        { label: 'Account', value: report.reporter_account || '' },
+        { label: 'Fake reports so far', value: String(report.reporter_history?.fake || 0) },
+      ],
+    });
+    if (!ok) return;
+    const reason = window.prompt('Why are you blocking this reporter? (kept for other admins)', '');
+    if (reason === null) return;
+    setError('');
+    try {
+      await adminBlockReporter(report.id, reason.trim() || null);
+      onBlocked();
+    } catch (err) {
+      setError(err?.message || 'Failed to block the reporter.');
+    }
+  };
+
+  return (
+    <>
+      <button
+        className="dashBtn dashBtnDanger"
+        type="button"
+        onClick={block}
+        disabled={!report.can_block}
+        title={report.can_block ? '' : 'This report has no contact number or account to block.'}
+      >
+        Block reporter
+      </button>
+      {error && <span className="ui-error" style={{ margin: 0 }}>{error}</span>}
+    </>
+  );
+}
+
+// Admins only: everyone blocked from sending reports, and unblocking.
+function BlockedReporters({ refreshKey, onChanged }) {
+  const confirm = useConfirm();
+  const [blocked, setBlocked] = useState([]);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let mounted = true;
+    adminListBlockedReporters()
+      .then((res) => { if (mounted) setBlocked(res?.blocked || []); })
+      .catch((err) => { if (mounted) setError(err?.message || 'Failed to load blocked reporters.'); });
+    return () => { mounted = false; };
+  }, [refreshKey]);
+
+  const unblock = async (entry) => {
+    const ok = await confirm({
+      title: 'Unblock this reporter?',
+      message: 'Their new rescue reports will be accepted again.',
+      confirmLabel: 'Unblock',
+      summary: [{ label: 'Reporter', value: entry.label }, { label: 'Reason', value: entry.reason || '' }],
+    });
+    if (!ok) return;
+    try {
+      await adminUnblockReporter(entry.id);
+      onChanged();
+    } catch (err) {
+      setError(err?.message || 'Failed to unblock.');
+    }
+  };
+
+  return (
+    <details className="rr-blocked">
+      <summary>Blocked reporters ({blocked.length})</summary>
+      {error && <div className="ui-error">{error}</div>}
+      {blocked.length === 0 ? (
+        <div className="ui-empty">Nobody is blocked. Block a reporter from a report’s Triage panel.</div>
+      ) : (
+        <div className="dashTableWrap">
+          <table className="dashTable">
+            <thead>
+              <tr><th>Reporter</th><th>Reason</th><th>Blocked by</th><th>Since</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+              {blocked.map((b) => (
+                <tr key={b.id}>
+                  <td>{b.label}{b.report_id ? <span className="ui-muted"> · from report #{b.report_id}</span> : null}</td>
+                  <td>{b.reason || '—'}</td>
+                  <td>{b.blocked_by || '—'}</td>
+                  <td className="dashNowrap">{shortDate(b.created_at)}</td>
+                  <td><button className="dashBtn" type="button" onClick={() => unblock(b)}>Unblock</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </details>
+  );
+}
+
+// Small flags beside the reporter's name in the list.
+function ReportFlags({ report }) {
+  const fake = report.reporter_history?.fake || 0;
+  return (
+    <>
+      {report.status !== 'invalid' && report.possible_duplicate && <span className="badge badgeOrange rr-flag" title={`Possible duplicate of report #${report.possible_duplicate.id}`}>Possible duplicate</span>}
+      {report.reporter_blocked
+        ? <span className="badge badgeOrange rr-flag">Blocked</span>
+        : fake > 0 && <span className="badge badgeOrange rr-flag">{plural(fake, 'fake report')} before</span>}
+    </>
+  );
+}
 // Full report view: details, photo, and the exact spot on the map (from the report's coordinates).
 function DetailPanel({ report }) {
   const hasPin = report.latitude != null && report.longitude != null;
@@ -33,6 +283,7 @@ function DetailPanel({ report }) {
 
   return (
     <div style={{ marginTop: 10 }}>
+      <ScreeningNotes report={report} />
       <div className="dashFormGrid">
         <div><strong>Reporter:</strong> {report.reporter_name || 'Anonymous'}</div>
         <div><strong>Contact:</strong> {report.contact_number || '—'}</div>
@@ -77,8 +328,9 @@ function DetailPanel({ report }) {
 // that was typed in then.
 const assignedLabel = (report) => report.team?.name || report.assigned_to || '—';
 
-function TriagePanel({ report, teams, onSaved }) {
+function TriagePanel({ report, teams, onSaved, isAdmin }) {
   const confirm = useConfirm();
+  const [closing, setClosing] = useState(false);
   const [teamId, setTeamId] = useState(report.team_id ? String(report.team_id) : '');
   const [notes, setNotes] = useState(report.admin_notes || '');
   // Active teams to choose from, plus the report's current team if it has since been archived.
@@ -119,10 +371,30 @@ function TriagePanel({ report, teams, onSaved }) {
   };
 
   const nextStatus = NEXT_STATUS[report.status];
+  const isInvalid = report.status === 'invalid';
+
+  const reopen = async () => {
+    const ok = await confirm({
+      title: 'Reopen this report?',
+      message: 'It goes back to Pending in the rescue queue, and the invalid reason is cleared.',
+      confirmLabel: 'Reopen report',
+      summary: [{ label: 'Report', value: `#${report.id} — ${report.location || 'no location'}` }],
+    });
+    if (!ok) return;
+    setState({ status: 'loading', error: '' });
+    try {
+      await adminUpdateRescueReport(report.id, { status: 'pending' });
+      setState({ status: 'idle', error: '' });
+      onSaved();
+    } catch (err) {
+      setState({ status: 'error', error: err?.message || 'Failed to reopen.' });
+    }
+  };
 
   return (
     <div style={{ marginTop: 10 }}>
       {state.status === 'error' && <div className="ui-error">{state.error}</div>}
+      <ScreeningNotes report={report} />
       <div className="dashFormGrid">
         <div><strong>Contact:</strong> {report.contact_number || '—'}</div>
         <div><strong>Location:</strong> {report.location || '—'}</div>
@@ -131,6 +403,7 @@ function TriagePanel({ report, teams, onSaved }) {
       {report.photo_url && (
         <img src={photoSrc(report.photo_url)} alt="" className="dashThumbLg" style={{ marginTop: 8 }} />
       )}
+      {!isInvalid && (
       <div className="dashFormGrid" style={{ marginTop: 10 }}>
         <div className="ui-field">
           <label className="ui-label">Assigned team</label>
@@ -152,21 +425,36 @@ function TriagePanel({ report, teams, onSaved }) {
           <textarea className="ui-input" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
         </div>
       </div>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <button className="dashBtn" type="button" onClick={() => save()} disabled={state.status === 'loading'}>
-          {state.status === 'loading' ? 'Saving…' : 'Save assignment & notes'}
-        </button>
-        {nextStatus && (
-          <button className="dashBtn dashBtnPrimary" type="button" onClick={() => save({ status: nextStatus })} disabled={state.status === 'loading'}>
-            {NEXT_LABEL[report.status]}
-          </button>
-        )}
-      </div>
+      )}
+      {closing ? (
+        <InvalidForm report={report} onCancel={() => setClosing(false)} onSaved={() => { setClosing(false); onSaved(); }} />
+      ) : (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          {isInvalid ? (
+            <button className="dashBtn dashBtnPrimary" type="button" onClick={reopen} disabled={state.status === 'loading'}>Reopen report</button>
+          ) : (
+            <>
+              <button className="dashBtn" type="button" onClick={() => save()} disabled={state.status === 'loading'}>
+                {state.status === 'loading' ? 'Saving…' : 'Save assignment & notes'}
+              </button>
+              {nextStatus && (
+                <button className="dashBtn dashBtnPrimary" type="button" onClick={() => save({ status: nextStatus })} disabled={state.status === 'loading'}>
+                  {NEXT_LABEL[report.status]}
+                </button>
+              )}
+              {report.status !== 'resolved' && (
+                <button className="dashBtn" type="button" onClick={() => setClosing(true)}>Mark invalid…</button>
+              )}
+            </>
+          )}
+          {isAdmin && <BlockReporterButton report={report} onBlocked={onSaved} />}
+        </div>
+      )}
     </div>
   );
 }
 
-function ReportRow({ report, teams, onChanged, onUnreadChanged, isMobile }) {
+function ReportRow({ report, teams, onChanged, onUnreadChanged, isMobile, isAdmin }) {
   const [mode, setMode] = useState(''); // '' | 'triage' | 'detail'
   const isUnread = !report.read_at;
 
@@ -196,7 +484,7 @@ function ReportRow({ report, teams, onChanged, onUnreadChanged, isMobile }) {
   );
   const panel = mode === 'detail'
     ? <DetailPanel report={report} />
-    : <TriagePanel report={report} teams={teams} onSaved={handleInteracted} />;
+    : <TriagePanel report={report} teams={teams} onSaved={handleInteracted} isAdmin={isAdmin} />;
 
   if (isMobile) {
     return (
@@ -210,6 +498,7 @@ function ReportRow({ report, teams, onChanged, onUnreadChanged, isMobile }) {
             { label: 'Status', value: <StatusBadge status={report.status} /> },
             { label: 'Assigned to', value: assignedLabel(report) },
             { label: 'Submitted', value: (report.created_at || '').slice(0, 10) },
+            { label: 'Flags', value: <ReportFlags report={report} /> },
           ]}
           actions={actions}
         />
@@ -221,7 +510,10 @@ function ReportRow({ report, teams, onChanged, onUnreadChanged, isMobile }) {
   return (
     <>
       <tr className={isUnread ? 'dashRowUnread' : ''}>
-        <td>{report.reporter_name || 'Anonymous'}</td>
+        <td>
+          {report.reporter_name || 'Anonymous'}
+          <div className="rr-flags"><ReportFlags report={report} /></div>
+        </td>
         <td>{report.location}</td>
         <td><UrgencyBadge urgency={report.urgency} /></td>
         <td><StatusBadge status={report.status} /></td>
@@ -241,7 +533,7 @@ function ReportRow({ report, teams, onChanged, onUnreadChanged, isMobile }) {
   );
 }
 
-export default function RescueReportsAdmin({ onUnreadChanged }) {
+export default function RescueReportsAdmin({ onUnreadChanged, isAdmin = false }) {
   const isMobile = useIsMobile();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -302,8 +594,8 @@ export default function RescueReportsAdmin({ onUnreadChanged }) {
 
       <div className="dashFilterBar">
         <select className="ui-input" style={{ maxWidth: 180 }} aria-label="Filter rescue reports by status" value={status} onChange={(e) => changeStatus(e.target.value)}>
-          <option value="">All statuses</option>
-          {STATUSES.map((s) => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
+          <option value="">All except invalid</option>
+          {STATUSES.map((s) => <option key={s} value={s}>{s === 'invalid' ? 'invalid (fake, duplicate, not found)' : s.replace('_', ' ')}</option>)}
         </select>
         {teams.length > 0 && (
           <select className="ui-input" style={{ maxWidth: 200 }} aria-label="Filter rescue reports by team" value={teamFilter} onChange={(e) => { setPage(1); setTeamFilter(e.target.value); }}>
@@ -320,7 +612,7 @@ export default function RescueReportsAdmin({ onUnreadChanged }) {
       ) : isMobile ? (
         <div className="dashCardList">
           {reports.map((r) => (
-            <ReportRow key={r.id} report={r} teams={teams} onChanged={refresh} onUnreadChanged={onUnreadChanged} isMobile />
+            <ReportRow key={r.id} report={r} teams={teams} onChanged={refresh} onUnreadChanged={onUnreadChanged} isMobile isAdmin={isAdmin} />
           ))}
         </div>
       ) : (
@@ -339,7 +631,7 @@ export default function RescueReportsAdmin({ onUnreadChanged }) {
             </thead>
             <tbody>
               {reports.map((r) => (
-                <ReportRow key={r.id} report={r} teams={teams} onChanged={refresh} onUnreadChanged={onUnreadChanged} />
+                <ReportRow key={r.id} report={r} teams={teams} onChanged={refresh} onUnreadChanged={onUnreadChanged} isAdmin={isAdmin} />
               ))}
             </tbody>
           </table>
@@ -347,6 +639,8 @@ export default function RescueReportsAdmin({ onUnreadChanged }) {
       )}
 
       {!loading && reports.length > 0 && <Pagination meta={meta} onPage={setPage} />}
+
+      {isAdmin && <BlockedReporters refreshKey={refreshKey} onChanged={refresh} />}
     </>
   );
 }

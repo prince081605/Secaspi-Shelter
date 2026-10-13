@@ -69,6 +69,11 @@ export async function adminAddAnimalPhotos(id, formData) {
   return api.post(`/api/animals/${id}/photos`, formData);
 }
 
+// Bulk photo update: which animal each file name belongs to (only the names are sent).
+export async function adminMatchAnimalPhotos(files) {
+  return api.post('/api/admin/animals/photos/match', { files });
+}
+
 export async function adminDeleteAnimalPhoto(animalId, photoId) {
   return api.delete(`/api/animals/${animalId}/photos/${photoId}`);
 }

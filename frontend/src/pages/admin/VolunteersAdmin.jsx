@@ -354,6 +354,72 @@ function TasksPanel({ volunteer, onChanged, isAdmin }) {
   );
 }
 
+// A person's categories as small chips (the managed 'volunteer_category' list).
+function CategoryChips({ values }) {
+  const lists = useCategories();
+  if (!values?.length) return <span className="ui-muted">—</span>;
+  return (
+    <span className="volCatChips">
+      {values.map((v) => <span key={v} className="badge">{optionLabel(lists.volunteer_category, v)}</span>)}
+    </span>
+  );
+}
+
+// What this person helps with. Hidden categories they already have stay on the list for them.
+function CategoryEditor({ personnel, onSaved }) {
+  const lists = useCategories();
+  const [selected, setSelected] = useState(personnel.categories || []);
+  const [state, setState] = useState({ status: 'idle', error: '' });
+  const shown = (lists.volunteer_category || []).filter((o) => !o.hidden || selected.includes(o.value));
+  const dirty = [...selected].sort().join() !== [...(personnel.categories || [])].sort().join();
+
+  const toggle = (value) => setSelected((s) => (s.includes(value) ? s.filter((v) => v !== value) : [...s, value]));
+
+  const save = async () => {
+    setState({ status: 'loading', error: '' });
+    try {
+      await adminUpdateVolunteer(personnel.id, { categories: selected });
+      setState({ status: 'idle', error: '' });
+      onSaved();
+    } catch (err) {
+      setState({ status: 'error', error: err?.message || 'Failed to save categories.' });
+    }
+  };
+
+  return (
+    <fieldset className="volCatEdit">
+      <legend className="ui-label">Categories</legend>
+      {state.status === 'error' && <div className="ui-error">{state.error}</div>}
+      {shown.length === 0 ? (
+        <div className="ui-muted">No categories yet. Add them in Settings → System data.</div>
+      ) : (
+        <div className="volCatGrid">
+          {shown.map((o) => (
+            <label key={o.value} className={selected.includes(o.value) ? 'volCatPick volCatPickOn' : 'volCatPick'}>
+              <input type="checkbox" checked={selected.includes(o.value)} onChange={() => toggle(o.value)} />
+              {o.label}{o.hidden ? ' (hidden)' : ''}
+            </label>
+          ))}
+        </div>
+      )}
+      <button className="dashBtn dashBtnPrimary" type="button" onClick={save} disabled={!dirty || state.status === 'loading'} style={{ marginTop: 8 }}>
+        {state.status === 'loading' ? 'Saving…' : 'Save categories'}
+      </button>
+    </fieldset>
+  );
+}
+
+const CATEGORY_STYLES = `
+  .volCatChips { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+  .volCatChips .badge { font-size: 11px; padding: 3px 8px; }
+  .volCatEdit { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin: 0 0 12px; min-width: 0; }
+  .volCatGrid { display: flex; flex-wrap: wrap; gap: 6px; }
+  .volCatPick { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; cursor: pointer; font-size: 0.88rem; min-height: 36px; }
+  .volCatPick input { accent-color: var(--brand); margin: 0; }
+  .volCatPickOn { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
+  .volCatPick:focus-within { outline: 3px solid var(--brand); outline-offset: 2px; }
+`;
+
 function PersonnelRow({ personnel, onChanged, isAdmin }) {
   const confirm = useConfirm();
   const isMobile = useIsMobile();
@@ -414,13 +480,14 @@ function PersonnelRow({ personnel, onChanged, isAdmin }) {
   );
   const actions = (
     <>
-      <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Tasks'}</button>
+      <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Manage'}</button>
       <button type="button" className="dashBtn dashBtnDanger" onClick={remove}>Remove</button>
     </>
   );
   const panel = (
     <>
       {personnel.performance_notes && <div><strong>Notes:</strong> {personnel.performance_notes}</div>}
+      <CategoryEditor key={(personnel.categories || []).join()} personnel={personnel} onSaved={onChanged} />
       <TasksPanel volunteer={personnel} onChanged={onChanged} isAdmin={isAdmin} />
     </>
   );
@@ -433,6 +500,7 @@ function PersonnelRow({ personnel, onChanged, isAdmin }) {
           subtitle={personnel.user?.email}
           fields={[
             { label: 'Availability', value: personnel.availability || '—' },
+            { label: 'Categories', value: <CategoryChips values={personnel.categories} /> },
             { label: 'Hours rendered', value: hoursControl },
             { label: 'Tasks', value: personnel.tasks.length },
           ]}
@@ -449,6 +517,7 @@ function PersonnelRow({ personnel, onChanged, isAdmin }) {
       <tr>
         <td>{personnel.user?.full_name}<br /><span style={{ fontSize: 12, color: 'var(--muted)' }}>{personnel.user?.email}</span></td>
         <td>{personnel.availability || '—'}</td>
+        <td><CategoryChips values={personnel.categories} /></td>
         <td className="dashActionsCell">{hoursControl}</td>
         <td>{personnel.tasks.length}</td>
         <td className="dashActionsCell">
@@ -456,11 +525,11 @@ function PersonnelRow({ personnel, onChanged, isAdmin }) {
         </td>
       </tr>
       {error && (
-        <tr><td colSpan={5}><div className="ui-error">{error}</div></td></tr>
+        <tr><td colSpan={6}><div className="ui-error">{error}</div></td></tr>
       )}
       {expanded && (
         <tr>
-          <td colSpan={5} className="dashExpandPanel">{panel}</td>
+          <td colSpan={6} className="dashExpandPanel">{panel}</td>
         </tr>
       )}
     </>
@@ -530,6 +599,7 @@ function RequestRow({ application, onChanged }) {
           <div><dt>Phone</dt><dd>{application.applicant?.phone || '—'}</dd></div>
           <div className="dashInfoFull"><dt>Experience</dt><dd>{application.experience || '—'}</dd></div>
           <div className="dashInfoFull"><dt>Why volunteer?</dt><dd>{application.reason || '—'}</dd></div>
+          <div className="dashInfoFull"><dt>Would like to help with</dt><dd><CategoryChips values={application.preferred_categories} /></dd></div>
         </dl>
       </div>
       <div className="dashReviewSection">
@@ -700,11 +770,13 @@ function PersonnelRoster({ type, isAdmin }) {
   const [refreshKey, setRefreshKey] = useState(0);
   const [page, setPage] = useState(1);
   const [meta, setMeta] = useState({ current_page: 1, last_page: 1 });
+  const [category, setCategory] = useState('');
+  const lists = useCategories();
 
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    adminListVolunteers({ type, page })
+    adminListVolunteers({ type, page, category })
       .then((data) => {
         if (!mounted) return;
         setPersonnel(data?.data || []);
@@ -719,7 +791,7 @@ function PersonnelRoster({ type, isAdmin }) {
         if (mounted) setLoading(false);
       });
     return () => { mounted = false; };
-  }, [type, refreshKey, page]);
+  }, [type, refreshKey, page, category]);
 
   // Keep the current page on refresh so an open Tasks panel isn't collapsed.
   const refresh = () => {
@@ -732,18 +804,25 @@ function PersonnelRoster({ type, isAdmin }) {
 
   return (
     <>
+      <style>{CATEGORY_STYLES}</style>
       {error && <div className="ui-error">{error}</div>}
 
-      <button className="dashBtn dashBtnPrimary" onClick={() => setShowAdd((v) => !v)}>
-        {showAdd ? 'Close' : addLabel}
-      </button>
+      <div className="dashFilterBar">
+        <button className="dashBtn dashBtnPrimary" onClick={() => setShowAdd((v) => !v)}>
+          {showAdd ? 'Close' : addLabel}
+        </button>
+        <select className="ui-input" style={{ maxWidth: 230 }} aria-label={`Filter ${typeLabel} by category`} value={category} onChange={(e) => { setPage(1); setCategory(e.target.value); }}>
+          <option value="">All categories</option>
+          {(lists.volunteer_category || []).map((o) => <option key={o.value} value={o.value}>{o.label}{o.hidden ? ' (hidden)' : ''}</option>)}
+        </select>
+      </div>
 
       {showAdd && <AddPersonForm type={type} onCancel={() => setShowAdd(false)} onAdded={refresh} />}
 
       {loading ? (
         <div className="ui-empty">Loading…</div>
       ) : personnel.length === 0 ? (
-        <div className="ui-empty">No {typeLabel} yet.</div>
+        <div className="ui-empty">{category ? `No ${typeLabel} in this category.` : `No ${typeLabel} yet.`}</div>
       ) : isMobile ? (
         <div className="dashCardList" style={{ marginTop: 10 }}>
           {personnel.map((p) => (
@@ -757,6 +836,7 @@ function PersonnelRoster({ type, isAdmin }) {
               <tr>
                 <th>{type === 'staff' ? 'Staff Member' : 'Volunteer'}</th>
                 <th>Availability</th>
+                <th>Categories</th>
                 <th>Hours rendered</th>
                 <th>Tasks</th>
                 <th>Actions</th>

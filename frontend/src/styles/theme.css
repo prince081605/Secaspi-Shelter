@@ -534,6 +534,13 @@ body {
   color: var(--brand);
 }
 
+/* The line at the top of a longer form that explains the asterisk. */
+.ui-required-note {
+  margin: 0 0 0.9rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
 .ui-input,
 .ui-select,
 .ui-textarea {

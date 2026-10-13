@@ -145,7 +145,7 @@ function ExpenseForm({ editing, onCancel, onSaved, onError }) {
     <form className="dashCard" onSubmit={submit} style={{ marginTop: 10, marginBottom: 12 }}>
       <div className="dashFormGrid">
         <div className="ui-field">
-          <label htmlFor="expense-category" className="ui-label">Category</label>
+          <label htmlFor="expense-category" className="ui-label ui-label-required">Category</label>
           <select id="expense-category" className="ui-input" value={form.category} onChange={set('category')} required>
             {DONATION_CATEGORIES.map((c) => (
               <option key={c.key} value={c.key}>{c.label}</option>
@@ -155,7 +155,7 @@ function ExpenseForm({ editing, onCancel, onSaved, onError }) {
         </div>
 
         <div className="ui-field">
-          <label htmlFor="expense-amount" className="ui-label">Amount (₱)</label>
+          <label htmlFor="expense-amount" className="ui-label ui-label-required">Amount (₱)</label>
           <input id="expense-amount"
             className="ui-input"
             type="number"
@@ -169,7 +169,7 @@ function ExpenseForm({ editing, onCancel, onSaved, onError }) {
         </div>
 
         <div className="ui-field">
-          <label htmlFor="expense-date-spent" className="ui-label">Date spent</label>
+          <label htmlFor="expense-date-spent" className="ui-label ui-label-required">Date spent</label>
           <input id="expense-date-spent" className="ui-input" type="date" max={todayLocal()} value={form.spent_at} onChange={set('spent_at')} required />
           {errorFor('spent_at') && <div className="ui-error">{errorFor('spent_at')}</div>}
         </div>
@@ -187,7 +187,7 @@ function ExpenseForm({ editing, onCancel, onSaved, onError }) {
       </div>
 
       <div className="ui-field">
-        <label htmlFor="expense-description" className="ui-label">Description</label>
+        <label htmlFor="expense-description" className="ui-label ui-label-required">Description</label>
         <input id="expense-description"
           className="ui-input"
           type="text"

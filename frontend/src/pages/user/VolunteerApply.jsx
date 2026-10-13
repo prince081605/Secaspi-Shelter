@@ -24,6 +24,12 @@ const styles = `
   .volTag-rejected { background: #ffe0e0; color: #b42318; }
   .volTag-completed { background: var(--line); color: var(--ink-soft); }
   .volSuccess { padding: 2.5rem; text-align: center; }
+  .volCats { border: 0; padding: 0; margin: 0 0 1rem; min-width: 0; }
+  .volCatsGrid { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .volCat { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.5rem 0.85rem; border: 1px solid var(--line); border-radius: 999px; cursor: pointer; font-size: 0.9rem; min-height: 40px; }
+  .volCat input { accent-color: var(--brand); width: 16px; height: 16px; margin: 0; }
+  .volCatOn { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
+  .volCat:focus-within { outline: 3px solid var(--brand); outline-offset: 2px; }
   .volIdPreview { display: block; max-width: min(320px, 100%); margin-top: 0.7rem; border: 1px solid var(--line); border-radius: 10px; }
   @media (max-width: 560px) {
     .volBody { padding: 2rem 1rem; }
@@ -50,6 +56,7 @@ export default function VolunteerApply() {
     experience: gate.draft?.experience || '',
     reason: gate.draft?.reason || '',
     valid_id_type: gate.draft?.valid_id_type || '',
+    preferred_categories: Array.isArray(gate.draft?.preferred_categories) ? gate.draft.preferred_categories : [],
   });
   // The ID photo is a File, which JSON.stringify turns into {} — so it is kept out of `form`
   // and its input only appears once signed in. Same trick, same reason, as the donation proof
@@ -90,6 +97,12 @@ export default function VolunteerApply() {
   }, [gate.isAuthed]);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const toggleCategory = (value) => setForm((f) => ({
+    ...f,
+    preferred_categories: f.preferred_categories.includes(value)
+      ? f.preferred_categories.filter((v) => v !== value)
+      : [...f.preferred_categories, value],
+  }));
 
   // Show the chosen ID before it is sent, so a blurry or wrong-side photo is caught here rather
   // than by a reviewer days later. The URL is minted in the handler and released by the effect
@@ -133,6 +146,7 @@ export default function VolunteerApply() {
       body.append('reason', form.reason);
       body.append('valid_id_type', form.valid_id_type);
       body.append('valid_id_image', idImage);
+      form.preferred_categories.forEach((c) => body.append('preferred_categories[]', c));
       await submitVolunteerApplication(body);
       setDone(true);
       load();
@@ -214,6 +228,7 @@ export default function VolunteerApply() {
             {error && <div className="ui-error">{error}</div>}
 
             <form onSubmit={handleSubmit}>
+              <p className="ui-required-note">Fields marked * are required.</p>
               <div className="ui-field">
                 <label htmlFor="volunteer-availability" className="ui-label ui-label-required">Availability</label>
                 <input id="volunteer-availability"
@@ -245,6 +260,17 @@ export default function VolunteerApply() {
                   required
                 />
               </div>
+              <fieldset className="ui-field volCats">
+                <legend className="ui-label">What would you like to help with? (optional)</legend>
+                <div className="volCatsGrid">
+                  {visibleOptions(categories.volunteer_category).map((c) => (
+                    <label key={c.value} className={form.preferred_categories.includes(c.value) ? 'volCat volCatOn' : 'volCat'}>
+                      <input type="checkbox" checked={form.preferred_categories.includes(c.value)} onChange={() => toggleCategory(c.value)} />
+                      {c.label}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
               <div className="ui-field">
                 <label htmlFor="volunteer-type-of-id" className="ui-label ui-label-required">Type of ID</label>
                 <select id="volunteer-type-of-id"

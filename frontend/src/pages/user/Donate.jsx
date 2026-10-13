@@ -234,8 +234,9 @@ export default function Donate() {
             {error && <div className="ui-error">{error}</div>}
 
             <form onSubmit={handleSubmit}>
+              <p className="ui-required-note">Fields marked * are required.</p>
               <div className="ui-field">
-                <label htmlFor="donate-amount" className="ui-label">Amount (₱)</label>
+                <label htmlFor="donate-amount" className="ui-label ui-label-required">Amount (₱)</label>
                 <div className="donateAmounts">
                   {PRESET_AMOUNTS.map((a) => (
                     <button
@@ -290,8 +291,8 @@ export default function Donate() {
               </div>
 
               <div className="ui-field">
-                <label htmlFor="donate-payment-method" className="ui-label">Payment method</label>
-                <select id="donate-payment-method" className="ui-select" value={paymentMethod} onChange={(e) => handleMethodChange(e.target.value)}>
+                <label htmlFor="donate-payment-method" className="ui-label ui-label-required">Payment method</label>
+                <select id="donate-payment-method" className="ui-select" value={paymentMethod} onChange={(e) => handleMethodChange(e.target.value)} required>
                   <option value="gcash">GCash</option>
                   <option value="cash">Cash</option>
                   <option value="bank">Bank Transfer</option>
@@ -303,7 +304,7 @@ export default function Donate() {
                   the original flow for donors who would rather not use the checkout. */}
               {canPayOnline && (
                 <div className="ui-field">
-                  <label className="ui-label">How would you like to pay?</label>
+                  <label className="ui-label ui-label-required">How would you like to pay?</label>
                   <div className="donateSettle">
                     <label className={'donateSettleOpt' + (settlement === 'gateway' ? ' donateSettleOptOn' : '')}>
                       <input

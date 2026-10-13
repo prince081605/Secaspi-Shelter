@@ -61,6 +61,7 @@ export default function FosterApply() {
             {error && <div className="ui-error">{error}</div>}
 
             <form onSubmit={handleSubmit}>
+              <p className="ui-required-note">Fields marked * are required.</p>
               <div className="ui-field">
                 <label htmlFor="foster-full-name" className="ui-label ui-label-required">Full name</label>
                 <input id="foster-full-name" className="ui-input" name="full_name" value={form.full_name} onChange={handleChange} required />

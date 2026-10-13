@@ -583,7 +583,7 @@ class ReportController extends Controller
         $reports = $query->orderByDesc('id')->get();
 
         $summary = [];
-        foreach (['pending' => 'Pending', 'assigned' => 'Assigned', 'in_progress' => 'In progress', 'resolved' => 'Resolved'] as $key => $label) {
+        foreach (['pending' => 'Pending', 'assigned' => 'Assigned', 'in_progress' => 'In progress', 'resolved' => 'Resolved', 'invalid' => 'Invalid (fake, duplicate, not found)'] as $key => $label) {
             $summary[] = ['label' => $label, 'value' => (int) ($statusCounts[$key] ?? 0)];
         }
         foreach (['low' => 'Low urgency', 'medium' => 'Medium urgency', 'high' => 'High urgency', 'critical' => 'Critical urgency'] as $key => $label) {

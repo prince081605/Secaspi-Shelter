@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CategoryOption;
 use App\Models\Team;
 use App\Models\User;
 use App\Models\Volunteer;
@@ -11,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class VolunteerController extends Controller
 {
@@ -144,6 +146,10 @@ class VolunteerController extends Controller
             $query->where('type', 'volunteer');
         }
 
+        if ($category = $request->query('category')) {
+            $query->whereJsonContains('categories', $category);
+        }
+
         // per_page lets a picker (e.g. "add attendance for…") load everyone at once; capped.
         $perPage = min(max((int) $request->query('per_page', 20), 1), 100);
         $volunteers = $query->orderByDesc('id')->paginate($perPage)->withQueryString();
@@ -160,7 +166,8 @@ class VolunteerController extends Controller
             'type' => ['nullable', 'in:volunteer,staff'],
             'availability' => ['nullable', 'string', 'max:150'],
             'performance_notes' => ['nullable', 'string'],
-        ]);
+            ...self::categoryRules(),
+        ], self::CATEGORY_MESSAGES);
 
         if ($validator->fails()) {
             return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
@@ -168,6 +175,9 @@ class VolunteerController extends Controller
 
         $data = $validator->validated();
         $data['type'] = $data['type'] ?? 'volunteer';
+        if (array_key_exists('categories', $data)) {
+            $data['categories'] = array_values(array_unique($data['categories'] ?? [])) ?: null;
+        }
 
         // Granting staff-level access promotes the account's role to `staff`, so it's an
         // admin-only action — a staff member must not be able to mint more staff (privilege
@@ -194,7 +204,9 @@ class VolunteerController extends Controller
             'availability' => ['nullable', 'string', 'max:150'],
             'hours_rendered' => ['sometimes', 'numeric', 'min:0', 'max:100000'],
             'performance_notes' => ['nullable', 'string'],
-        ]);
+            // A category since hidden from the list stays valid for someone who already has it.
+            ...self::categoryRules((array) $volunteer->categories),
+        ], self::CATEGORY_MESSAGES);
 
         if ($validator->fails()) {
             return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
@@ -210,6 +222,10 @@ class VolunteerController extends Controller
             }
             $volunteer->setTotalHours((float) $data['hours_rendered']);
             unset($data['hours_rendered']);
+        }
+
+        if (array_key_exists('categories', $data)) {
+            $data['categories'] = array_values(array_unique($data['categories'] ?? [])) ?: null;
         }
 
         $volunteer->update($data);
@@ -312,12 +328,24 @@ class VolunteerController extends Controller
         return response()->json(['message' => 'Task deleted']);
     }
 
+    private const CATEGORY_MESSAGES = ['categories.*.in' => 'Choose categories from the list in Settings → System data.'];
+
+    /** Volunteer categories: keys from the managed list, plus any the person already has. */
+    private static function categoryRules(array $kept = []): array
+    {
+        return [
+            'categories' => ['sometimes', 'nullable', 'array'],
+            'categories.*' => ['string', Rule::in([...CategoryOption::activeValues('volunteer_category'), ...$kept])],
+        ];
+    }
+
     private function toItem(Volunteer $v): array
     {
         return [
             'id' => $v->id,
             'type' => $v->type,
             'availability' => $v->availability,
+            'categories' => $v->categories ?? [],
             'hours_rendered' => $v->hours_rendered,
             'performance_notes' => $v->performance_notes,
             'user' => $v->user ? [

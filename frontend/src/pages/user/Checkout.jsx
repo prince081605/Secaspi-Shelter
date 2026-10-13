@@ -314,7 +314,7 @@ export default function Checkout() {
 
               {session.rail === 'bank' && (
                 <div className="apayField">
-                  <label className="apayLabel" htmlFor="apay-bank">Bank</label>
+                  <label className="apayLabel apayRequired" htmlFor="apay-bank">Bank</label>
                   <select
                     id="apay-bank"
                     className="apayInput"
@@ -327,7 +327,7 @@ export default function Checkout() {
               )}
 
               <div className="apayField">
-                <label className="apayLabel" htmlFor="apay-account">{rail.accountLabel}</label>
+                <label className="apayLabel apayRequired" htmlFor="apay-account">{rail.accountLabel}</label>
                 <input
                   id="apay-account"
                   className="apayInput"
@@ -341,7 +341,7 @@ export default function Checkout() {
               </div>
 
               <div className="apayField">
-                <label className="apayLabel" htmlFor="apay-pin">{rail.pinLabel}</label>
+                <label className="apayLabel apayRequired" htmlFor="apay-pin">{rail.pinLabel}</label>
                 <input
                   id="apay-pin"
                   className="apayInput"
@@ -372,7 +372,7 @@ export default function Checkout() {
               </p>
 
               <div className="apayField">
-                <label className="apayLabel" htmlFor="apay-otp">One-time code</label>
+                <label className="apayLabel apayRequired" htmlFor="apay-otp">One-time code</label>
                 <input
                   id="apay-otp"
                   className="apayInput apayOtpInput"

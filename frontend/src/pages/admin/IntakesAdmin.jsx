@@ -88,8 +88,8 @@ function NewIntakeForm({ onCancel, onCreated }) {
       {state.status === 'error' && <div className="ui-error">{state.error}</div>}
       <div className="dashFormGrid">
         <div className="ui-field">
-          <label htmlFor="intake-intake-type" className="ui-label">Intake type</label>
-          <select id="intake-intake-type" className="ui-input" value={form.intake_type} onChange={setField('intake_type')}>
+          <label htmlFor="intake-intake-type" className="ui-label ui-label-required">Intake type</label>
+          <select id="intake-intake-type" className="ui-input" value={form.intake_type} onChange={setField('intake_type')} required>
             {INTAKE_TYPES.map((t) => <option key={t} value={t}>{t.replace('_', ' ')}</option>)}
           </select>
         </div>

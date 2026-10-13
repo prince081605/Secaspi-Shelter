@@ -292,7 +292,7 @@ function UserProfile({ user, onProfileUpdated }) {
       {profileState.status === 'error' && <div className="ui-error">{profileState.error}</div>}
       <form onSubmit={handleProfileSubmit}>
         <div className="ui-field">
-          <label htmlFor="profile-full-name" className="ui-label">Full name</label>
+          <label htmlFor="profile-full-name" className="ui-label ui-label-required">Full name</label>
           <input id="profile-full-name" className="ui-input" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
         </div>
         <div className="ui-field">
@@ -309,15 +309,15 @@ function UserProfile({ user, onProfileUpdated }) {
       {passwordState.status === 'error' && <div className="ui-error">{passwordState.error}</div>}
       <form onSubmit={handlePasswordSubmit}>
         <div className="ui-field">
-          <label htmlFor="profile-current-password" className="ui-label">Current password</label>
+          <label htmlFor="profile-current-password" className="ui-label ui-label-required">Current password</label>
           <PasswordInput id="profile-current-password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} autoComplete="current-password" required />
         </div>
         <div className="ui-field">
-          <label htmlFor="profile-new-password" className="ui-label">New password</label>
+          <label htmlFor="profile-new-password" className="ui-label ui-label-required">New password</label>
           <PasswordInput id="profile-new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" required minLength={8} />
         </div>
         <div className="ui-field">
-          <label htmlFor="profile-confirm-new-password" className="ui-label">Confirm new password</label>
+          <label htmlFor="profile-confirm-new-password" className="ui-label ui-label-required">Confirm new password</label>
           <PasswordInput id="profile-confirm-new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" required minLength={8} />
         </div>
         <button className="ui-btn-primary" type="submit" disabled={passwordState.status === 'loading'}>
@@ -784,7 +784,7 @@ export default function Dashboard() {
               {activeNav === 'animals' ? <AnimalsAdmin isAdmin={isAdminRole} /> : null}
               {activeNav === 'requests' ? <AdoptionRequestsAdmin onUnreadChanged={fetchPendingCounts} /> : null}
               {activeNav === 'postadoption' ? <PostAdoptionAdmin onChanged={fetchPendingCounts} /> : null}
-              {activeNav === 'rescues' ? <RescueReportsAdmin onUnreadChanged={fetchPendingCounts} /> : null}
+              {activeNav === 'rescues' ? <RescueReportsAdmin isAdmin={isAdminRole} onUnreadChanged={fetchPendingCounts} /> : null}
               {activeNav === 'visitations' ? <VisitationsAdmin /> : null}
               {activeNav === 'messages' ? <Messages staff /> : null}
               {activeNav === 'reminders' ? <RemindersAdmin onChanged={fetchPendingCounts} /> : null}

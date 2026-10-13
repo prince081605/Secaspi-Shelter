@@ -240,6 +240,20 @@
 .aa-module .aa-import-table td:nth-child(3),
 .aa-module .aa-import-table td:nth-child(5) { white-space: normal; min-width: 90px; }
 .aa-import-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+/* Bulk photo update (AnimalPhotoBulk.jsx): one row per photo, its match beside it. */
+.aa-photo-list { list-style: none; margin: 0 0 12px; padding: 0; border: 1px solid var(--aa-line); border-radius: 10px; max-height: 520px; overflow-y: auto; }
+.aa-photo-row { display: grid; grid-template-columns: 56px minmax(0, 1fr) minmax(200px, 300px); gap: 12px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--aa-line); }
+.aa-photo-row:last-child { border-bottom: none; }
+.aa-photo-thumb { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; background: var(--aa-cream-2); }
+.aa-photo-info { min-width: 0; font-size: 13px; }
+.aa-photo-info .name { font-weight: 600; color: var(--aa-ink); overflow-wrap: anywhere; margin-bottom: 4px; }
+.aa-photo-select { width: 100%; }
+.aa-photo-main { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--aa-ink); cursor: pointer; }
+.aa-photo-main input { accent-color: var(--aa-terracotta); width: 16px; height: 16px; }
+@media (max-width: 640px) {
+  .aa-photo-row { grid-template-columns: 56px minmax(0, 1fr); }
+  .aa-photo-select { grid-column: 1 / -1; }
+}
 .aa-module .aa-import .dashBtn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
 .aa-module .aa-import .ui-success-msg { margin: 8px 0 14px; }
 

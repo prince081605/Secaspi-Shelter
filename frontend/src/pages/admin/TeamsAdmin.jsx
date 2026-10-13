@@ -40,7 +40,7 @@ function NewTeamForm({ onCreated }) {
     <form className="dashCard teams-new" onSubmit={submit}>
       <h3>New team</h3>
       {state.error && <div className="ui-error">{state.error}</div>}
-      <input className="ui-input" maxLength={100} required placeholder="Team name, e.g. Rescue Team Alpha" aria-label="Team name" value={name} onChange={(e) => setName(e.target.value)} />
+      <input className="ui-input" maxLength={100} required placeholder="Team name * (e.g. Rescue Team Alpha)" aria-label="Team name" value={name} onChange={(e) => setName(e.target.value)} />
       <input className="ui-input" maxLength={1000} placeholder="What the team does (optional)" aria-label="Team purpose" value={purpose} onChange={(e) => setPurpose(e.target.value)} />
       <button className="dashBtn dashBtnPrimary" type="submit" disabled={state.saving || !name.trim()}>
         <Plus size={15} aria-hidden="true" /> {state.saving ? 'Creating…' : 'Create team'}
@@ -211,7 +211,7 @@ function TeamDetail({ teamId, personnel, onChanged }) {
         <h4><ListChecks size={15} aria-hidden="true" /> Team tasks</h4>
         {team.is_active && team.members.length > 0 && (
           <form className="teams-inline" onSubmit={assignTask}>
-            <input className="ui-input" maxLength={150} required placeholder="Give the whole team a task, e.g. Clean the kennels" aria-label="Team task" value={task.task_name} onChange={(e) => setTask({ ...task, task_name: e.target.value })} />
+            <input className="ui-input" maxLength={150} required placeholder="Task for the whole team * (e.g. Clean the kennels)" aria-label="Team task" value={task.task_name} onChange={(e) => setTask({ ...task, task_name: e.target.value })} />
             <input className="ui-input teams-date" type="date" aria-label="Task date" value={task.assigned_date} onChange={(e) => setTask({ ...task, assigned_date: e.target.value })} />
             <button className="dashBtn dashBtnPrimary" type="submit" disabled={busy || !task.task_name.trim()}>Assign</button>
           </form>

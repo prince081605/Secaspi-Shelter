@@ -24,6 +24,7 @@ class CategoryOption extends Model
         'behavioral_issue' => ['name' => 'Behavioral issues', 'keyed' => false],
         'medical_record_type' => ['name' => 'Medical record types', 'keyed' => true, 'key_max' => 20],
         'valid_id_type' => ['name' => 'Valid ID types', 'keyed' => true, 'key_max' => 50],
+        'volunteer_category' => ['name' => 'Volunteer categories', 'keyed' => true, 'key_max' => 100],
     ];
 
     protected $fillable = ['type', 'value', 'label', 'sort_order', 'is_active'];

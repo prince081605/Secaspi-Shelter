@@ -35,6 +35,20 @@ class User extends Authenticatable
         ];
     }
 
+    /** Usernames: letters, numbers, spaces, dots, dashes and underscores — never an @, so a login can't be mistaken for an email. */
+    public const USERNAME_PATTERN = '/^[\pL\pN][\pL\pN ._-]*$/u';
+
+    /** The account for a login name: an email when it has an @, otherwise a username. Case doesn't matter. */
+    public static function findForLogin(string $login): ?self
+    {
+        $login = mb_strtolower(trim($login));
+        if ($login === '') {
+            return null;
+        }
+
+        return static::whereRaw(str_contains($login, '@') ? 'LOWER(email) = ?' : 'LOWER(username) = ?', [$login])->first();
+    }
+
     /**
      * Build a unique, system-assigned username from a person's full name in the
      * "First L." style (first name + the surname's leading initial) — e.g.

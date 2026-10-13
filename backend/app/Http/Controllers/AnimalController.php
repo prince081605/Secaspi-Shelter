@@ -275,12 +275,17 @@ class AnimalController extends Controller
         $validator = Validator::make($request->all(), [
             'photos' => ['required', 'array', 'min:1'],
             'photos.*' => ['image', 'max:5120'],
+            // The bulk photo update can make the new photo the one shown first.
+            'make_main' => ['sometimes', 'boolean'],
         ]);
 
         if ($validator->fails()) {
             return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
+        if ($request->boolean('make_main')) {
+            $animal->photos()->where('is_main', true)->update(['is_main' => false]);
+        }
         $hasMain = $animal->photos()->where('is_main', true)->exists();
         $created = [];
 

@@ -136,6 +136,7 @@ export default function VisitationBooking() {
             {error && <div className="ui-error">{error}</div>}
 
             <form onSubmit={handleSubmit}>
+              <p className="ui-required-note">Fields marked * are required.</p>
               <div className="ui-field">
                 <label htmlFor="visit-preferred-date" className="ui-label ui-label-required">Preferred date</label>
                 <input id="visit-preferred-date"

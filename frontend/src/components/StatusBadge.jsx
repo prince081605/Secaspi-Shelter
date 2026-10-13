@@ -33,6 +33,8 @@ const STATUS_VARIANTS = {
   medical: 'badgeOrange',
   quarantine: 'badgeOrange',
   archived: 'badgeOrange',
+  // A rescue report closed as fake, a duplicate or "animal not found".
+  invalid: 'badgeOrange',
 };
 
 export default function StatusBadge({ status, fallback = 'N/A' }) {

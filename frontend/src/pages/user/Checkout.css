@@ -150,6 +150,8 @@
   margin-bottom: 0.35rem;
 }
 
+.apayRequired::after { content: ' *'; color: var(--apay-brand); }
+
 .apayInput {
   width: 100%;
   padding: 0.75rem 0.9rem;

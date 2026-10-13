@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Support\EmailVerification;
 use App\Support\Mailer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -14,16 +15,22 @@ class AuthController extends Controller
 {
     public function login(Request $request)
     {
+        // People sign in with their email or their username. `email` is still accepted as the
+        // field name, so an older copy of the app keeps working.
         $validator = Validator::make($request->all(), [
-            'email' => ['required', 'email'],
+            'login' => ['required_without:email', 'nullable', 'string', 'max:255'],
+            'email' => ['required_without:login', 'nullable', 'string', 'max:255'],
             'password' => ['required', 'string'],
+        ], [
+            'login.required_without' => 'Enter your email or username.',
+            'email.required_without' => 'Enter your email or username.',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Invalid credentials', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
-        $user = User::where('email', $request->input('email'))->first();
+        $user = User::findForLogin((string) ($request->input('login') ?? $request->input('email')));
         if (! $user || ! Hash::check($request->input('password'), $user->password)) {
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
@@ -98,8 +105,8 @@ class AuthController extends Controller
 
         // Issue an email-verification token and send the confirmation link. `email_verified`
         // stays false (its DB default) until the user clicks through.
-        $token = $this->issueVerificationToken($user);
-        $verifyUrl = $this->sendVerificationEmail($user, $token);
+        $token = EmailVerification::issue($user);
+        $verifyUrl = EmailVerification::send($user, $token);
 
         $response = [
             'message' => 'Account created. Check your email to verify your address.',
@@ -183,8 +190,8 @@ class AuthController extends Controller
         $verifyUrl = null;
 
         if ($user && ! $user->email_verified) {
-            $token = $this->issueVerificationToken($user);
-            $verifyUrl = $this->sendVerificationEmail($user, $token);
+            $token = EmailVerification::issue($user);
+            $verifyUrl = EmailVerification::send($user, $token);
         }
 
         $response = [
@@ -196,47 +203,6 @@ class AuthController extends Controller
         }
 
         return response()->json($response);
-    }
-
-    /**
-     * Generate a fresh verification token, persist it (plus a 24h expiry) on the user, and
-     * return the plaintext token. The columns are guarded against mass assignment, so this
-     * writes them with forceFill.
-     */
-    private function issueVerificationToken(User $user): string
-    {
-        $token = Str::random(64);
-
-        $user->forceFill([
-            'email_verification_token' => $token,
-            'email_verification_token_expires_at' => now()->addDay(),
-        ])->save();
-
-        return $token;
-    }
-
-    /**
-     * Email the verification link and return the URL. A mail-transport failure is logged but
-     * never surfaced to the caller — registration must not 500 because SMTP is down.
-     */
-    private function sendVerificationEmail(User $user, string $token): string
-    {
-        $verifyUrl = rtrim(config('app.frontend_url'), '/')
-            .'/verify-email?email='.urlencode($user->email)
-            .'&token='.$token;
-
-        Mailer::send(
-            $user->email,
-            $user->full_name,
-            'Verify your SECASPI Shelter email',
-            "Hi {$user->full_name},\n\n"
-            .'Welcome to SECASPI Shelter! Please confirm your email address by opening the '
-            ."link below (valid for 24 hours):\n\n"
-            ."{$verifyUrl}\n\n"
-            ."If you didn't create this account, you can safely ignore this email."
-        );
-
-        return $verifyUrl;
     }
 
     public function forgotPassword(Request $request)

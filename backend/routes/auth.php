@@ -4,8 +4,10 @@ use App\Http\Controllers\AdoptionApplicationController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AnimalController;
 use App\Http\Controllers\AnimalImportController;
+use App\Http\Controllers\AnimalPhotoMatchController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BlockedReporterController;
 use App\Http\Controllers\CategoryOptionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DonationController;
@@ -120,6 +122,10 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('/rescue-reports', [RescueReportController::class, 'index'])->middleware('role:staff');
     Route::post('/rescue-reports/{report}/status', [RescueReportController::class, 'updateStatus'])->middleware('role:staff');
     Route::post('/rescue-reports/{report}/read', [RescueReportController::class, 'adminMarkRead'])->middleware('role:staff');
+    // Blocking a reporter who sends fake reports is an admin call; staff can still close those reports as invalid.
+    Route::post('/rescue-reports/{report}/block', [BlockedReporterController::class, 'store'])->middleware('admin');
+    Route::get('/admin/blocked-reporters', [BlockedReporterController::class, 'index'])->middleware('admin');
+    Route::delete('/admin/blocked-reporters/{blockedReporter}', [BlockedReporterController::class, 'destroy'])->middleware('admin');
     Route::put('/profile', [ProfileController::class, 'update']);
     Route::post('/profile/change-password', [ProfileController::class, 'changePassword']);
 
@@ -155,6 +161,8 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('/admin/animals/stats', [AnimalController::class, 'adminStats'])->middleware('role:staff');
     // ---- Bulk import from Excel ---- admin-only; preview checks every row and saves nothing.
     // Kept above /admin/animals/{animal} alongside "stats", for the same reason.
+    // Bulk photo update: match file names to animals; the photos then go through /animals/{animal}/photos.
+    Route::post('/admin/animals/photos/match', [AnimalPhotoMatchController::class, 'match'])->middleware(['admin', 'throttle:30,1']);
     Route::get('/admin/animals/import/template', [AnimalImportController::class, 'template'])->middleware('admin');
     Route::post('/admin/animals/import/preview', [AnimalImportController::class, 'preview'])->middleware(['admin', 'throttle:20,1']);
     Route::post('/admin/animals/import', [AnimalImportController::class, 'store'])->middleware(['admin', 'throttle:20,1']);
@@ -190,6 +198,8 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     // ---- User management (Phase 6) ---- admin only
     Route::get('/admin/users', [UserController::class, 'adminIndex'])->middleware('admin');
     Route::put('/admin/users/{user}', [UserController::class, 'adminUpdate'])->middleware('admin');
+    // Email and username are changed by an admin only (panel note): people sign in with either.
+    Route::put('/admin/users/{user}/login', [UserController::class, 'adminUpdateLogin'])->middleware('admin');
 
     // ---- Admin dashboard overview (Phase 6) ----
     Route::get('/admin/dashboard/overview', [DashboardController::class, 'adminOverview'])->middleware('role:staff');

@@ -58,7 +58,7 @@ function Step({ number, title, children }) {
  * import. Nothing is saved until the admin confirms; rows with problems and possible duplicates
  * are skipped (a duplicate can be ticked "Import anyway"). Photos are added afterwards, per animal.
  */
-export default function AnimalImport({ onImported, onClose }) {
+export default function AnimalImport({ onImported, onClose, onAddPhotos }) {
   const confirm = useConfirm();
   const isMobile = useIsMobile();
   const inputRef = useRef(null);
@@ -149,7 +149,7 @@ export default function AnimalImport({ onImported, onClose }) {
       title: `Import ${plural(importCount, 'animal')}?`,
       message:
         'They are added to the shelter straight away, and animals with the status Available appear on the public adoption page. ' +
-        'Existing animals are not changed. Photos are added afterwards from Manage → Photos.',
+        'Existing animals are not changed. Photos are added afterwards with “Update photos in bulk” or Manage → Photos.',
       confirmLabel: `Import ${plural(importCount, 'animal')}`,
       summary: [
         { label: 'Will be imported', value: importCount.toLocaleString() },
@@ -212,7 +212,7 @@ export default function AnimalImport({ onImported, onClose }) {
       </Step>
 
       {phase === 'done' && result ? (
-        <ImportResult result={result} onAgain={startOver} onClose={onClose} />
+        <ImportResult result={result} onAgain={startOver} onClose={onClose} onAddPhotos={onAddPhotos} />
       ) : (
         <>
           <Step number={2} title="Upload your filled-in file">
@@ -396,7 +396,7 @@ export default function AnimalImport({ onImported, onClose }) {
   );
 }
 
-function ImportResult({ result, onAgain, onClose }) {
+function ImportResult({ result, onAgain, onClose, onAddPhotos }) {
   const { summary } = result;
   return (
     <section className="aa-import-step aa-import-result" aria-live="polite">
@@ -437,10 +437,11 @@ function ImportResult({ result, onAgain, onClose }) {
         )}
 
         <p className="ui-muted">
-          Next: add photos for the new animals from Manage → Photos. Each animal’s QR code is created automatically.
+          Next: add photos for the new animals, all at once with “Update photos in bulk” or one by one from Manage → Photos. Each animal’s QR code is created automatically.
         </p>
         <div className="aa-import-actions">
-          <button type="button" className="dashBtn dashBtnPrimary" onClick={onAgain}>Import another file</button>
+          {onAddPhotos && <button type="button" className="dashBtn dashBtnPrimary" onClick={onAddPhotos}>Add their photos</button>}
+          <button type="button" className="dashBtn" onClick={onAgain}>Import another file</button>
           <button type="button" className="dashBtn" onClick={onClose}>Close</button>
         </div>
       </div>

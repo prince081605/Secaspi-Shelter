@@ -17,10 +17,13 @@ class VolunteerApplication extends Model
         'status',
         'admin_notes',
         'read_at',
+        'preferred_categories',
     ];
 
     protected $casts = [
         'read_at' => 'datetime',
+        // What the applicant would like to help with ('volunteer_category' keys).
+        'preferred_categories' => 'array',
     ];
 
     public function user()

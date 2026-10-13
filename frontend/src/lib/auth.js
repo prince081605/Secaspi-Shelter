@@ -3,8 +3,9 @@ import { api, setAuthToken } from './api';
 // `human` on login/register/forgotPassword is useHumanCheck().fields — the CAPTCHA token and
 // the honeypot those endpoints check before anything else.
 export const auth = {
-  async login(email, password, human = {}) {
-    const data = await api.post('/api/login', { email, password, ...human });
+  // `login` is the email or the username — the server works out which.
+  async login(login, password, human = {}) {
+    const data = await api.post('/api/login', { login, password, ...human });
     if (data?.token) setAuthToken(data.token);
     return data;
   },

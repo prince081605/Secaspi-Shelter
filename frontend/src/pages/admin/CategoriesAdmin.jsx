@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Brain, Cat, Check, Dog, Eye, EyeOff, IdCard, MapPin, Pencil, Plus, Search, Stethoscope, Tags, Trash2, X } from 'lucide-react';
+import { Brain, Cat, Check, Dog, Eye, EyeOff, HandHeart, IdCard, MapPin, Pencil, Plus, Search, Stethoscope, Tags, Trash2, X } from 'lucide-react';
 import {
   adminAddCategoryOption,
   adminDeleteCategoryOption,
@@ -38,6 +38,11 @@ const LISTS = [
     type: 'valid_id_type', label: 'Valid ID types', icon: IdCard,
     about: 'The IDs adoption and volunteer applicants can choose from.',
     renames: (n) => `The ${plural(n, 'application')} that used this ID will show the new name.`,
+  },
+  {
+    type: 'volunteer_category', label: 'Volunteer categories', icon: HandHeart,
+    about: 'What personnel help with. Volunteer applicants pick the ones they’d like, and staff assign them under Personnel, where the list can be filtered by them.',
+    renames: (n) => `The ${n === 1 ? 'person' : `${n} people`} in this category will show the new name.`,
   },
 ];
 

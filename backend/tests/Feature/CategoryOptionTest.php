@@ -43,7 +43,7 @@ class CategoryOptionTest extends TestCase
     {
         $lists = $this->getJson('/api/categories')->assertOk()->json('categories');
 
-        $this->assertSame(['dog_breed', 'cat_breed', 'behavioral_issue', 'medical_record_type', 'valid_id_type'], array_keys($lists));
+        $this->assertSame(['dog_breed', 'cat_breed', 'behavioral_issue', 'medical_record_type', 'valid_id_type', 'volunteer_category'], array_keys($lists));
         $this->assertSame(['Aspin', 'Aspin mix'], array_column(array_slice($lists['dog_breed'], 0, 2), 'label'));
         $this->assertSame('Puspin', $lists['cat_breed'][0]['label']);
         $this->assertCount(18, $lists['behavioral_issue']);

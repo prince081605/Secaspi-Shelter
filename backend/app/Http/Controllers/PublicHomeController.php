@@ -42,7 +42,7 @@ class PublicHomeController extends Controller
 
         $medicalTreatments = DB::table('medical_records')->count();
 
-        $rescueReportsHandled = DB::table('rescue_reports')->count();
+        $rescueReportsHandled = DB::table('rescue_reports')->where('status', '!=', 'invalid')->count(); // not fake/duplicate ones
 
         return response()->json([
             'items' => [
@@ -72,7 +72,7 @@ class PublicHomeController extends Controller
         $animalsRescued = DB::table('animals')->count();
         $animalsAdopted = DB::table('animals')->where('status', 'adopted')->count();
         $donationsRaised = (float) DB::table('donations')->where('status', 'verified')->sum('amount');
-        $rescueReportsHandled = DB::table('rescue_reports')->count();
+        $rescueReportsHandled = DB::table('rescue_reports')->where('status', '!=', 'invalid')->count(); // not fake/duplicate ones
         $volunteersCount = DB::table('volunteers')->count();
 
         $completedApplications = DB::table('adoption_applications')->where('status', 'completed')->count();

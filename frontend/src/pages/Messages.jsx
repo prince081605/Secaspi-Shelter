@@ -130,9 +130,11 @@ export default function Messages({ staff = false }) {
           {composing ? (
             <form onSubmit={sendNew}>
               <h3 className="dashSectionTitle" style={{ fontSize: 14, marginTop: 0 }}>New message to the shelter</h3>
-              <input className="ui-input" placeholder="Subject" style={{ marginBottom: 8 }}
+              <label htmlFor="msg-subject" className="ui-label ui-label-required">Subject</label>
+              <input id="msg-subject" className="ui-input" style={{ marginBottom: 8 }} required maxLength={150}
                 value={newMsg.subject} onChange={(e) => setNewMsg((m) => ({ ...m, subject: e.target.value }))} />
-              <textarea className="ui-input" placeholder="Write your message…" rows={5}
+              <label htmlFor="msg-body" className="ui-label ui-label-required">Message</label>
+              <textarea id="msg-body" className="ui-input" placeholder="Write your message…" rows={5} required maxLength={5000}
                 value={newMsg.body} onChange={(e) => setNewMsg((m) => ({ ...m, body: e.target.value }))} />
               <div style={{ marginTop: 8 }}>
                 <button className="dashBtn dashBtnPrimary" type="submit">Send</button>
@@ -151,7 +153,7 @@ export default function Messages({ staff = false }) {
                 ))}
               </div>
               <form className="msgComposer" onSubmit={sendReply}>
-                <input className="ui-input" placeholder="Type a reply…" value={reply} onChange={(e) => setReply(e.target.value)} />
+                <input className="ui-input" placeholder="Type a reply…" aria-label="Reply" required maxLength={5000} value={reply} onChange={(e) => setReply(e.target.value)} />
                 <button className="dashBtn dashBtnPrimary" type="submit">Send</button>
               </form>
             </>

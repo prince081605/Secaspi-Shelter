@@ -24,3 +24,17 @@ export async function adminUpdateRescueReport(id, payload) {
 export async function adminMarkRescueReportRead(id) {
   return api.post(`/api/rescue-reports/${id}/read`);
 }
+
+// ---- Admin: reporters who send fake reports ----
+
+export async function adminBlockReporter(reportId, reason) {
+  return api.post(`/api/rescue-reports/${reportId}/block`, { reason });
+}
+
+export async function adminListBlockedReporters() {
+  return api.get('/api/admin/blocked-reporters');
+}
+
+export async function adminUnblockReporter(id) {
+  return api.delete(`/api/admin/blocked-reporters/${id}`);
+}

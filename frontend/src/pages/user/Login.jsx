@@ -14,7 +14,7 @@ export default function Login() {
   // started rather than being dropped on the dashboard. Plain visits to /login have no state.
   const from = location.state?.from;
 
-  const [email, setEmail] = useState('');
+  const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -29,7 +29,7 @@ export default function Login() {
     setLoading(true);
     setError('');
     try {
-      await auth.login(email, password, human.fields);
+      await auth.login(login, password, human.fields);
       navigate(from || '/dashboard', { replace: true });
     } catch (err) {
       setError(err.message || 'Login failed');
@@ -48,8 +48,8 @@ export default function Login() {
       {error ? <div className="ui-error">{error}</div> : null}
       <form onSubmit={onSubmit}>
         <div className="ui-field">
-          <label htmlFor="login-email" className="ui-label ui-label-required">Email</label>
-          <input id="login-email" className="ui-input" value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="email" required />
+          <label htmlFor="login-email" className="ui-label ui-label-required">Email or username</label>
+          <input id="login-email" className="ui-input" value={login} onChange={(e) => setLogin(e.target.value)} type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} placeholder="you@example.com or your username" required />
         </div>
         <div className="ui-field">
           <label htmlFor="login-password" className="ui-label ui-label-required">Password</label>

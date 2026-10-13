@@ -96,7 +96,7 @@ export default function ShelterLocationsManager({ onChanged }) {
         ))}
       </ul>
       <form onSubmit={add} style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        <input className="ui-input" style={{ maxWidth: 220 }} maxLength={100} placeholder="New area, e.g. Kennel 3" value={newName} onChange={(e) => setNewName(e.target.value)} required />
+        <input className="ui-input" style={{ maxWidth: 220 }} maxLength={100} placeholder="New area name * (e.g. Kennel 3)" required value={newName} onChange={(e) => setNewName(e.target.value)} required />
         <button className="dashBtn dashBtnPrimary" type="submit" disabled={!newName.trim()}>+ Add area</button>
       </form>
     </div>

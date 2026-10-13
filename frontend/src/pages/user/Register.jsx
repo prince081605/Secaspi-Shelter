@@ -91,7 +91,7 @@ export default function Register() {
           <label htmlFor="register-your-username" className="ui-label">Your username</label>
           <input id="register-your-username" className="ui-input" value={created.username || ''} readOnly />
           <p className="ui-muted" style={{ marginTop: '0.4rem', fontSize: '0.85rem' }}>
-            This is your unique display name. You log in with your email.
+            You can log in with this username or your email.
           </p>
         </div>
         {resendMsg ? <div className="ui-success-msg" style={{ marginBottom: '0.75rem' }}>{resendMsg}</div> : null}
@@ -122,6 +122,7 @@ export default function Register() {
     >
       {error ? <div className="ui-error">{error}</div> : null}
       <form onSubmit={onSubmit}>
+        <p className="ui-required-note">Fields marked * are required.</p>
         <div className="ui-field">
           <label htmlFor="register-full-name" className="ui-label ui-label-required">Full name</label>
           <input id="register-full-name" className="ui-input" value={name} onChange={(e) => setName(e.target.value)} type="text" autoComplete="name" required />
@@ -130,7 +131,7 @@ export default function Register() {
           <label htmlFor="register-username" className="ui-label">Username (auto-generated)</label>
           <input id="register-username" className="ui-input" value={username} placeholder="Filled in from your name" readOnly />
           <p className="ui-muted" style={{ marginTop: '0.4rem', fontSize: '0.85rem' }}>
-            We create a unique username for you from your name.
+            We create a unique username for you from your name. You can log in with it or your email.
           </p>
         </div>
         <div className="ui-field">

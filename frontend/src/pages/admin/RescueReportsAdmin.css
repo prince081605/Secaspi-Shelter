@@ -1,0 +1,21 @@
+/* Rescue Reports (RescueReportsAdmin.jsx): screening notes, flags, closing as invalid and the
+   blocked-reporters list. Uses the global theme tokens. */
+.rr-screening {
+  display: grid; gap: 4px; margin-bottom: 10px; padding: 10px 12px;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--bg-soft);
+  font-size: 0.92rem; color: var(--ink-soft);
+}
+.rr-screening-warn { border-color: var(--danger); background: var(--danger-soft); }
+
+.rr-flags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.rr-flag { font-size: 11px; padding: 3px 8px; }
+
+.rr-invalid-form {
+  margin-top: 10px; padding: 12px; border: 1px dashed var(--line); border-radius: 10px;
+}
+
+.rr-blocked { margin-top: 18px; }
+.rr-blocked summary {
+  cursor: pointer; font-weight: 700; color: var(--ink); padding: 8px 0;
+}
+.rr-blocked summary:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; border-radius: 6px; }

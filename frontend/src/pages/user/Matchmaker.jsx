@@ -67,11 +67,12 @@ export default function Matchmaker() {
           <div className="mmForm">
             {QUESTIONS.map((q) => (
               <div className="mmField" key={q.key}>
-                <label htmlFor={q.key}>{q.label}</label>
+                <label htmlFor={q.key} className="ui-label-required">{q.label}</label>
                 <select
                   id={q.key}
                   className="ui-select"
                   value={answers[q.key]}
+                  required
                   onChange={(e) => setAnswers((a) => ({ ...a, [q.key]: e.target.value }))}
                 >
                   {q.options.map(([val, lbl]) => <option key={val} value={val}>{lbl}</option>)}

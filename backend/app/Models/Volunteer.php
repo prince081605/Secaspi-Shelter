@@ -12,9 +12,12 @@ class Volunteer extends Model
         'type',
         'availability',
         'performance_notes',
+        'categories',
     ];
 
     protected $casts = [
+        // Keys from the managed 'volunteer_category' list: what this person helps with.
+        'categories' => 'array',
         'hours_rendered' => 'float',
         'hours_adjustment' => 'float',
     ];

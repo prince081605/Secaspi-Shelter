@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from 'react';
-import { PawPrint, Dog, Syringe, Pill, Search, X, MapPin, FileSpreadsheet } from 'lucide-react';
+import { PawPrint, Dog, Syringe, Pill, Search, X, MapPin, FileSpreadsheet, Images } from 'lucide-react';
 import {
   adminListAnimals,
   adminGetAnimalStats,
@@ -27,6 +27,7 @@ import AnimalLocationPanel from '../../components/AnimalLocationPanel';
 import ShelterLocationsManager from './ShelterLocationsManager';
 import ActionMenu from '../../components/ActionMenu';
 import AnimalImport from './AnimalImport';
+import AnimalPhotoBulk from './AnimalPhotoBulk';
 import BreedInput from '../../components/BreedInput';
 import PhotoInput from '../../components/PhotoInput';
 import { optionLabel, useCategories, visibleOptions } from '../../lib/categoriesApi';
@@ -723,6 +724,7 @@ export default function AnimalsAdmin({ isAdmin = false }) {
   const [locationOpenFor, setLocationOpenFor] = useState(null);
   const [showLocations, setShowLocations] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showBulkPhotos, setShowBulkPhotos] = useState(false);
   const [locations, setLocations] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [viewMode, setViewMode] = useState('table');
@@ -879,14 +881,23 @@ export default function AnimalsAdmin({ isAdmin = false }) {
             <button
               className="dashBtn"
               aria-expanded={showImport}
-              onClick={() => { setShowImport((v) => !v); setShowCreate(false); }}
+              onClick={() => { setShowImport((v) => !v); setShowCreate(false); setShowBulkPhotos(false); }}
             >
               <FileSpreadsheet size={15} style={{ verticalAlign: '-3px' }} /> {showImport ? 'Close import' : 'Import from Excel'}
             </button>
           )}
+          {isAdmin && (
+            <button
+              className="dashBtn"
+              aria-expanded={showBulkPhotos}
+              onClick={() => { setShowBulkPhotos((v) => !v); setShowImport(false); setShowCreate(false); }}
+            >
+              <Images size={15} style={{ verticalAlign: '-3px' }} /> {showBulkPhotos ? 'Close photos' : 'Update photos in bulk'}
+            </button>
+          )}
           <button
             className="dashBtn dashBtnPrimary"
-            onClick={() => { setShowCreate((v) => !v); setEditingAnimal(null); setShowImport(false); }}
+            onClick={() => { setShowCreate((v) => !v); setEditingAnimal(null); setShowImport(false); setShowBulkPhotos(false); }}
           >
             {showCreate ? 'Close' : '+ Add Animal'}
           </button>
@@ -894,7 +905,8 @@ export default function AnimalsAdmin({ isAdmin = false }) {
       </div>
 
       {isAdmin && showLocations && <ShelterLocationsManager onChanged={refresh} />}
-      {isAdmin && showImport && <AnimalImport onImported={refresh} onClose={() => setShowImport(false)} />}
+      {isAdmin && showImport && <AnimalImport onImported={refresh} onClose={() => setShowImport(false)} onAddPhotos={() => { setShowImport(false); setShowBulkPhotos(true); }} />}
+      {isAdmin && showBulkPhotos && <AnimalPhotoBulk onUploaded={refresh} onClose={() => setShowBulkPhotos(false)} />}
 
       {error && <div className="ui-error">{error}</div>}
 

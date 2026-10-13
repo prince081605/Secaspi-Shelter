@@ -30,7 +30,10 @@ class VolunteerApplicationController extends Controller
             // they are. 5 MB matches every other upload in the app.
             'valid_id_type' => ['required', Rule::in(CategoryOption::activeValues('valid_id_type'))],
             'valid_id_image' => ['required', 'image', 'max:5120'],
-        ]);
+            // What they'd like to help with. Optional; staff assign the final categories.
+            'preferred_categories' => ['nullable', 'array'],
+            'preferred_categories.*' => ['string', Rule::in(CategoryOption::activeValues('volunteer_category'))],
+        ], ['preferred_categories.*.in' => 'Choose the areas you would like to help with from the list.']);
 
         if ($validator->fails()) {
             return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
@@ -65,6 +68,7 @@ class VolunteerApplicationController extends Controller
                 'reason' => $data['reason'],
                 'valid_id_type' => $data['valid_id_type'],
                 'valid_id_path' => $idPath,
+                'preferred_categories' => array_values(array_unique($data['preferred_categories'] ?? [])) ?: null,
             ]);
         } catch (\Throwable $e) {
             if ($idPath) {
@@ -134,9 +138,10 @@ class VolunteerApplicationController extends Controller
         // Approving onboards the applicant: create a Volunteer (carrying their stated
         // availability) and promote their role. Mirrors VolunteerController@adminStore.
         if ($statusChanged && $application->status === 'approved') {
+            // Their preferred categories become their starting categories; staff can change them.
             $volunteer = Volunteer::firstOrCreate(
                 ['user_id' => $application->user_id],
-                ['availability' => $application->availability]
+                ['availability' => $application->availability, 'categories' => $application->preferred_categories]
             );
 
             // role isn't mass-assignable (privilege-escalation guard), so forceFill it —
@@ -170,6 +175,7 @@ class VolunteerApplicationController extends Controller
             'availability' => $a->availability,
             'experience' => $a->experience,
             'reason' => $a->reason,
+            'preferred_categories' => $a->preferred_categories ?? [],
             'status' => $a->status,
             'admin_notes' => $a->admin_notes,
             'created_at' => $a->created_at,
