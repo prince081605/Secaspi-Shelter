@@ -14,8 +14,3 @@ export async function adminListUsers(params = {}) {
 export async function adminUpdateUser(id, payload) {
   return api.put(`/api/admin/users/${id}`, payload);
 }
-
-// Email and username — admins only. A new email has to be confirmed again.
-export async function adminUpdateUserLogin(id, payload) {
-  return api.put(`/api/admin/users/${id}/login`, payload);
-}

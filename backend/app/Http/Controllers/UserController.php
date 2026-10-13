@@ -4,8 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Volunteer;
-use App\Support\EmailVerification;
-use App\Support\Mailer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -37,7 +35,17 @@ class UserController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        $users->getCollection()->transform(fn (User $u) => $this->toItem($u));
+        $users->getCollection()->transform(fn (User $u) => [
+            'id' => $u->id,
+            'full_name' => $u->full_name,
+            'username' => $u->username,
+            'email' => $u->email,
+            'phone' => $u->phone,
+            'role' => $u->role,
+            'status' => $u->status,
+            'suspension_reason' => $u->suspension_reason,
+            'email_verified' => (bool) $u->email_verified,
+        ]);
 
         return response()->json($users);
     }
@@ -102,87 +110,18 @@ class UserController extends Controller
             }
         }
 
-        return response()->json(['user' => $this->toItem($user)]);
-    }
-
-    /**
-     * Change an account's email and/or username — admins only; nobody changes their own email.
-     * A new email has to be confirmed again: the link goes to the new address, and the old one
-     * is told about the change in case it wasn't expected.
-     */
-    public function adminUpdateLogin(Request $request, User $user)
-    {
-        $validator = Validator::make($request->all(), [
-            'email' => ['required', 'email', 'max:255'],
-            'username' => ['required', 'string', 'min:3', 'max:60', 'regex:'.User::USERNAME_PATTERN],
-        ], [
-            'username.regex' => 'A username can use letters, numbers, spaces, dots, dashes and underscores, but not @.',
-            'username.min' => 'A username needs at least 3 characters.',
+        return response()->json([
+            'user' => [
+                'id' => $user->id,
+                'full_name' => $user->full_name,
+                'username' => $user->username,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'role' => $user->role,
+                'status' => $user->status,
+                'suspension_reason' => $user->suspension_reason,
+                'email_verified' => (bool) $user->email_verified,
+            ],
         ]);
-        if ($validator->fails()) {
-            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
-        }
-
-        $email = trim($validator->validated()['email']);
-        $username = trim((string) preg_replace('/\s+/u', ' ', $validator->validated()['username']));
-
-        // Unique whatever the letter case, so two accounts can't differ only by capitals.
-        $taken = fn (string $column, string $value) => User::whereRaw("LOWER({$column}) = ?", [mb_strtolower($value)])
-            ->whereKeyNot($user->id)->exists();
-        if ($taken('email', $email)) {
-            return response()->json(['message' => 'Another account already uses this email.', 'errors' => ['email' => ['Another account already uses this email.']]], 422);
-        }
-        if ($taken('username', $username)) {
-            return response()->json(['message' => 'Another account already uses this username.', 'errors' => ['username' => ['Another account already uses this username.']]], 422);
-        }
-
-        $oldEmail = $user->email;
-        $emailChanged = mb_strtolower($email) !== mb_strtolower((string) $oldEmail);
-
-        $user->forceFill(['username' => $username, 'email' => $email]);
-        if ($emailChanged) {
-            $user->forceFill(['email_verified' => false]);
-        }
-        $user->save();
-
-        $verifyUrl = null;
-        if ($emailChanged) {
-            $verifyUrl = EmailVerification::send($user, EmailVerification::issue($user), changedByAdmin: true);
-
-            if ($oldEmail) {
-                Mailer::send(
-                    $oldEmail,
-                    $user->full_name,
-                    'Your SECASPI Shelter email was changed',
-                    "Hi {$user->full_name},\n\n"
-                    ."A SECASPI Shelter administrator changed the email on your account from this address to {$email}. "
-                    ."From now on, sign in with the new email or your username.\n\n"
-                    ."If you didn't expect this, please contact the shelter."
-                );
-            }
-        }
-
-        $response = ['user' => $this->toItem($user->fresh()), 'email_changed' => $emailChanged];
-        // Local dev sends mail to the log, so hand back the link to try the flow — as register() does.
-        if ($verifyUrl && app()->environment('local')) {
-            $response['verify_url'] = $verifyUrl;
-        }
-
-        return response()->json($response);
-    }
-
-    private function toItem(User $user): array
-    {
-        return [
-            'id' => $user->id,
-            'full_name' => $user->full_name,
-            'username' => $user->username,
-            'email' => $user->email,
-            'phone' => $user->phone,
-            'role' => $user->role,
-            'status' => $user->status,
-            'suspension_reason' => $user->suspension_reason,
-            'email_verified' => (bool) $user->email_verified,
-        ];
     }
 }

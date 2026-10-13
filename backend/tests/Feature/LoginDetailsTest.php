@@ -8,8 +8,8 @@ use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /**
- * People sign in with their email or their username, and only an admin changes an account's
- * email or username.
+ * People sign in with their email or their username, so the admin account doesn't have to use
+ * an address like admin@gmail.com. Nobody's email is changed from the admin side.
  */
 class LoginDetailsTest extends TestCase
 {
@@ -30,59 +30,26 @@ class LoginDetailsTest extends TestCase
             ->assertJsonPath('message', 'Enter your email or username.');
     }
 
-    public function test_an_admin_changes_email_and_username(): void
+    public function test_the_admin_signs_in_with_a_username(): void
     {
-        $user = User::factory()->create(['email' => 'old@example.com', 'username' => 'Maria S.', 'email_verified' => true]);
-        Sanctum::actingAs(User::factory()->admin()->create());
+        User::factory()->admin()->create(['email' => 'admin@gmail.com', 'username' => 'Admin']);
 
-        $this->putJson("/api/admin/users/{$user->id}/login", ['email' => 'new@example.com', 'username' => 'maria.santos'])
+        $this->postJson('/api/login', ['login' => 'Admin', 'password' => 'password'])
             ->assertOk()
-            ->assertJsonPath('email_changed', true)
-            ->assertJsonPath('user.email', 'new@example.com')
-            ->assertJsonPath('user.username', 'maria.santos')
-            // The new address has to be confirmed again.
-            ->assertJsonPath('user.email_verified', false);
-
-        $this->app['auth']->forgetGuards();
-        $this->postJson('/api/login', ['login' => 'maria.santos', 'password' => 'password'])->assertOk();
-        $this->postJson('/api/login', ['login' => 'old@example.com', 'password' => 'password'])->assertStatus(401);
+            ->assertJsonPath('user.role', 'admin');
     }
 
-    public function test_username_only_change_keeps_the_email_verified(): void
+    public function test_emails_are_not_changed_from_the_admin_side_or_the_profile(): void
     {
-        $user = User::factory()->create(['email' => 'ana@example.com', 'username' => 'Ana R.', 'email_verified' => true]);
+        $user = User::factory()->create(['email' => 'mine@example.com']);
+
         Sanctum::actingAs(User::factory()->admin()->create());
+        $this->putJson("/api/admin/users/{$user->id}/login", ['email' => 'new@example.com', 'username' => 'Someone'])->assertNotFound();
+        $this->putJson("/api/admin/users/{$user->id}", ['email' => 'new@example.com'])->assertOk();
 
-        $this->putJson("/api/admin/users/{$user->id}/login", ['email' => 'ANA@example.com', 'username' => 'Ana Reyes'])
-            ->assertOk()
-            ->assertJsonPath('email_changed', false)
-            ->assertJsonPath('user.email_verified', true);
-    }
-
-    public function test_taken_or_invalid_details_are_refused(): void
-    {
-        User::factory()->create(['email' => 'taken@example.com', 'username' => 'Taken']);
-        $user = User::factory()->create(['email' => 'me@example.com', 'username' => 'Me Myself']);
-        Sanctum::actingAs(User::factory()->admin()->create());
-
-        $this->putJson("/api/admin/users/{$user->id}/login", ['email' => 'TAKEN@example.com', 'username' => 'Me Myself'])
-            ->assertStatus(422)->assertJsonPath('message', 'Another account already uses this email.');
-        $this->putJson("/api/admin/users/{$user->id}/login", ['email' => 'me@example.com', 'username' => 'taken'])
-            ->assertStatus(422)->assertJsonPath('message', 'Another account already uses this username.');
-        $this->putJson("/api/admin/users/{$user->id}/login", ['email' => 'me@example.com', 'username' => 'me@home'])
-            ->assertStatus(422)->assertJsonValidationErrors('username');
-    }
-
-    public function test_only_admins_change_login_details(): void
-    {
-        $user = User::factory()->create();
-
-        Sanctum::actingAs(User::factory()->staff()->create());
-        $this->putJson("/api/admin/users/{$user->id}/login", ['email' => 'x@example.com', 'username' => 'Someone'])->assertForbidden();
-
-        // Nobody changes their own email from their profile.
         Sanctum::actingAs($user);
-        $this->putJson('/api/profile', ['full_name' => $user->full_name, 'email' => 'mine@example.com'])->assertOk();
-        $this->assertDatabaseMissing('users', ['email' => 'mine@example.com']);
+        $this->putJson('/api/profile', ['full_name' => $user->full_name, 'email' => 'other@example.com'])->assertOk();
+
+        $this->assertDatabaseHas('users', ['id' => $user->id, 'email' => 'mine@example.com']);
     }
 }

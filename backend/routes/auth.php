@@ -198,8 +198,6 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     // ---- User management (Phase 6) ---- admin only
     Route::get('/admin/users', [UserController::class, 'adminIndex'])->middleware('admin');
     Route::put('/admin/users/{user}', [UserController::class, 'adminUpdate'])->middleware('admin');
-    // Email and username are changed by an admin only (panel note): people sign in with either.
-    Route::put('/admin/users/{user}/login', [UserController::class, 'adminUpdateLogin'])->middleware('admin');
 
     // ---- Admin dashboard overview (Phase 6) ----
     Route::get('/admin/dashboard/overview', [DashboardController::class, 'adminOverview'])->middleware('role:staff');

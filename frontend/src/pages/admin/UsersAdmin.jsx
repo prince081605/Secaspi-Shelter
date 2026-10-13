@@ -1,5 +1,5 @@
-import { Fragment, useEffect, useState } from 'react';
-import { adminListUsers, adminUpdateUser, adminUpdateUserLogin } from '../../lib/usersApi';
+import { useEffect, useState } from 'react';
+import { adminListUsers, adminUpdateUser } from '../../lib/usersApi';
 import { Users } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import useConfirm from '../../lib/useConfirm';
@@ -8,78 +8,6 @@ import useIsMobile from '../../lib/useIsMobile';
 
 const ROLES = ['admin', 'staff', 'volunteer', 'user'];
 const STATUSES = ['active', 'suspended', 'pending'];
-
-// Email and username are changed here, by an admin only. A new email has to be confirmed again:
-// the link goes to the new address, and the old one is told about the change.
-function LoginDetailsForm({ user, onSaved, onCancel }) {
-  const confirm = useConfirm();
-  const [email, setEmail] = useState(user.email || '');
-  const [username, setUsername] = useState(user.username || '');
-  const [state, setState] = useState({ status: 'idle', error: '' });
-  const emailChanged = email.trim().toLowerCase() !== (user.email || '').toLowerCase();
-  const usernameChanged = username.trim() !== (user.username || '');
-
-  const submit = async (e) => {
-    e.preventDefault();
-    if (!emailChanged && !usernameChanged) {
-      onCancel();
-      return;
-    }
-    const ok = await confirm({
-      title: `Change ${user.full_name}’s login details?`,
-      message: emailChanged
-        ? 'A confirmation link goes to the new email, and the old email is told about the change. They sign in with the new email or their username.'
-        : 'They sign in with their email or this username.',
-      confirmLabel: 'Save login details',
-      summary: [
-        { label: 'Email', value: emailChanged ? `${user.email} → ${email.trim()}` : '' },
-        { label: 'Username', value: usernameChanged ? `${user.username || '—'} → ${username.trim()}` : '' },
-      ],
-    });
-    if (!ok) return;
-    setState({ status: 'loading', error: '' });
-    try {
-      const res = await adminUpdateUserLogin(user.id, { email: email.trim(), username: username.trim() });
-      onSaved(res?.email_changed ? `Saved. A confirmation link was sent to ${res.user.email}.` : 'Login details saved.');
-    } catch (err) {
-      setState({ status: 'error', error: err?.message || 'Failed to save the login details.' });
-    }
-  };
-
-  return (
-    <form onSubmit={submit} style={{ marginTop: 6 }}>
-      {state.status === 'error' && <div className="ui-error">{state.error}</div>}
-      <div className="dashFormGrid">
-        <div className="ui-field">
-          <label htmlFor={`user-email-${user.id}`} className="ui-label ui-label-required">Email</label>
-          <input id={`user-email-${user.id}`} className="ui-input" type="email" required maxLength={255} autoComplete="off" value={email} onChange={(e) => setEmail(e.target.value)} />
-        </div>
-        <div className="ui-field">
-          <label htmlFor={`user-username-${user.id}`} className="ui-label ui-label-required">Username</label>
-          <input
-            id={`user-username-${user.id}`}
-            className="ui-input"
-            required
-            minLength={3}
-            maxLength={60}
-            pattern="[^@]+"
-            title="Letters, numbers, spaces, dots, dashes and underscores — no @"
-            autoComplete="off"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-          <span className="ui-muted" style={{ fontSize: 12, marginTop: 4 }}>They can sign in with this or their email.</span>
-        </div>
-      </div>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <button className="dashBtn dashBtnPrimary" type="submit" disabled={state.status === 'loading'}>
-          {state.status === 'loading' ? 'Saving…' : 'Save login details'}
-        </button>
-        <button className="dashBtn" type="button" onClick={onCancel}>Cancel</button>
-      </div>
-    </form>
-  );
-}
 
 export default function UsersAdmin({ currentUserId }) {
   const confirm = useConfirm();
@@ -91,8 +19,6 @@ export default function UsersAdmin({ currentUserId }) {
   const [role, setRole] = useState('');
   const [status, setStatusFilter] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
-  const [editingId, setEditingId] = useState(null);
-  const [notice, setNotice] = useState('');
 
   useEffect(() => {
     let mounted = true;
@@ -191,7 +117,6 @@ export default function UsersAdmin({ currentUserId }) {
     <>
       <h2 className="dashSectionTitle"><Users size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />User Management</h2>
       {error && <div className="ui-error">{error}</div>}
-      {notice && <div className="ui-success-msg">{notice}</div>}
 
       <div className="dashFilterBar">
         <input className="ui-input" style={{ maxWidth: 220 }} placeholder="Search name/email" aria-label="Search users by name or email" value={q} onChange={(e) => setQ(e.target.value)} />
@@ -234,14 +159,9 @@ export default function UsersAdmin({ currentUserId }) {
                 )}
               </>
             );
-            const loginForm = editingId === u.id && (
-              <div className="dashCardExpand">
-                <LoginDetailsForm user={u} onCancel={() => setEditingId(null)} onSaved={(msg) => { setEditingId(null); setNotice(msg); refresh(); }} />
-              </div>
-            );
             return (
-              <Fragment key={u.id}>
               <DashCard
+                key={u.id}
                 title={<>{u.full_name}{u.username && <span style={{ fontSize: 12, color: 'var(--muted)' }}> · @{u.username}</span>}</>}
                 subtitle={u.email}
                 fields={[
@@ -251,9 +171,6 @@ export default function UsersAdmin({ currentUserId }) {
                 ]}
                 actions={
                   <>
-                    <button className="dashBtn" onClick={() => { setNotice(''); setEditingId(editingId === u.id ? null : u.id); }}>
-                      {editingId === u.id ? 'Close' : 'Edit login'}
-                    </button>
                     <button className="dashBtn" disabled={isSelf} onClick={() => handleToggleStatus(u)}>
                       {u.status === 'suspended' ? 'Reactivate' : 'Suspend'}
                     </button>
@@ -261,8 +178,6 @@ export default function UsersAdmin({ currentUserId }) {
                   </>
                 }
               />
-              {loginForm}
-              </Fragment>
             );
           })}
         </div>
@@ -282,8 +197,7 @@ export default function UsersAdmin({ currentUserId }) {
               {users.map((u) => {
                 const isSelf = u.id === currentUserId;
                 return (
-                  <Fragment key={u.id}>
-                  <tr>
+                  <tr key={u.id}>
                     <td>
                       {u.full_name}
                       {u.username && <span style={{ fontSize: 12, color: 'var(--muted)' }}> · @{u.username}</span>}
@@ -311,26 +225,13 @@ export default function UsersAdmin({ currentUserId }) {
                         </div>
                       )}
                     </td>
-                    <td className="dashActionsCell">
-                      <span className="dashActionsRow">
-                        <button className="dashBtn" onClick={() => { setNotice(''); setEditingId(editingId === u.id ? null : u.id); }}>
-                          {editingId === u.id ? 'Close' : 'Edit login'}
-                        </button>
-                        <button className="dashBtn" disabled={isSelf} onClick={() => handleToggleStatus(u)}>
-                          {u.status === 'suspended' ? 'Reactivate' : 'Suspend'}
-                        </button>
-                        {isSelf && <span style={{ alignSelf: 'center', fontSize: 12, color: 'var(--muted)' }}>(you)</span>}
-                      </span>
+                    <td>
+                      <button className="dashBtn" disabled={isSelf} onClick={() => handleToggleStatus(u)}>
+                        {u.status === 'suspended' ? 'Reactivate' : 'Suspend'}
+                      </button>
+                      {isSelf && <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--muted)' }}>(you)</span>}
                     </td>
                   </tr>
-                  {editingId === u.id && (
-                    <tr>
-                      <td colSpan={5} className="dashExpandPanel">
-                        <LoginDetailsForm user={u} onCancel={() => setEditingId(null)} onSaved={(msg) => { setEditingId(null); setNotice(msg); refresh(); }} />
-                      </td>
-                    </tr>
-                  )}
-                  </Fragment>
                 );
               })}
             </tbody>

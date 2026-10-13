@@ -35,9 +35,6 @@ class User extends Authenticatable
         ];
     }
 
-    /** Usernames: letters, numbers, spaces, dots, dashes and underscores — never an @, so a login can't be mistaken for an email. */
-    public const USERNAME_PATTERN = '/^[\pL\pN][\pL\pN ._-]*$/u';
-
     /** The account for a login name: an email when it has an @, otherwise a username. Case doesn't matter. */
     public static function findForLogin(string $login): ?self
     {
