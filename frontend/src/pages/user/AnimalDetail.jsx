@@ -532,10 +532,14 @@ export default function AnimalDetail() {
           <div className="detActionBar">
             <div className="detActionBarInner">
               <span className="detActionBarName">{animal.name || 'Unnamed'}</span>
-              <div className="detActions">
-                <button className="ui-btn-primary" onClick={() => navigate(`/adopt/${id}/apply`)}>Apply to Adopt</button>
-                <button className="ui-btn-secondary" onClick={() => navigate(`/adopt/${id}/foster`)}>Apply to Foster</button>
-              </div>
+              {animal.status === 'deceased' ? (
+                <span className="ui-muted">{animal.name || 'This animal'} has passed away. Thank you for caring about them.</span>
+              ) : (
+                <div className="detActions">
+                  <button className="ui-btn-primary" onClick={() => navigate(`/adopt/${id}/apply`)}>Apply to Adopt</button>
+                  <button className="ui-btn-secondary" onClick={() => navigate(`/adopt/${id}/foster`)}>Apply to Foster</button>
+                </div>
+              )}
             </div>
           </div>
         </>

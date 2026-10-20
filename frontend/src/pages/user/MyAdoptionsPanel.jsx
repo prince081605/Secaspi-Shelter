@@ -143,13 +143,24 @@ function ReturnRequest({ adoption, onSent }) {
   );
 }
 
+// What the family sees when the shelter has recorded a change (in their words, not the staff's).
+const STATUS_NOTICES = {
+  lost_contact: (name) => `We’ve had trouble reaching you about ${name}. Send us an update so we know you’re both doing well.`,
+  missing: (name) => `We’ve noted that ${name} is missing, and we hope ${name} is found soon. If ${name} comes home, send us an update.`,
+  deceased: (name) => `We are so sorry for the loss of ${name}. Thank you for the home and the love you gave. There are no more check-ins.`,
+  rehomed: (name) => `We’ve noted that ${name} now lives with another family. There are no more check-ins.`,
+};
+
 function AdoptionCard({ adoption, onChanged }) {
   const confirm = useConfirm();
   const [composing, setComposing] = useState(false);
   const [notice, setNotice] = useState('');
   const name = adoption.animal?.name || 'Your pet';
   const isActive = adoption.status === 'completed';
+  const canUpdate = adoption.can_send_update;
+  const canReturn = adoption.can_request_return;
   const ret = adoption.return_request;
+  const statusNotice = isActive && STATUS_NOTICES[adoption.post_adoption_status];
 
   const stopSharing = async (update) => {
     const ok = await confirm({
@@ -174,9 +185,14 @@ function AdoptionCard({ adoption, onChanged }) {
           </p>
         </div>
         {!isActive && <StatusBadge status={adoption.status} />}
+        {isActive && adoption.post_adoption_status && adoption.post_adoption_status !== 'in_home' && (
+          <StatusBadge status={adoption.post_adoption_status} />
+        )}
       </header>
 
-      {isActive && adoption.next_check_in && (
+      {statusNotice && <div className="ui-notice">{statusNotice(name)}</div>}
+
+      {canUpdate && adoption.next_check_in && (
         <p className="pa-next">
           Our next check-in is <strong>{adoption.next_check_in.label}</strong> after the adoption, around {formatDate(adoption.next_check_in.due_date)}.
           Sending an update around then counts as your check-in.
@@ -193,7 +209,7 @@ function AdoptionCard({ adoption, onChanged }) {
 
       {notice && <div className="ui-success-msg" role="status">{notice}</div>}
 
-      {isActive && (composing ? (
+      {canUpdate && (composing ? (
         <UpdateForm adoption={adoption} onSent={() => { setComposing(false); setNotice(`Thank you! Your update about ${name} was sent to the shelter.`); onChanged(); }} />
       ) : (
         <button type="button" className="ui-btn-primary pa-compose" onClick={() => { setComposing(true); setNotice(''); }}>
@@ -227,7 +243,7 @@ function AdoptionCard({ adoption, onChanged }) {
         </section>
       )}
 
-      {isActive && ret?.status !== 'pending' && <ReturnRequest adoption={adoption} onSent={onChanged} />}
+      {canReturn && ret?.status !== 'pending' && <ReturnRequest adoption={adoption} onSent={onChanged} />}
     </article>
   );
 }

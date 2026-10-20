@@ -35,6 +35,9 @@ class MyAdoptionController extends Controller
         if ($application->status !== 'completed') {
             return response()->json(['message' => 'Updates can only be sent for a completed adoption.'], 422);
         }
+        if (! in_array($application->post_adoption_status, PostAdoption::ADOPTER_CAN_UPDATE, true)) {
+            return response()->json(['message' => 'Updates are closed for this adoption. Message the shelter if you need anything.'], 422);
+        }
 
         $validator = Validator::make($request->all(), [
             'wellbeing' => ['required', Rule::in(AdoptionUpdate::WELLBEING)],
@@ -87,6 +90,9 @@ class MyAdoptionController extends Controller
         if ($application->status !== 'completed') {
             return response()->json(['message' => 'Only a completed adoption can be returned.'], 422);
         }
+        if (! in_array($application->post_adoption_status, PostAdoption::ADOPTER_CAN_RETURN, true)) {
+            return response()->json(['message' => 'A return can only be requested while the animal is with you. Message the shelter if you need anything.'], 422);
+        }
         if ($application->returns()->where('status', 'pending')->exists()) {
             return response()->json(['message' => 'You already have a return request waiting for the shelter to review.'], 422);
         }
@@ -126,6 +132,10 @@ class MyAdoptionController extends Controller
             'reference_no' => $a->reference_no,
             'status' => $a->status,
             'completed_at' => $a->completed_at,
+            'post_adoption_status' => $a->post_adoption_status,
+            'post_adoption_status_label' => PostAdoption::STATUSES[$a->post_adoption_status] ?? null,
+            'can_send_update' => $a->status === 'completed' && in_array($a->post_adoption_status, PostAdoption::ADOPTER_CAN_UPDATE, true),
+            'can_request_return' => $a->status === 'completed' && in_array($a->post_adoption_status, PostAdoption::ADOPTER_CAN_RETURN, true),
             'animal' => $a->animal ? [
                 'id' => $a->animal->id,
                 'name' => $a->animal->name,

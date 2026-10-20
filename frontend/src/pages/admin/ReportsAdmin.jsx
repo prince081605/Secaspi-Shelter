@@ -16,7 +16,7 @@ const FILTER_CONFIG = {
   },
   animals: {
     species: true,
-    status: ['available', 'adopted', 'fostered', 'medical', 'quarantine', 'archived'],
+    status: ['available', 'adopted', 'fostered', 'medical', 'quarantine', 'archived', 'deceased'],
   },
   medical: {
     dateRange: true,

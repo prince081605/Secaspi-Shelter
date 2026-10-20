@@ -87,8 +87,20 @@
 .pa-history-meta { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
 .pa-story-line { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 8px; font-size: 13px; color: var(--sage-dark); }
 
+/* Adopted animals: status filter + search, the status form's effect line, and the history. */
+.pa-toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.pa-toolbar .pa-chips { flex: 1; min-width: 0; }
+.pa-search { max-width: 280px; margin-bottom: 12px; }
+.pa-effect { margin: -4px 0 0; }
+.pa-timeline { list-style: none; margin: 12px 0 0; padding: 12px 0 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
+.pa-timeline li { padding-left: 14px; border-left: 2px solid var(--line); }
+.pa-timeline li:first-child { border-left-color: var(--brand); }
+.pa-timeline-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; color: var(--ink); }
+.pa-timeline p { margin: 4px 0 0; font-size: 14px; color: var(--ink-soft); line-height: 1.5; white-space: pre-line; }
+
 @media (max-width: 640px) {
   .pa-form-row { grid-template-columns: 1fr; }
+  .pa-search { max-width: none; width: 100%; }
   .pa-list > li, .pa-adoption { padding: 14px; }
   .pa-photos img { width: 80px; height: 80px; }
 }

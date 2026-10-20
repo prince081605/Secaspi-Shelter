@@ -33,6 +33,12 @@ const STATUS_VARIANTS = {
   medical: 'badgeOrange',
   quarantine: 'badgeOrange',
   archived: 'badgeOrange',
+  deceased: 'badgeOrange',
+  // Post-adoption statuses (in_home is green, the rest need a look).
+  in_home: 'badgeGreen',
+  lost_contact: 'badgeSky',
+  missing: 'badgeOrange',
+  rehomed: 'badgeSky',
   // A rescue report closed as fake, a duplicate or "animal not found".
   invalid: 'badgeOrange',
 };

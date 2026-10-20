@@ -34,7 +34,7 @@ import './AnimalsAdmin.css';
 // STATUSES, GENDERS and SIZES mirror the constants on App\Models\Animal, which the API (and the
 // Excel import) validate against. Breeds, behavioral issues and medical record types are
 // admin-managed lists instead (Categories page), read through useCategories().
-const STATUSES = ['available', 'adopted', 'fostered', 'medical', 'quarantine', 'archived'];
+const STATUSES = ['available', 'adopted', 'fostered', 'medical', 'quarantine', 'archived', 'deceased'];
 const GENDERS = ['male', 'female'];
 const SIZES = ['small', 'medium', 'large'];
 

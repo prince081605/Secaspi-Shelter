@@ -62,7 +62,7 @@ class DashboardController extends Controller
             ['key' => 'donationsMonth', 'label' => 'Donations (month)', 'value' => '₱'.number_format($donationsThisMonth, 2), 'sub' => now()->format('F Y')],
         ];
 
-        $statusBreakdown = Animal::where('status', '!=', 'archived')
+        $statusBreakdown = Animal::whereNotIn('status', ['archived', 'deceased'])
             ->select('status', DB::raw('COUNT(*) as count'))
             ->groupBy('status')
             ->pluck('count', 'status');

@@ -225,7 +225,7 @@ class ReportController extends Controller
 
         $animals = $query->with('currentLocation')->orderByDesc('id')->get();
 
-        $statusLabels = ['available' => 'Available', 'adopted' => 'Adopted', 'fostered' => 'Fostered', 'medical' => 'Medical', 'quarantine' => 'Quarantine', 'archived' => 'Archived'];
+        $statusLabels = ['available' => 'Available', 'adopted' => 'Adopted', 'fostered' => 'Fostered', 'medical' => 'Medical', 'quarantine' => 'Quarantine', 'archived' => 'Archived', 'deceased' => 'Deceased'];
         $summary = [];
         foreach ($statusLabels as $key => $label) {
             $summary[] = ['label' => $label, 'value' => (int) ($statusCounts[$key] ?? 0)];

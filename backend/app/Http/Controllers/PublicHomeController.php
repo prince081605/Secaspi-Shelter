@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AdoptionUpdate;
 use App\Models\Animal;
 use App\Models\Expense;
+use App\Services\PostAdoption;
 use App\Support\DonationCategories;
 use App\Support\PublicStats;
 use Illuminate\Support\Carbon;
@@ -248,7 +249,7 @@ class PublicHomeController extends Controller
                     'animals.age',
                     'animals.status',
                 ])
-                ->whereNotIn('animals.status', ['archived', 'adopted'])
+                ->whereNotIn('animals.status', ['archived', 'adopted', 'deceased'])
                 ->orderByDesc('animals.id')
                 ->limit(8);
 
@@ -303,7 +304,8 @@ class PublicHomeController extends Controller
 
     /**
      * Happy Tails: adopters' updates published as success stories — only those the adopter
-     * offered (share_publicly) AND staff approved, from adoptions still in place (not returned).
+     * offered (share_publicly) AND staff approved, from animals still in their homes (not returned,
+     * rehomed, missing or deceased — see PostAdoption::ON_HAPPY_TAILS).
      * The adopter is named by first name only, and no contact details are included.
      */
     public function happyTails()
@@ -312,7 +314,8 @@ class PublicHomeController extends Controller
             ->where('share_publicly', true)
             ->where('story_status', 'approved')
             // "Where they are now" stops being true once the animal has come back to the shelter.
-            ->whereHas('application', fn ($q) => $q->where('status', 'completed'))
+            ->whereHas('application', fn ($q) => $q->where('status', 'completed')
+                ->whereIn('post_adoption_status', PostAdoption::ON_HAPPY_TAILS))
             ->with(['animal.mainPhoto', 'user'])
             ->orderByDesc('story_reviewed_at')
             ->limit(6)

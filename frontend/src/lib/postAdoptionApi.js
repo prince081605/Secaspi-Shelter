@@ -29,6 +29,17 @@ export const RETURN_DESTINATIONS = [
 ];
 export const MAX_UPDATE_PHOTOS = 4;
 
+// Where an adopted animal is now (the backend's PostAdoption::STATUSES). `effect` is what staff
+// are told before they change it — the side effects are the server's, these only describe them.
+export const POST_ADOPTION_STATUSES = [
+  { value: 'in_home', label: 'In home', effect: 'With the family. Check-ins run as scheduled.' },
+  { value: 'lost_contact', label: 'Lost contact', effect: 'The family can’t be reached. Check-ins stay open so you keep trying; an update from the family sets it back to In home.' },
+  { value: 'missing', label: 'Missing', effect: 'The animal is lost. Check-ins pause, and the ones not yet due come back when you set it to In home.' },
+  { value: 'deceased', label: 'Deceased', effect: 'The animal has died. Check-ins end, the animal’s record is marked Deceased, and its Happy Tails story comes down.' },
+  { value: 'rehomed', label: 'Rehomed', effect: 'The family gave the animal to someone else. Check-ins end and its Happy Tails story comes down.' },
+  { value: 'returned', label: 'Returned to the shelter', effect: 'Ends the adoption: the animal comes back into shelter care and the check-ins end. A waiting return request is accepted with it.' },
+];
+
 export const labelOf = (list, value) => list.find((o) => o.value === value)?.label || value || '';
 
 // ---- The adopter ("My Adopted Pets") ----
@@ -57,6 +68,13 @@ export const getHappyTails = () => api.get('/api/home/happy-tails');
 // ---- Staff (Post-adoption page) ----
 
 export const adminPostAdoptionSummary = () => api.get('/api/admin/post-adoption/summary');
+export function adminListAdoptions({ status = '', q = '', page = 1 } = {}) {
+  const params = new URLSearchParams({ page: String(page) });
+  if (status) params.set('status', status);
+  if (q) params.set('q', q);
+  return api.get(`/api/admin/post-adoption/adoptions?${params}`);
+}
+export const adminSetAdoptionStatus = (id, payload) => api.put(`/api/admin/post-adoption/adoptions/${id}/status`, payload);
 export const adminListCheckIns = (view, page = 1) => api.get(`/api/admin/post-adoption/check-ins?view=${view}&page=${page}`);
 export const adminRecordCheckIn = (id, payload) => api.put(`/api/admin/post-adoption/check-ins/${id}`, payload);
 export const adminListAdoptionUpdates = (filter, page = 1) => api.get(`/api/admin/post-adoption/updates?filter=${filter}&page=${page}`);

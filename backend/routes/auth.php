@@ -113,6 +113,9 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('/my-adoptions/{application}/return', [MyAdoptionController::class, 'requestReturn'])->middleware('throttle:5,1');
     // Staff: check-ins, updates and Happy Tails review, return requests.
     Route::get('/admin/post-adoption/summary', [PostAdoptionController::class, 'summaryIndex'])->middleware('perm:desk.operate');
+    // Every adopted animal and where it is now (in home, missing, deceased, …), and changing that.
+    Route::get('/admin/post-adoption/adoptions', [PostAdoptionController::class, 'adoptions'])->middleware('perm:desk.operate');
+    Route::put('/admin/post-adoption/adoptions/{application}/status', [PostAdoptionController::class, 'updateStatus'])->middleware('perm:desk.operate');
     Route::get('/admin/post-adoption/check-ins', [PostAdoptionController::class, 'checkIns'])->middleware('perm:desk.operate');
     Route::put('/admin/post-adoption/check-ins/{followUp}', [PostAdoptionController::class, 'recordCheckIn'])->middleware('perm:desk.operate');
     Route::get('/admin/post-adoption/updates', [PostAdoptionController::class, 'updates'])->middleware('perm:desk.operate');

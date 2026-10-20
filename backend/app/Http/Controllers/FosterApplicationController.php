@@ -14,6 +14,11 @@ class FosterApplicationController extends Controller
 {
     public function store(Request $request, Animal $animal)
     {
+        // A deceased animal's page can still be reached (its kennel QR code), but nobody can apply for it.
+        if ($animal->status === 'deceased') {
+            return response()->json(['message' => "{$animal->name} has passed away, so applications are closed."], 422);
+        }
+
         if ($request->input('end_date') === '') {
             $request->merge(['end_date' => null]);
         }

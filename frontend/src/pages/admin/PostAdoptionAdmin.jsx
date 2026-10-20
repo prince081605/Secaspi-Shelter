@@ -3,9 +3,11 @@ import { HeartHandshake, PawPrint } from 'lucide-react';
 import {
   ADOPTER_WELLBEING,
   CONTACT_METHODS,
+  POST_ADOPTION_STATUSES,
   RETURN_DESTINATIONS,
   STAFF_WELLBEING,
   adminListAdoptionUpdates,
+  adminListAdoptions,
   adminListCheckIns,
   adminListReturns,
   adminMarkAdoptionUpdateRead,
@@ -13,6 +15,7 @@ import {
   adminRecordCheckIn,
   adminResolveReturn,
   adminReviewStory,
+  adminSetAdoptionStatus,
   labelOf,
 } from '../../lib/postAdoptionApi';
 import Pagination from '../../components/Pagination';
@@ -21,6 +24,8 @@ import useConfirm from '../../lib/useConfirm';
 import './PostAdoption.css';
 
 const formatDate = (value) => (value ? new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—');
+// Today in the shelter's own day (Manila), for date inputs that can't be in the future.
+const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
 const errorText = (err, fallback) => Object.values(err?.data?.errors || {})[0]?.[0] || err?.message || fallback;
 
 /**
@@ -45,6 +50,7 @@ function usePaged(load, source) {
   }, [page, refreshKey, source]);
 
   return {
+    raw: data,
     items: data?.data || [],
     meta: { current_page: data?.current_page || 1, last_page: data?.last_page || 1 },
     loading: !data && !error,
@@ -161,6 +167,205 @@ function CheckInsTab({ onChanged }) {
               )}
             </li>
           ))}
+        </ul>
+      )}
+      <Pagination meta={list.meta} onPage={list.setPage} />
+    </>
+  );
+}
+
+// ---------- Adopted animals: where each one is now ----------
+
+const STATUS_NOTE_HINTS = {
+  in_home: 'How you confirmed it — e.g. found by a neighbour, the family called back…',
+  lost_contact: 'What you tried — calls, texts, the address on file…',
+  missing: 'When and where the animal was last seen, and what the family is doing…',
+  deceased: 'The cause if known, and how the family told us…',
+  rehomed: 'Who has the animal now, and how to reach them if known…',
+  returned: 'Who brought the animal back, and its condition…',
+};
+
+function UpdateStatus({ adoption, onSaved, onCancel }) {
+  const confirm = useConfirm();
+  const name = adoption.animal?.name || 'the animal';
+  const current = adoption.post_adoption_status;
+  // Deceased can't become Returned: if Deceased was a mistake, it goes back to In home first.
+  const options = POST_ADOPTION_STATUSES.filter((o) => o.value !== current && !(current === 'deceased' && o.value === 'returned'));
+  const [form, setForm] = useState({ status: '', happened_on: today(), animal_status: 'available', notes: '' });
+  const [state, setState] = useState({ saving: false, error: '' });
+  const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+  const chosen = POST_ADOPTION_STATUSES.find((o) => o.value === form.status);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!chosen) return;
+    const ok = await confirm({
+      title: `Mark ${name} as ${chosen.label}?`,
+      message: chosen.effect,
+      confirmLabel: 'Update status',
+      tone: ['deceased', 'returned'].includes(form.status) ? 'danger' : 'default',
+      summary: [
+        { label: 'From', value: labelOf(POST_ADOPTION_STATUSES, current) },
+        { label: 'To', value: chosen.label },
+        { label: 'Date', value: formatDate(form.happened_on) },
+        form.status === 'returned' && { label: 'Goes to', value: labelOf(RETURN_DESTINATIONS, form.animal_status) },
+      ].filter(Boolean),
+    });
+    if (!ok) return;
+    setState({ saving: true, error: '' });
+    try {
+      await adminSetAdoptionStatus(adoption.id, {
+        status: form.status,
+        happened_on: form.happened_on || null,
+        animal_status: form.status === 'returned' ? form.animal_status : null,
+        notes: form.notes.trim() || null,
+      });
+      onSaved();
+    } catch (err) {
+      setState({ saving: false, error: errorText(err, 'The status could not be updated.') });
+    }
+  };
+
+  return (
+    <form className="pa-form pa-inline-form" onSubmit={submit}>
+      {state.error && <div className="ui-error">{state.error}</div>}
+      <div className="pa-form-row">
+        <label>
+          <span className="ui-label ui-label-required">New status</span>
+          <select className="ui-input" value={form.status} onChange={set('status')} required>
+            <option value="">Choose…</option>
+            {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </label>
+        <label>
+          <span className="ui-label">When it happened</span>
+          <input
+            className="ui-input"
+            type="date"
+            value={form.happened_on}
+            onChange={set('happened_on')}
+            max={today()}
+            min={adoption.completed_at ? String(adoption.completed_at).slice(0, 10) : undefined}
+          />
+        </label>
+      </div>
+      {chosen && <p className="ui-muted pa-sub pa-effect">{chosen.effect}</p>}
+      {form.status === 'returned' && (
+        <label>
+          <span className="ui-label ui-label-required">{name} goes</span>
+          <select className="ui-input" value={form.animal_status} onChange={set('animal_status')}>
+            {RETURN_DESTINATIONS.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
+          </select>
+        </label>
+      )}
+      <label>
+        <span className="ui-label">Notes</span>
+        <textarea className="ui-textarea" rows={2} maxLength={2000} value={form.notes} onChange={set('notes')} placeholder={STATUS_NOTE_HINTS[form.status] || 'What happened, and how you found out…'} />
+      </label>
+      <div className="pa-actions">
+        <button className="dashBtn dashBtnPrimary" type="submit" disabled={state.saving || !form.status}>{state.saving ? 'Saving…' : 'Update status'}</button>
+        <button className="dashBtn" type="button" onClick={onCancel} disabled={state.saving}>Cancel</button>
+      </div>
+    </form>
+  );
+}
+
+function StatusTimeline({ history }) {
+  return (
+    <ol className="pa-timeline" aria-label="Status history">
+      {history.map((h) => (
+        <li key={h.id}>
+          <div className="pa-timeline-head">
+            <StatusBadge status={h.to} />
+            <strong>{h.to_label}</strong>
+            <span className="ui-muted">{h.happened_on ? formatDate(h.happened_on) : 'date not recorded'}</span>
+            <span className="ui-muted">· {h.by ? `by ${h.by}` : 'automatic'}</span>
+          </div>
+          {h.animal_status && <div className="ui-muted pa-sub">Went {labelOf(RETURN_DESTINATIONS, h.animal_status).toLowerCase()}.</div>}
+          {h.notes && <p>{h.notes}</p>}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function AdoptionsTab({ onChanged }) {
+  const [status, setStatus] = useState('');
+  const [typed, setTyped] = useState('');
+  const [search, setSearch] = useState('');
+  const [open, setOpen] = useState({ id: null, panel: '' }); // panel: 'status' | 'history'
+  const list = usePaged((page) => adminListAdoptions({ status, q: search, page }), `adoptions:${status}:${search}`);
+  const { setPage } = list;
+  const counts = list.raw?.counts || {};
+  const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
+
+  // Search as the name is typed, once typing pauses.
+  useEffect(() => {
+    const t = setTimeout(() => { setSearch(typed.trim()); setPage(1); }, 350);
+    return () => clearTimeout(t);
+  }, [typed, setPage]);
+
+  const toggle = (id, panel) => setOpen((o) => (o.id === id && o.panel === panel ? { id: null, panel: '' } : { id, panel }));
+
+  return (
+    <>
+      <p className="ui-muted pa-tab-intro">
+        Every adopted animal and where it is now. Update the status when you learn something has changed — each change is kept in the animal’s history.
+      </p>
+      <div className="pa-toolbar">
+        <div className="pa-chips" role="group" aria-label="Filter by status">
+          {[['', 'All', total], ...POST_ADOPTION_STATUSES.map((o) => [o.value, o.value === 'returned' ? 'Returned' : o.label, counts[o.value]])].map(([key, label, n]) => (
+            <button key={key || 'all'} type="button" className={status === key ? 'active' : ''} aria-pressed={status === key} onClick={() => { setStatus(key); list.setPage(1); setOpen({ id: null, panel: '' }); }}>
+              {label}{n ? ` (${n})` : ''}
+            </button>
+          ))}
+        </div>
+        <input className="ui-input pa-search" type="search" placeholder="Search animal, adopter or reference" aria-label="Search adopted animals" value={typed} onChange={(e) => setTyped(e.target.value)} />
+      </div>
+      {list.error && <div className="ui-error">{list.error}</div>}
+      {list.loading ? <div className="ui-empty">Loading…</div> : list.items.length === 0 ? (
+        <div className="ui-empty">{search || status ? 'No adopted animals match.' : 'No completed adoptions yet.'}</div>
+      ) : (
+        <ul className="pa-list">
+          {list.items.map((a) => {
+            const since = a.history[0]?.happened_on; // unknown for adoptions completed before dates were kept
+            const closed = a.status === 'returned';
+            return (
+              <li key={a.id} className="dashCard">
+                <div className="pa-row">
+                  <PetLine animal={a.animal} adoption={a} extra={a.reference_no} />
+                  <div className="pa-row-side">
+                    <div className="pa-due">
+                      <StatusBadge status={a.post_adoption_status} />
+                      {since && <span className="ui-muted">since {formatDate(since)}</span>}
+                    </div>
+                    {!closed && (
+                      <button className="dashBtn dashBtnPrimary" type="button" aria-expanded={open.id === a.id && open.panel === 'status'} onClick={() => toggle(a.id, 'status')}>
+                        Update status
+                      </button>
+                    )}
+                    <button className="dashBtn" type="button" aria-expanded={open.id === a.id && open.panel === 'history'} onClick={() => toggle(a.id, 'history')}>
+                      History ({a.history.length})
+                    </button>
+                  </div>
+                </div>
+                <p className="ui-muted pa-sub pa-row-foot">
+                  {a.next_check_in
+                    ? `Next check-in: ${a.next_check_in.label}, ${formatDate(a.next_check_in.due_date)}.`
+                    : closed ? 'Adoption ended — the animal is back in shelter care.' : 'No check-ins scheduled.'}
+                  {a.pending_return ? ' A return request is waiting — see Return requests.' : ''}
+                </p>
+                {open.id === a.id && open.panel === 'status' && (
+                  <UpdateStatus
+                    adoption={a}
+                    onCancel={() => setOpen({ id: null, panel: '' })}
+                    onSaved={() => { setOpen({ id: a.id, panel: 'history' }); list.reload(); onChanged(); }}
+                  />
+                )}
+                {open.id === a.id && open.panel === 'history' && <StatusTimeline history={a.history} />}
+              </li>
+            );
+          })}
         </ul>
       )}
       <Pagination meta={list.meta} onPage={list.setPage} />
@@ -342,9 +547,10 @@ function ReturnsTab({ onChanged }) {
 }
 
 /**
- * Post-adoption care for staff: check-ins to make, updates adopters send (and which to publish
- * as Happy Tails), and return requests to decide. Check-ins are scheduled automatically when an
- * adoption is marked Completed.
+ * Post-adoption care for staff: check-ins to make, every adopted animal and where it is now
+ * (its status and history), updates adopters send (and which to publish as Happy Tails), and
+ * return requests to decide. Check-ins are scheduled automatically when an adoption is marked
+ * Completed.
  */
 export default function PostAdoptionAdmin({ onChanged }) {
   const [tab, setTab] = useState('checkins');
@@ -364,6 +570,7 @@ export default function PostAdoptionAdmin({ onChanged }) {
 
   const tabs = [
     ['checkins', 'Check-ins', summary?.check_ins_due],
+    ['adoptions', 'Adopted animals', null],
     ['updates', 'Adopter updates', summary?.unread_updates],
     ['stories', 'Happy Tails', summary?.stories_pending],
     ['returns', 'Return requests', summary?.returns_pending],
@@ -385,6 +592,7 @@ export default function PostAdoptionAdmin({ onChanged }) {
       </div>
       <div role="tabpanel">
         {tab === 'checkins' && <CheckInsTab onChanged={changed} />}
+        {tab === 'adoptions' && <AdoptionsTab onChanged={changed} />}
         {tab === 'updates' && <UpdatesTab key="updates" onChanged={changed} />}
         {tab === 'stories' && <UpdatesTab key="stories" storiesOnly onChanged={changed} />}
         {tab === 'returns' && <ReturnsTab onChanged={changed} />}

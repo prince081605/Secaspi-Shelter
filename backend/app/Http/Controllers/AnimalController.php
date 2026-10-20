@@ -20,9 +20,9 @@ class AnimalController extends Controller
 {
     public function index(Request $request)
     {
-        // Public adoption browsing should never surface animals that are already adopted
-        // or archived — they aren't available to apply for.
-        $query = Animal::query()->whereNotIn('status', ['archived', 'adopted']);
+        // Public adoption browsing should never surface animals that are already adopted,
+        // archived or deceased — they aren't available to apply for.
+        $query = Animal::query()->whereNotIn('status', ['archived', 'adopted', 'deceased']);
 
         if ($q = $request->query('q')) {
             $this->applySearch($query, $q);

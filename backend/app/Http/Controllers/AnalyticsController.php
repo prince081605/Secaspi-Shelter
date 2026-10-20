@@ -154,8 +154,8 @@ class AnalyticsController extends Controller
 
     /**
      * Live-release rate: live outcomes (adopted + fostered) over all completed outcomes
-     * (adopted + fostered + archived). Archived stands in for non-live outcomes since the
-     * app doesn't track euthanasia/death. Returns a percentage.
+     * (adopted + fostered + archived + deceased). Archived also stands in for non-live outcomes
+     * the app doesn't record separately. Returns a percentage.
      */
     private function liveReleaseRate(): float
     {
@@ -165,7 +165,7 @@ class AnalyticsController extends Controller
             ->pluck('count', 'status');
 
         $live = (int) ($byStatus['adopted'] ?? 0) + (int) ($byStatus['fostered'] ?? 0);
-        $outcomes = $live + (int) ($byStatus['archived'] ?? 0);
+        $outcomes = $live + (int) ($byStatus['archived'] ?? 0) + (int) ($byStatus['deceased'] ?? 0);
 
         return $outcomes > 0 ? round(($live / $outcomes) * 100, 1) : 0.0;
     }

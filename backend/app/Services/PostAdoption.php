@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\AdoptionApplication;
 use App\Models\AdoptionFollowUp;
 use App\Models\AdoptionReturn;
+use App\Models\AdoptionStatusChange;
 use App\Models\AdoptionUpdate;
 use App\Models\Reminder;
 use App\Models\User;
@@ -22,11 +23,39 @@ use Illuminate\Support\Facades\DB;
  *  - A return request, once accepted, ends the adoption: the application is marked Returned, the
  *    animal goes back into shelter care, and the check-ins still ahead are cancelled. Nothing is
  *    deleted — the adoption's history stays on record.
+ *  - Staff keep a post-adoption status on each adoption (STATUSES) — in home, lost contact,
+ *    missing, deceased, rehomed, returned — and every change goes on the adoption's timeline.
  */
 class PostAdoption
 {
     /** Check-in => days after the adoption was completed. */
     public const SCHEDULE = ['1 week' => 7, '1 month' => 30, '3 months' => 90, '6 months' => 180];
+
+    /** Where an adopted animal is now. In home is where every completed adoption starts. */
+    public const STATUSES = [
+        'in_home' => 'In home',
+        'lost_contact' => 'Lost contact',
+        'missing' => 'Missing',
+        'deceased' => 'Deceased',
+        'rehomed' => 'Rehomed',
+        'returned' => 'Returned',
+    ];
+
+    /**
+     * No check-ins while the animal is in one of these: it isn't with the family (missing,
+     * rehomed, returned) or has died. Missing only pauses them — the ones still ahead come back if
+     * the animal is found. Lost contact keeps them, so staff keep trying to reach the family.
+     */
+    private const NO_CHECK_INS = ['missing', 'deceased', 'rehomed', 'returned'];
+
+    /** The adopter can send updates (a missing pet's family can tell us it's been found)… */
+    public const ADOPTER_CAN_UPDATE = ['in_home', 'lost_contact', 'missing'];
+
+    /** …and ask to return the animal only while it's with them. */
+    public const ADOPTER_CAN_RETURN = ['in_home', 'lost_contact'];
+
+    /** Happy Tails show "where they are now", so only stories from animals still in their homes. */
+    public const ON_HAPPY_TAILS = ['in_home', 'lost_contact'];
 
     /** Roughly how far ahead an adopter's update still counts as answering a check-in. */
     private const UPDATE_ANSWERS_WITHIN_DAYS = 7;
@@ -44,6 +73,10 @@ class PostAdoption
         DB::transaction(function () use ($application) {
             if (! $application->completed_at) {
                 $application->forceFill(['completed_at' => now()])->save();
+            }
+            if (! $application->post_adoption_status) {
+                $application->forceFill(['post_adoption_status' => 'in_home'])->save();
+                $this->log($application, null, 'in_home', ['notes' => 'Adoption completed.'], null);
             }
 
             if ($application->followUps()->exists()) {
@@ -78,6 +111,73 @@ class PostAdoption
                 $f->update(['status' => 'cancelled']);
                 Reminder::where('remindable_type', AdoptionFollowUp::class)->where('remindable_id', $f->id)->delete();
             });
+    }
+
+    /**
+     * Staff change where the adopted animal is now. The side effects follow the status:
+     *  - deceased: the animal's record is marked Deceased (and goes back to Adopted if that was a mistake);
+     *  - missing, deceased, rehomed: the check-ins still ahead are called off; back to In home or
+     *    Lost contact, the ones not yet due come back;
+     *  - returned: ends the adoption, as an accepted return request does — the animal goes back into
+     *    shelter care (`animal_status`). A pending return request from the adopter is accepted with it.
+     * The caller has checked the change is allowed (see PostAdoptionController::updateStatus).
+     *
+     * @param  array{happened_on?: ?string, notes?: ?string, animal_status?: ?string}  $data
+     */
+    public function changeStatus(AdoptionApplication $application, string $to, array $data, ?User $by): AdoptionStatusChange
+    {
+        if ($to === 'returned' && ($request = $application->returns()->where('status', 'pending')->first())) {
+            $this->resolveReturn($request, 'accepted', $data['animal_status'] ?? null, $data['notes'] ?? null, $by, $data['happened_on'] ?? null);
+
+            return $application->statusChanges()->first();
+        }
+
+        return DB::transaction(function () use ($application, $to, $data, $by) {
+            $from = $application->post_adoption_status;
+
+            if ($to === 'returned') {
+                $application->update(['status' => 'returned']);
+                $application->animal()->update(['status' => $data['animal_status']]);
+            } elseif ($to === 'deceased') {
+                $application->animal()->update(['status' => 'deceased']);
+            } elseif ($from === 'deceased') {
+                $application->animal()->update(['status' => 'adopted']);
+            }
+
+            if (in_array($to, self::NO_CHECK_INS, true)) {
+                $this->stop($application);
+            } elseif (in_array($from, self::NO_CHECK_INS, true)) {
+                $this->resume($application);
+            }
+
+            $application->forceFill(['post_adoption_status' => $to])->save();
+
+            return $this->log($application, $from, $to, $data, $by);
+        });
+    }
+
+    /** Bring back the check-ins that were called off and aren't yet past their due date. */
+    private function resume(AdoptionApplication $application): void
+    {
+        $application->followUps()->where('status', 'cancelled')->whereDate('due_date', '>=', now()->toDateString())->get()
+            ->each(function (AdoptionFollowUp $f) {
+                $f->update(['status' => 'pending']);
+                $this->mirrorReminder($f);
+            });
+    }
+
+    private function log(AdoptionApplication $application, ?string $from, string $to, array $data, ?User $by): AdoptionStatusChange
+    {
+        return AdoptionStatusChange::create([
+            'adoption_application_id' => $application->id,
+            'animal_id' => $application->animal_id,
+            'from_status' => $from,
+            'to_status' => $to,
+            'happened_on' => $data['happened_on'] ?? now()->toDateString(),
+            'animal_status' => $to === 'returned' ? ($data['animal_status'] ?? null) : null,
+            'notes' => $data['notes'] ?? null,
+            'changed_by' => $by?->id,
+        ]);
     }
 
     /** Staff record how a check-in went. */
@@ -122,6 +222,12 @@ class PostAdoption
         if ($update->wellbeing === 'need_help') {
             $this->alertStaff($update);
         }
+
+        // A family the shelter had lost touch with has just been in touch.
+        $application = $update->application;
+        if ($application && $application->post_adoption_status === 'lost_contact') {
+            $this->changeStatus($application, 'in_home', ['notes' => 'The adopter got back in touch with an update.'], null);
+        }
     }
 
     /**
@@ -129,22 +235,29 @@ class PostAdoption
      * Returned, the animal goes back into shelter care with the chosen status, and the check-ins
      * still ahead are cancelled — all or nothing.
      */
-    public function resolveReturn(AdoptionReturn $return, string $decision, ?string $animalStatus, ?string $notes, User $by): AdoptionReturn
+    public function resolveReturn(AdoptionReturn $return, string $decision, ?string $animalStatus, ?string $notes, ?User $by, ?string $happenedOn = null): AdoptionReturn
     {
-        DB::transaction(function () use ($return, $decision, $animalStatus, $notes, $by) {
+        DB::transaction(function () use ($return, $decision, $animalStatus, $notes, $by, $happenedOn) {
             $return->forceFill([
                 'status' => $decision,
                 'animal_status' => $decision === 'accepted' ? $animalStatus : null,
                 'staff_notes' => $notes,
-                'resolved_by' => $by->id,
+                'resolved_by' => $by?->id,
                 'resolved_at' => now(),
             ])->save();
 
             if ($decision === 'accepted') {
                 $application = $return->application;
+                $from = $application->post_adoption_status;
                 $application->update(['status' => 'returned']);
+                $application->forceFill(['post_adoption_status' => 'returned'])->save();
                 $application->animal()->update(['status' => $animalStatus]);
                 $this->stop($application);
+                $this->log($application, $from, 'returned', [
+                    'happened_on' => $happenedOn,
+                    'animal_status' => $animalStatus,
+                    'notes' => $notes ?: 'Return request accepted.',
+                ], $by);
             }
         });
 

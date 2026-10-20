@@ -50,6 +50,12 @@ class AdoptionApplication extends Model
         return $this->hasMany(AdoptionReturn::class, 'adoption_application_id')->orderByDesc('id');
     }
 
+    /** The post-adoption timeline (in home → missing → in home …), newest first. */
+    public function statusChanges()
+    {
+        return $this->hasMany(AdoptionStatusChange::class, 'adoption_application_id')->orderByDesc('id');
+    }
+
     public function animal()
     {
         return $this->belongsTo(Animal::class, 'animal_id');

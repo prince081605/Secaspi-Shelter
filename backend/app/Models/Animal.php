@@ -12,7 +12,8 @@ class Animal extends Model
     // animals and intakes both validate against this list.
     public const SPECIES = ['dog', 'cat'];
 
-    public const STATUSES = ['available', 'adopted', 'fostered', 'medical', 'quarantine', 'archived'];
+    // 'deceased' is set from Post-adoption when an adopted animal dies (or here, for one that died in care).
+    public const STATUSES = ['available', 'adopted', 'fostered', 'medical', 'quarantine', 'archived', 'deceased'];
 
     public const GENDERS = ['male', 'female'];
 
@@ -92,6 +93,7 @@ class Animal extends Model
             'medical' => 'Medical recovery',
             'quarantine' => 'In quarantine',
             'archived' => 'Archived',
+            'deceased' => 'Deceased',
             default => $status ? ucfirst($status) : 'Unknown',
         };
     }

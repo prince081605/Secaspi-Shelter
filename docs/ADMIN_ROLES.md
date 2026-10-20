@@ -43,7 +43,7 @@ Cells show view, create, edit, delete, approve, export, or none. Staff are shown
 | Health reminders | view, edit | none | none | view, edit |
 | Intakes, documents, convert to animal | view, create, edit, delete, approve | none | none | view, create, edit, delete, approve |
 | Adoption and foster applications | view, approve | none | none | view, approve |
-| Post-adoption: check-ins, updates, stories, returns | view, edit, approve | none | none | view, edit, approve |
+| Post-adoption: check-ins, updates, stories, returns, status (in home, lost contact, missing, deceased, rehomed, returned) | view, edit, approve | none | none | view, edit, approve |
 | Rescue reports: triage, status, mark invalid | view, edit | none | none | view, edit |
 | Visit requests | view, approve | none | none | view, approve |
 | Messages inbox | view, create (reply) | none | none | view, create (reply) |

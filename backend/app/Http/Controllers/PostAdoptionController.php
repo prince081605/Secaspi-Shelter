@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\AdoptionApplication;
 use App\Models\AdoptionFollowUp;
 use App\Models\AdoptionReturn;
+use App\Models\AdoptionStatusChange;
 use App\Models\AdoptionUpdate;
+use App\Rules\NotInFuture;
 use App\Services\PostAdoption;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -13,8 +15,9 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
 /**
- * Staff side of post-adoption care: the check-ins to make, the updates adopters send (and which
- * of them to publish as Happy Tails), and return requests to decide.
+ * Staff side of post-adoption care: every adopted animal and where it is now (its post-adoption
+ * status and timeline), the check-ins to make, the updates adopters send (and which of them to
+ * publish as Happy Tails), and return requests to decide.
  */
 class PostAdoptionController extends Controller
 {
@@ -32,6 +35,78 @@ class PostAdoptionController extends Controller
     public function summaryIndex()
     {
         return response()->json(self::summary());
+    }
+
+    /**
+     * Every adoption that was completed (including returned ones), newest first.
+     * ?status= one of PostAdoption::STATUSES, ?q= animal name, adopter or reference no.
+     * `counts` has how many adoptions are in each status, for the filter chips.
+     */
+    public function adoptions(Request $request)
+    {
+        $query = AdoptionApplication::query()
+            ->whereIn('status', ['completed', 'returned'])
+            ->with(['animal.mainPhoto', 'statusChanges.changer', 'followUps', 'returns'])
+            ->orderByDesc('completed_at')->orderByDesc('id');
+
+        if (array_key_exists($status = (string) $request->query('status'), PostAdoption::STATUSES)) {
+            $query->where('post_adoption_status', $status);
+        }
+        if ($q = trim((string) $request->query('q'))) {
+            // LOWER() on both sides: LIKE is case-sensitive on Postgres (prod).
+            $needle = '%'.mb_strtolower($q).'%';
+            $query->where(fn ($w) => $w->whereRaw('LOWER(full_name) LIKE ?', [$needle])
+                ->orWhereRaw('LOWER(reference_no) LIKE ?', [$needle])
+                ->orWhereHas('animal', fn ($a) => $a->whereRaw('LOWER(name) LIKE ?', [$needle])));
+        }
+
+        $page = $query->paginate(20)->withQueryString();
+        $page->getCollection()->transform(fn (AdoptionApplication $a) => $this->toAdoptionItem($a));
+
+        $counts = AdoptionApplication::whereIn('status', ['completed', 'returned'])
+            ->selectRaw('post_adoption_status, COUNT(*) AS total')->groupBy('post_adoption_status')
+            ->pluck('total', 'post_adoption_status');
+
+        return response()->json([
+            ...$page->toArray(),
+            'counts' => collect(PostAdoption::STATUSES)->map(fn ($label, $key) => (int) ($counts[$key] ?? 0)),
+        ]);
+    }
+
+    public function updateStatus(Request $request, AdoptionApplication $application, PostAdoption $postAdoption)
+    {
+        if ($application->status === 'returned') {
+            return response()->json(['message' => 'This adoption ended with a return — the animal is back in shelter care. A new adoption starts a new record.'], 422);
+        }
+        if ($application->status !== 'completed') {
+            return response()->json(['message' => 'Only a completed adoption has a post-adoption status.'], 422);
+        }
+
+        $current = $application->post_adoption_status;
+        $validator = Validator::make($request->all(), [
+            'status' => ['required', Rule::in(array_keys(PostAdoption::STATUSES)), Rule::notIn([$current])],
+            'happened_on' => array_filter(['nullable', 'date', new NotInFuture,
+                $application->completed_at ? 'after_or_equal:'.$application->completed_at->toDateString() : null]),
+            'animal_status' => ['required_if:status,returned', 'nullable', Rule::in(AdoptionReturn::ANIMAL_STATUSES)],
+            'notes' => ['nullable', 'string', 'max:2000'],
+        ], [
+            'status.required' => 'Choose the new status.',
+            'status.not_in' => 'That is already this adoption’s status.',
+            'happened_on.after_or_equal' => 'The date can’t be before the adoption was completed.',
+            'animal_status.required_if' => 'Choose where the animal goes when it comes back.',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
+        }
+
+        $to = $request->input('status');
+        if ($current === 'deceased' && $to === 'returned') {
+            return response()->json(['message' => 'This animal is recorded as deceased. If that was a mistake, set it back to In home first.'], 422);
+        }
+
+        $postAdoption->changeStatus($application, $to, $validator->safe()->only(['happened_on', 'animal_status', 'notes']), $request->user());
+
+        return response()->json(['adoption' => $this->toAdoptionItem($application->fresh(['animal.mainPhoto', 'statusChanges.changer', 'followUps', 'returns']))]);
     }
 
     /** ?view=due (default: due today or overdue) | upcoming | done */
@@ -175,6 +250,31 @@ class PostAdoptionController extends Controller
             'species' => $animal->species,
             'photo' => optional($animal->mainPhoto)->photo_url ? Storage::url($animal->mainPhoto->photo_url) : null,
         ] : null;
+    }
+
+    private function toAdoptionItem(AdoptionApplication $a): array
+    {
+        $next = $a->followUps->firstWhere('status', 'pending');
+
+        return [
+            ...$this->adoption($a),
+            'post_adoption_status' => $a->post_adoption_status,
+            'post_adoption_status_label' => PostAdoption::STATUSES[$a->post_adoption_status] ?? null,
+            'next_check_in' => $next ? ['label' => $next->label, 'due_date' => $next->due_date->toDateString()] : null,
+            'pending_return' => $a->returns->contains('status', 'pending'),
+            'animal' => $this->animal($a->animal),
+            'history' => $a->statusChanges->map(fn (AdoptionStatusChange $c) => [
+                'id' => $c->id,
+                'from' => $c->from_status,
+                'to' => $c->to_status,
+                'to_label' => PostAdoption::STATUSES[$c->to_status] ?? $c->to_status,
+                'happened_on' => $c->happened_on?->toDateString(),
+                'animal_status' => $c->animal_status,
+                'notes' => $c->notes,
+                'by' => $c->changer?->full_name,
+                'recorded_at' => $c->created_at,
+            ])->values(),
+        ];
     }
 
     private function toCheckInItem(AdoptionFollowUp $f): array
