@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { applyForFoster } from '../../lib/animalsApi';
 import { todayLocal } from '../../lib/dates';
 import SiteNav from '../../components/SiteNav';
+import useConfirm from '../../lib/useConfirm';
 
 const styles = `
   .applyBody { max-width: 640px; margin: 0 auto; padding: 3rem 1.5rem; }
@@ -16,6 +17,7 @@ const styles = `
 `;
 
 export default function FosterApply() {
+  const confirm = useConfirm();
   const { id } = useParams();
   const [form, setForm] = useState({
     full_name: '', address: '', occupation: '', housing_type: '', pet_experience: '', reason: '',
@@ -29,6 +31,18 @@ export default function FosterApply() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const ok = await confirm({
+      title: 'Submit your foster application?',
+      message: 'The shelter reviews it as you sent it and contacts you about the next steps, so check your details first.',
+      confirmLabel: 'Submit application',
+      summary: [
+        { label: 'Name', value: form.full_name },
+        { label: 'Address', value: form.address },
+        { label: 'From', value: form.start_date },
+        { label: 'Until', value: form.end_date || 'Open-ended' },
+      ],
+    });
+    if (!ok) return;
     setSubmitting(true);
     setError('');
     try {

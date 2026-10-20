@@ -6,7 +6,8 @@ import MyTaskItem, { MyTaskList, RequestTaskForm } from '../../components/MyTask
 import AttendanceCard from '../../components/AttendanceCard';
 import PhotoInput from '../../components/PhotoInput';
 import useLoginGate from '../../lib/useLoginGate';
-import { useCategories, visibleOptions } from '../../lib/categoriesApi';
+import { optionLabel, useCategories, visibleOptions } from '../../lib/categoriesApi';
+import useConfirm from '../../lib/useConfirm';
 import {
   submitVolunteerApplication,
   listMyVolunteerApplications,
@@ -39,6 +40,7 @@ const styles = `
 `;
 
 export default function VolunteerApply() {
+  const confirm = useConfirm();
   const navigate = useNavigate();
   const gate = useLoginGate('/volunteer');
 
@@ -134,6 +136,18 @@ export default function VolunteerApply() {
       setError('Please attach a photo of your ID.');
       return;
     }
+
+    const ok = await confirm({
+      title: 'Submit your volunteer application?',
+      message: 'The shelter reviews it and lets you know. Once approved, your tasks and attendance appear on your dashboard.',
+      confirmLabel: 'Submit application',
+      summary: [
+        { label: 'Availability', value: form.availability },
+        { label: 'Interested in', value: form.preferred_categories.map((c) => optionLabel(categories.volunteer_category, c)).join(', ') },
+        { label: 'Valid ID', value: optionLabel(categories.valid_id_type, form.valid_id_type) },
+      ],
+    });
+    if (!ok) return;
 
     setSubmitting(true);
     setError('');

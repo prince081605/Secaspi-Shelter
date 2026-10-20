@@ -4,6 +4,7 @@ import { applyForAdoption } from '../../lib/animalsApi';
 import { useCategories, visibleOptions } from '../../lib/categoriesApi';
 import SiteNav from '../../components/SiteNav';
 import PhotoInput from '../../components/PhotoInput';
+import useConfirm from '../../lib/useConfirm';
 
 const styles = `
   .applyBody { max-width: 640px; margin: 0 auto; padding: 3rem 1.5rem; }
@@ -16,6 +17,7 @@ const styles = `
 `;
 
 export default function AdoptionApply() {
+  const confirm = useConfirm();
   const { id } = useParams();
   const [form, setForm] = useState({
     full_name: '', contact_number: '', address: '', occupation: '', housing_type: '', pet_experience: '', reason: '',
@@ -49,6 +51,18 @@ export default function AdoptionApply() {
       setError('Please attach a photo of your ID.');
       return;
     }
+    const ok = await confirm({
+      title: 'Submit your adoption application?',
+      message: 'The shelter reviews it as you sent it and contacts you about the next steps, so check your details first.',
+      confirmLabel: 'Submit application',
+      summary: [
+        { label: 'Name', value: form.full_name },
+        { label: 'Contact', value: form.contact_number },
+        { label: 'Address', value: form.address },
+        { label: 'Valid ID', value: (categories.valid_id_type || []).find((t) => t.value === form.valid_id_type)?.label || form.valid_id_type },
+      ],
+    });
+    if (!ok) return;
     setSubmitting(true);
     setError('');
     try {

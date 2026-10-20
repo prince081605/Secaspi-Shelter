@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { MapPin } from 'lucide-react';
 import { adminGetAnimal } from '../lib/animalsApi';
 import { listShelterLocations, moveAnimal } from '../lib/locationsApi';
+import useConfirm from '../lib/useConfirm';
 
 const styles = `
   .alpCurrent { display: flex; align-items: center; gap: 0.5rem; font-size: 1.05rem; font-weight: 700; }
@@ -26,6 +27,7 @@ function formatWhen(value) {
  * used on the animal's page — the page its QR code opens — and 'admin' in the Animals panel.
  */
 export default function AnimalLocationPanel({ animalId, source = 'admin', onMoved }) {
+  const confirm = useConfirm();
   const [animal, setAnimal] = useState(null);
   const [locations, setLocations] = useState([]);
   const [target, setTarget] = useState('');
@@ -48,6 +50,14 @@ export default function AnimalLocationPanel({ animalId, source = 'admin', onMove
   const submit = async (e) => {
     e.preventDefault();
     if (target === '') return;
+    const to = target === 'none' ? null : locations.find((l) => String(l.id) === String(target));
+    const ok = await confirm({
+      title: `Move ${animal?.name || 'this animal'} to ${nameOf(to)}?`,
+      message: 'The move is logged in the animal’s location history.',
+      confirmLabel: 'Move',
+      summary: [{ label: 'From', value: nameOf(animal?.current_location) }, { label: 'To', value: nameOf(to) }],
+    });
+    if (!ok) return;
     setState({ status: 'saving', error: '', saved: '' });
     try {
       const res = await moveAnimal(animalId, { locationId: target === 'none' ? null : Number(target), note, source });

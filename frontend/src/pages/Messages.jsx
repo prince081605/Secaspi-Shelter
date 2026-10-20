@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { MessageSquare } from 'lucide-react';
+import useConfirm from '../lib/useConfirm';
 import {
   listConversations, listAdminConversations, startConversation,
   getConversation, replyConversation,
@@ -28,6 +29,7 @@ const styles = `
 `;
 
 export default function Messages({ staff = false }) {
+  const confirm = useConfirm();
   const [conversations, setConversations] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [thread, setThread] = useState(null);
@@ -83,6 +85,13 @@ export default function Messages({ staff = false }) {
   const sendNew = async (e) => {
     e.preventDefault();
     if (!newMsg.subject.trim() || !newMsg.body.trim()) return;
+    const ok = await confirm({
+      title: 'Send this message to the shelter?',
+      message: 'The shelter team is notified and replies here. You’ll get a notification when they do.',
+      confirmLabel: 'Send message',
+      summary: [{ label: 'Subject', value: newMsg.subject.trim() }],
+    });
+    if (!ok) return;
     try {
       const data = await startConversation(newMsg.subject.trim(), newMsg.body.trim());
       setNewMsg({ subject: '', body: '' });

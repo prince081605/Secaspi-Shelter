@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react';
 
 /*
- * Asks the admin to confirm before a write lands. Returns a function taking the dialog copy
+ * Asks for confirmation before a write lands (admin writes and user-side submissions alike). Returns a function taking the dialog copy
  * and resolving to true/false:
  *
  *   const confirm = useConfirm();

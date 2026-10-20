@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import useConfirm from '../../lib/useConfirm';
 import {
   authorizePayment,
   cancelPayment,
@@ -87,6 +88,7 @@ function useCountdown(expiresAt, active) {
 }
 
 export default function Checkout() {
+  const confirm = useConfirm();
   const { token } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -188,13 +190,26 @@ export default function Checkout() {
     run(() => authorizePayment(token, { account, pin }));
   };
 
-  const handleConfirm = (e) => {
+  const handleConfirm = async (e) => {
     e.preventDefault();
+    const sure = await confirm({
+      title: `Pay ${peso(session?.amount)} now?`,
+      message: 'The amount is taken from your account and your donation is recorded as received.',
+      confirmLabel: `Pay ${peso(session?.amount)}`,
+    });
+    if (!sure) return;
     run(() => confirmOtp(token, otp)).then((ok) => { if (ok) setOtp(''); });
   };
 
   const handleCancel = async () => {
-    if (!window.confirm('Cancel this payment? Nothing will be charged.')) return;
+    const sure = await confirm({
+      title: 'Cancel this payment?',
+      message: 'Nothing will be charged. You can start a new donation any time.',
+      confirmLabel: 'Cancel payment',
+      cancelLabel: 'Keep paying',
+      tone: 'danger',
+    });
+    if (!sure) return;
     await run(() => cancelPayment(token));
     navigate('/donate?cancelled=1');
   };

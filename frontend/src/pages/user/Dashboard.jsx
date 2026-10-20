@@ -6,6 +6,7 @@ import { listMyAdoptionApplications, listMyFosterApplications } from '../../lib/
 import { updateProfile, changePassword } from '../../lib/profileApi';
 import Reveal from '../../components/Reveal';
 import PasswordInput from '../../components/PasswordInput';
+import useConfirm from '../../lib/useConfirm';
 import {
   Clock, Heart, User, Pencil, Lock, ClipboardList, Dog, Trophy, LayoutDashboard,
   ArrowLeft, Menu, X, LogOut, MessageSquare, PawPrint, Bell, Inbox, HeartHandshake,
@@ -224,6 +225,7 @@ function UserApplications({ applications, loading }) {
 }
 
 function UserProfile({ user, onProfileUpdated }) {
+  const confirm = useConfirm();
   const isMobile = useIsMobile();
   const [fullName, setFullName] = useState(user?.full_name || '');
   const [phone, setPhone] = useState(user?.phone || '');
@@ -236,6 +238,13 @@ function UserProfile({ user, onProfileUpdated }) {
 
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
+    const ok = await confirm({
+      title: 'Save your profile?',
+      message: 'The shelter uses these details to contact you about your applications and donations.',
+      confirmLabel: 'Save changes',
+      summary: [{ label: 'Name', value: fullName }, { label: 'Phone', value: phone }],
+    });
+    if (!ok) return;
     setProfileState({ status: 'loading', error: '' });
     try {
       const data = await updateProfile({ full_name: fullName, phone });
@@ -248,6 +257,12 @@ function UserProfile({ user, onProfileUpdated }) {
 
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
+    const ok = await confirm({
+      title: 'Change your password?',
+      message: 'Use the new password the next time you log in. Your account is signed out everywhere else.',
+      confirmLabel: 'Change password',
+    });
+    if (!ok) return;
     setPasswordState({ status: 'loading', error: '' });
     try {
       await changePassword({

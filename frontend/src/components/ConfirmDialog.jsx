@@ -4,7 +4,9 @@ import { ConfirmContext } from '../lib/useConfirm';
 import './ConfirmDialog.css';
 
 /*
- * A single confirmation dialog for every admin write.
+ * A single confirmation dialog for every admin write — and every user-side submission (a rescue
+ * report, an application, a donation, a visit request, a message, an update), which shows the
+ * person what they entered before it is sent.
  *
  * Admin work is not undoable from the UI — adding an animal, approving an adoption, verifying
  * a donation and deleting an expense all land in the database the moment the button is hit,

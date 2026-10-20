@@ -7,6 +7,7 @@ import { DONATION_CATEGORIES, NEEDED_MOST_LABEL, NEEDED_MOST_VALUE } from '../..
 import SiteNav from '../../components/SiteNav';
 import PhotoInput from '../../components/PhotoInput';
 import useLoginGate from '../../lib/useLoginGate';
+import useConfirm from '../../lib/useConfirm';
 
 const peso = (n) => `₱${Number(n || 0).toLocaleString()}`;
 
@@ -49,6 +50,7 @@ export default function Donate() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const gate = useLoginGate('/donate');
+  const confirm = useConfirm();
 
   // A draft only exists when this page sent the visitor off to log in, and it outranks the
   // landing page's preselected amount: it is the choice they made most recently.
@@ -132,6 +134,21 @@ export default function Donate() {
       gate.askToLogin(draftValues());
       return;
     }
+
+    const ok = await confirm({
+      title: `Donate ${peso(amount)}?`,
+      message: viaGateway
+        ? 'You’ll go to the secure checkout to pay. Nothing is charged until you finish there.'
+        : 'Your donation is recorded now, and the shelter verifies it once the payment reaches them. You’ll get a receipt.',
+      confirmLabel: viaGateway ? 'Continue to checkout' : 'Submit donation',
+      summary: [
+        { label: 'Amount', value: peso(amount) },
+        { label: 'For', value: !category || category === NEEDED_MOST_VALUE ? NEEDED_MOST_LABEL : (DONATION_CATEGORIES.find((c) => c.key === category)?.label || category) },
+        { label: 'Payment', value: { gcash: 'GCash', cash: 'Cash', bank: 'Bank transfer' }[paymentMethod] || paymentMethod },
+        { label: 'Your name', value: listPublicly ? 'Shown on the donor list' : 'Anonymous' },
+      ],
+    });
+    if (!ok) return;
 
     setSubmitting(true);
     setError('');

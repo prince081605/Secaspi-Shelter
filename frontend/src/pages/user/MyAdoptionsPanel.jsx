@@ -23,6 +23,7 @@ const STORY_STATES = {
 };
 
 function UpdateForm({ adoption, onSent }) {
+  const confirm = useConfirm();
   const name = adoption.animal?.name || 'your pet';
   const [wellbeing, setWellbeing] = useState('doing_well');
   const [message, setMessage] = useState('');
@@ -37,6 +38,19 @@ function UpdateForm({ adoption, onSent }) {
 
   const submit = async (e) => {
     e.preventDefault();
+    const ok = await confirm({
+      title: `Send this update about ${name}?`,
+      message: share
+        ? 'You also offered it as a Happy Tails story. The shelter reviews it first, and only your first name is shown.'
+        : 'Only the shelter sees it.',
+      confirmLabel: 'Send update',
+      summary: [
+        { label: `How ${name} is doing`, value: labelOf(ADOPTER_WELLBEING, wellbeing) },
+        { label: 'Photos', value: photos.length ? String(photos.length) : '' },
+        { label: 'Happy Tails', value: share ? 'Offered' : 'Not shared' },
+      ],
+    });
+    if (!ok) return;
     setState({ sending: true, error: '' });
     try {
       await sendAdoptionUpdate(adoption.id, { wellbeing, message, photos, sharePublicly: share });

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { createVisitation, listVisitations } from '../../lib/visitationsApi';
 import SiteNav from '../../components/SiteNav';
 import useLoginGate from '../../lib/useLoginGate';
+import useConfirm from '../../lib/useConfirm';
 
 const styles = `
   .visitBody { max-width: 640px; margin: 0 auto; padding: 3rem 1.5rem; }
@@ -37,6 +38,7 @@ function toDateInput(d) {
 }
 
 export default function VisitationBooking() {
+  const confirm = useConfirm();
   const navigate = useNavigate();
   const gate = useLoginGate('/visit');
 
@@ -86,6 +88,18 @@ export default function VisitationBooking() {
       gate.askToLogin(formValues());
       return;
     }
+
+    const ok = await confirm({
+      title: 'Request this visit?',
+      message: 'The shelter confirms the date with you before the visit. You can see the request under “Your visit requests”.',
+      confirmLabel: 'Request visit',
+      summary: [
+        { label: 'Date', value: requestedDate },
+        { label: 'Time', value: SLOT_LABEL[timeSlot] || timeSlot },
+        { label: 'Visitors', value: String(Number(numVisitors) || 1) },
+      ],
+    });
+    if (!ok) return;
 
     setSubmitting(true);
     setError('');

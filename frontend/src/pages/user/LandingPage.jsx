@@ -6,6 +6,7 @@ import { getPublicSettings, settingImageUrl } from "../../lib/settingsApi.js";
 import { getHappyTails } from "../../lib/postAdoptionApi.js";
 import SiteNav from "../../components/SiteNav.jsx";
 import useHumanCheck from "../../lib/useHumanCheck.jsx";
+import useConfirm from "../../lib/useConfirm.js";
 import {
   Hero,
   Pathways,
@@ -37,6 +38,7 @@ const URGENCY_BY_CONDITION = {
 };
 
 export default function LandingPage() {
+  const confirm = useConfirm();
   const navigate = useNavigate();
   const { hash } = useLocation();
   const [amt, setAmt] = useState(donationAmounts[1]);
@@ -162,6 +164,19 @@ export default function LandingPage() {
       setReportState({ status: "error", error: human.notReadyMessage });
       return;
     }
+    const ok = await confirm({
+      title: "Send this rescue report?",
+      message: "The shelter team is alerted right away. Make sure the location and your contact number are right, so the team can find the animal and reach you.",
+      confirmLabel: "Send report",
+      summary: [
+        { label: "Location", value: form.location },
+        { label: "Condition", value: form.condition },
+        { label: "Your contact", value: form.contact },
+        { label: "Map pin", value: form.latitude != null ? "Pinned" : "" },
+        { label: "Photo", value: reportPhoto ? "Attached" : "" },
+      ],
+    });
+    if (!ok) return;
     setReportState({ status: "loading", error: "" });
     try {
       const fd = new FormData();

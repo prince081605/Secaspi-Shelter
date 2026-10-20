@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Clock } from 'lucide-react';
 import { clockIn, clockOut, formatDateTime, formatDuration, formatTime, getMyAttendance } from '../lib/attendanceApi';
+import useConfirm from '../lib/useConfirm';
 
 const styles = `
   .attCard { border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.1rem; margin-bottom: 1.2rem; background: var(--surface, transparent); }
@@ -29,6 +30,7 @@ const hours = (h) => `${Number(h || 0).toLocaleString(undefined, { maximumFracti
  * Renders nothing for someone without a personnel record.
  */
 export default function AttendanceCard({ onChanged }) {
+  const confirm = useConfirm();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -52,6 +54,18 @@ export default function AttendanceCard({ onChanged }) {
   if (loading || !data) return null;
 
   const toggle = async () => {
+    const minutesSoFar = data.on_duty && data.open_since
+      ? Math.max(0, Math.floor((Date.now() - new Date(data.open_since).getTime()) / 60000))
+      : null;
+    const ok = await confirm(data.on_duty
+      ? {
+          title: 'Clock out now?',
+          message: 'Your shift ends now and its hours are added to your total.',
+          confirmLabel: 'Clock out',
+          summary: [{ label: 'On duty for', value: formatDuration(minutesSoFar) }],
+        }
+      : { title: 'Clock in now?', message: 'Your shift starts now. Remember to clock out when you leave.', confirmLabel: 'Clock in' });
+    if (!ok) return;
     setBusy(true);
     setError('');
     try {

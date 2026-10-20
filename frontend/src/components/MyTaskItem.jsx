@@ -3,6 +3,7 @@ import { requestVolunteerTask, submitTaskProof } from '../lib/volunteersApi';
 import { todayLocal } from '../lib/dates';
 import StatusBadge from './StatusBadge';
 import PhotoInput from './PhotoInput';
+import useConfirm from '../lib/useConfirm';
 
 const styles = `
   .myTaskList { list-style: none; padding: 0; margin: 0; }
@@ -47,6 +48,7 @@ function formatDateTime(value) {
  * lands as 'requested' until the team confirms it.
  */
 export function RequestTaskForm({ onRequested }) {
+  const confirm = useConfirm();
   const [taskName, setTaskName] = useState('');
   const [date, setDate] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -54,6 +56,13 @@ export function RequestTaskForm({ onRequested }) {
 
   const submit = async (e) => {
     e.preventDefault();
+    const ok = await confirm({
+      title: 'Request this task?',
+      message: 'A Desk Admin reviews it and assigns it to you.',
+      confirmLabel: 'Request task',
+      summary: [{ label: 'Task', value: taskName }, { label: 'Date', value: date }],
+    });
+    if (!ok) return;
     setSubmitting(true);
     setError('');
     try {
@@ -112,6 +121,7 @@ export function MyTaskList({ children }) {
  * completes the task — it parks it as 'submitted' until a Desk Admin verifies it.
  */
 export default function MyTaskItem({ task, onUpdated }) {
+  const confirm = useConfirm();
   const [open, setOpen] = useState(false);
   const [image, setImage] = useState(null);
   const [previewUrl, setPreviewUrl] = useState('');
@@ -133,6 +143,12 @@ export default function MyTaskItem({ task, onUpdated }) {
   const send = async (e) => {
     e.preventDefault();
     if (!image) return;
+    const ok = await confirm({
+      title: 'Send this photo as proof?',
+      message: `A Desk Admin checks it and marks “${task.task_name}” complete.`,
+      confirmLabel: 'Send proof',
+    });
+    if (!ok) return;
     setSending(true);
     setError('');
     try {
