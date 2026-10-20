@@ -212,7 +212,7 @@ function ExpenseForm({ editing, onCancel, onSaved, onError }) {
 
 const EMPTY_RESULT = { key: null, expenses: [], stats: null, meta: { current_page: 1, last_page: 1 }, error: '' };
 
-export default function ExpensesAdmin({ isAdmin = false }) {
+export default function ExpensesAdmin({ canEdit = false }) {
   const confirm = useConfirm();
   const isMobile = useIsMobile();
   const [category, setCategory] = useState('');
@@ -360,7 +360,7 @@ export default function ExpensesAdmin({ isAdmin = false }) {
           />
         </label>
 
-        {isAdmin && (
+        {canEdit && (
           <button
             className="dashBtn dashBtnPrimary"
             onClick={() => {
@@ -380,7 +380,7 @@ export default function ExpensesAdmin({ isAdmin = false }) {
         )}
       </div>
 
-      {isAdmin && formOpen && (
+      {canEdit && formOpen && (
         <ExpenseForm
           // Remount when the edited row changes so the form re-initialises from the new row
           // (see ExpenseForm — this is why it needs no prop-syncing effect).
@@ -413,7 +413,7 @@ export default function ExpensesAdmin({ isAdmin = false }) {
                 { label: 'Receipt', value: e.receipt_url ? <a href={fileSrc(e.receipt_url)} target="_blank" rel="noreferrer">View</a> : '—' },
                 e.recorded_by && { label: 'Recorded by', value: e.recorded_by },
               ]}
-              actions={isAdmin ? rowActions(e) : null}
+              actions={canEdit ? rowActions(e) : null}
             />
           ))}
         </div>
@@ -428,7 +428,7 @@ export default function ExpensesAdmin({ isAdmin = false }) {
                 <th>Amount</th>
                 <th>Receipt</th>
                 <th>Recorded by</th>
-                {isAdmin && <th>Actions</th>}
+                {canEdit && <th>Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -444,7 +444,7 @@ export default function ExpensesAdmin({ isAdmin = false }) {
                       : '—'}
                   </td>
                   <td>{e.recorded_by || '—'}</td>
-                  {isAdmin && (
+                  {canEdit && (
                     <td className="dashActionsCell">
                       <span className="dashActionsRow">{rowActions(e)}</span>
                     </td>

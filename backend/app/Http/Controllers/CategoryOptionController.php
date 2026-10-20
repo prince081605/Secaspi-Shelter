@@ -15,8 +15,8 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
 /**
- * The admin-managed lists (see CategoryOption): anyone can read them, since the forms need them;
- * only admins add, rename, hide/restore or delete. Nothing a record uses is ever deleted — it can
+ * The dropdown lists (see CategoryOption): anyone can read them, since the forms need them;
+ * only the Data Admin adds, renames, hides/restores or deletes. Nothing a record uses is ever deleted — it can
  * only be hidden, which takes it off the dropdowns while the records that have it keep it.
  */
 class CategoryOptionController extends Controller

@@ -56,6 +56,8 @@ class AuthController extends Controller
                 'username' => $user->username,
                 'email' => $user->email,
                 'role' => $user->role,
+                'role_label' => $user->roleLabel(),
+                'permissions' => $user->permissions(),
             ],
         ]);
 
@@ -116,6 +118,8 @@ class AuthController extends Controller
                 'username' => $user->username,
                 'email' => $user->email,
                 'role' => $user->role,
+                'role_label' => $user->roleLabel(),
+                'permissions' => $user->permissions(),
                 'email_verified' => (int) ($user->email_verified ?? 0),
             ],
         ];
@@ -308,6 +312,8 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'phone' => $user->phone,
                 'role' => $user->role,
+                'role_label' => $user->roleLabel(),
+                'permissions' => $user->permissions(),
                 'email_verified' => (int) ($user->email_verified ?? 0),
             ],
         ]);

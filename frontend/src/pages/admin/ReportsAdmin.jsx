@@ -62,12 +62,12 @@ function saveBlob(blob, filename) {
   URL.revokeObjectURL(url);
 }
 
-export default function ReportsAdmin({ isAdmin = false }) {
+export default function ReportsAdmin({ canFinancial = false }) {
   const isMobile = useIsMobile();
-  // The financial reports (donations, expenses) are admin-only; staff see operational types only.
+  // The financial reports (donations, expenses) are the Data Admin's; staff see operational types only.
   // The server enforces this too — ReportController::resolveData() blocks both types below admin,
   // so hiding them here is convenience, not the access control.
-  const reportTypes = isAdmin
+  const reportTypes = canFinancial
     ? REPORT_TYPES
     : REPORT_TYPES.filter((t) => !FINANCIAL_REPORT_TYPES.includes(t.key));
   const [type, setType] = useState('adoption');

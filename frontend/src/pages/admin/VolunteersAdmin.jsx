@@ -5,6 +5,7 @@ import TeamsAdmin from './TeamsAdmin';
 import {
   adminListVolunteers,
   adminCreateVolunteer,
+  adminSearchPersonnelCandidates,
   adminUpdateVolunteer,
   adminDeleteVolunteer,
   adminCreateVolunteerTask,
@@ -14,24 +15,24 @@ import {
   adminUpdateVolunteerApplication,
   adminMarkVolunteerApplicationRead,
 } from '../../lib/volunteersApi';
-import { adminListUsers } from '../../lib/usersApi';
 import StatusBadge from '../../components/StatusBadge';
 import useConfirm from '../../lib/useConfirm';
 import Pagination from '../../components/Pagination';
 import DashCard from '../../components/DashCard';
 import useIsMobile from '../../lib/useIsMobile';
 import { optionLabel, useCategories } from '../../lib/categoriesApi';
+import { roleLabel } from '../../lib/permissions';
 
 // 'submitted' is where a task lands once the volunteer sends proof they finished it, so the
 // step after it is signing that proof off. 'ongoing' still leads straight to completed — not
 // every task produces a photo worth waiting for.
 const NEXT_TASK_STATUS = { assigned: 'ongoing', ongoing: 'completed', submitted: 'completed' };
 
-// Completing a task is an admin's verification of the work (the backend enforces this too):
+// Completing a task is a Desk Admin's verification of the work (the backend enforces this too):
 // staff do tasks themselves, so they move tasks along but never complete them.
-function nextStatusFor(task, isAdmin) {
+function nextStatusFor(task, canSupervise) {
   const next = NEXT_TASK_STATUS[task.status];
-  return next === 'completed' && !isAdmin ? null : next;
+  return next === 'completed' && !canSupervise ? null : next;
 }
 
 function nextStatusLabel(task, next) {
@@ -87,9 +88,9 @@ function AddPersonForm({ type, onCancel, onAdded }) {
   const loadUsers = async (query = '') => {
     setState({ status: 'loading', error: '' });
     try {
-      const data = await adminListUsers(query ? { q: query } : {});
-      // Admins and existing staff/volunteers aren't valid picks here.
-      setResults((data?.data || []).filter((u) => u.role !== 'admin' && u.role !== 'volunteer' && u.role !== 'staff'));
+      // Only plain user accounts come back: not personnel already, and not an admin type.
+      const data = await adminSearchPersonnelCandidates(query);
+      setResults(data?.users || []);
       setState({ status: 'idle', error: '' });
     } catch (err) {
       setState({ status: 'error', error: err?.message || 'Failed to load users.' });
@@ -150,7 +151,7 @@ function AddPersonForm({ type, onCancel, onAdded }) {
                     key={u.id}
                     title={u.full_name}
                     subtitle={u.email}
-                    fields={[{ label: 'Role', value: u.role }]}
+                    fields={[{ label: 'Role', value: roleLabel(u.role) }]}
                     actions={<button className="dashBtn dashBtnPrimary" onClick={() => setSelected(u)}>Select</button>}
                   />
                 ))}
@@ -164,7 +165,7 @@ function AddPersonForm({ type, onCancel, onAdded }) {
                       <tr key={u.id}>
                         <td>{u.full_name}</td>
                         <td>{u.email}</td>
-                        <td>{u.role}</td>
+                        <td>{roleLabel(u.role)}</td>
                         <td><button className="dashBtn dashBtnPrimary" onClick={() => setSelected(u)}>Select</button></td>
                       </tr>
                     ))}
@@ -197,7 +198,7 @@ function AddPersonForm({ type, onCancel, onAdded }) {
   );
 }
 
-function TasksPanel({ volunteer, onChanged, isAdmin }) {
+function TasksPanel({ volunteer, onChanged, canSupervise }) {
   const confirm = useConfirm();
   const isMobile = useIsMobile();
   const [taskName, setTaskName] = useState('');
@@ -262,13 +263,13 @@ function TasksPanel({ volunteer, onChanged, isAdmin }) {
   };
 
   const advanceTask = (task) => {
-    const next = nextStatusFor(task, isAdmin);
+    const next = nextStatusFor(task, canSupervise);
     if (next) setStatus(task, next);
   };
 
   // The buttons a task row offers, shared by the table and the mobile cards.
   const taskActions = (t) => {
-    const next = nextStatusFor(t, isAdmin);
+    const next = nextStatusFor(t, canSupervise);
     return (
       <>
         {t.status === 'requested' && (
@@ -277,11 +278,11 @@ function TasksPanel({ volunteer, onChanged, isAdmin }) {
         {next && (
           <button className="dashBtn dashBtnPrimary" onClick={() => advanceTask(t)}>{nextStatusLabel(t, next)}</button>
         )}
-        {isAdmin && t.status === 'submitted' && (
+        {canSupervise && t.status === 'submitted' && (
           <button className="dashBtn" onClick={() => setStatus(t, 'ongoing')}>Send back</button>
         )}
-        {!isAdmin && t.status === 'submitted' && (
-          <span className="ui-muted" style={{ fontSize: 12 }}>Awaiting admin verification</span>
+        {!canSupervise && t.status === 'submitted' && (
+          <span className="ui-muted" style={{ fontSize: 12 }}>Awaiting Desk Admin verification</span>
         )}
         <button className="dashBtn dashBtnDanger" aria-label={t.status === 'requested' ? 'Decline task' : 'Delete task'} onClick={() => deleteTask(t)}><X size={14} /></button>
       </>
@@ -420,7 +421,7 @@ const CATEGORY_STYLES = `
   .volCatPick:focus-within { outline: 3px solid var(--brand); outline-offset: 2px; }
 `;
 
-function PersonnelRow({ personnel, onChanged, isAdmin }) {
+function PersonnelRow({ personnel, onChanged, canSupervise }) {
   const confirm = useConfirm();
   const isMobile = useIsMobile();
   const [expanded, setExpanded] = useState(false);
@@ -469,8 +470,8 @@ function PersonnelRow({ personnel, onChanged, isAdmin }) {
     }
   };
 
-  // Hours come from attendance; only an admin can override the total (the backend enforces it).
-  const hoursControl = isAdmin ? (
+  // Hours come from attendance; only a Desk Admin can override the total (the backend enforces it).
+  const hoursControl = canSupervise ? (
     <span className="dashActionsRow">
       <input className="ui-input" type="number" min="0" step="0.25" style={{ width: 90 }} aria-label={`Hours rendered by ${personnel.user?.full_name || 'this person'}`} value={hours} onChange={(e) => setHours(e.target.value)} />
       <button className="dashBtn" onClick={saveHours}>Save</button>
@@ -488,7 +489,7 @@ function PersonnelRow({ personnel, onChanged, isAdmin }) {
     <>
       {personnel.performance_notes && <div><strong>Notes:</strong> {personnel.performance_notes}</div>}
       <CategoryEditor key={(personnel.categories || []).join()} personnel={personnel} onSaved={onChanged} />
-      <TasksPanel volunteer={personnel} onChanged={onChanged} isAdmin={isAdmin} />
+      <TasksPanel volunteer={personnel} onChanged={onChanged} canSupervise={canSupervise} />
     </>
   );
 
@@ -761,7 +762,7 @@ function VolunteerRequests() {
   );
 }
 
-function PersonnelRoster({ type, isAdmin }) {
+function PersonnelRoster({ type, canSupervise }) {
   const isMobile = useIsMobile();
   const [personnel, setPersonnel] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -800,7 +801,9 @@ function PersonnelRoster({ type, isAdmin }) {
   };
 
   const typeLabel = type === 'staff' ? 'staff' : 'volunteers';
-  const addLabel = type === 'staff' ? '+ Add staff' : '+ Add volunteer';
+  // Making someone staff is a role change, so it's the System Admin's (Users → Role); the desk
+  // only adds volunteers here.
+  const canAdd = type !== 'staff';
 
   return (
     <>
@@ -808,16 +811,20 @@ function PersonnelRoster({ type, isAdmin }) {
       {error && <div className="ui-error">{error}</div>}
 
       <div className="dashFilterBar">
-        <button className="dashBtn dashBtnPrimary" onClick={() => setShowAdd((v) => !v)}>
-          {showAdd ? 'Close' : addLabel}
-        </button>
+        {canAdd ? (
+          <button className="dashBtn dashBtnPrimary" onClick={() => setShowAdd((v) => !v)}>
+            {showAdd ? 'Close' : '+ Add volunteer'}
+          </button>
+        ) : (
+          <span className="ui-muted" style={{ fontSize: '0.9rem' }}>Staff are added by a System Admin, from Users.</span>
+        )}
         <select className="ui-input" style={{ maxWidth: 230 }} aria-label={`Filter ${typeLabel} by category`} value={category} onChange={(e) => { setPage(1); setCategory(e.target.value); }}>
           <option value="">All categories</option>
           {(lists.volunteer_category || []).map((o) => <option key={o.value} value={o.value}>{o.label}{o.hidden ? ' (hidden)' : ''}</option>)}
         </select>
       </div>
 
-      {showAdd && <AddPersonForm type={type} onCancel={() => setShowAdd(false)} onAdded={refresh} />}
+      {canAdd && showAdd && <AddPersonForm type={type} onCancel={() => setShowAdd(false)} onAdded={refresh} />}
 
       {loading ? (
         <div className="ui-empty">Loading…</div>
@@ -826,7 +833,7 @@ function PersonnelRoster({ type, isAdmin }) {
       ) : isMobile ? (
         <div className="dashCardList" style={{ marginTop: 10 }}>
           {personnel.map((p) => (
-            <PersonnelRow key={p.id} personnel={p} onChanged={refresh} isAdmin={isAdmin} />
+            <PersonnelRow key={p.id} personnel={p} onChanged={refresh} canSupervise={canSupervise} />
           ))}
         </div>
       ) : (
@@ -844,7 +851,7 @@ function PersonnelRoster({ type, isAdmin }) {
             </thead>
             <tbody>
               {personnel.map((p) => (
-                <PersonnelRow key={p.id} personnel={p} onChanged={refresh} isAdmin={isAdmin} />
+                <PersonnelRow key={p.id} personnel={p} onChanged={refresh} canSupervise={canSupervise} />
               ))}
             </tbody>
           </table>
@@ -856,7 +863,7 @@ function PersonnelRoster({ type, isAdmin }) {
   );
 }
 
-export default function VolunteersAdmin({ isAdmin = false }) {
+export default function VolunteersAdmin({ canSupervise = false }) {
   const [mode, setMode] = useState('volunteers');
   const [subMode, setSubMode] = useState('roster');
 
@@ -911,15 +918,15 @@ export default function VolunteersAdmin({ isAdmin = false }) {
           {subMode === 'requests' ? (
             <VolunteerRequests />
           ) : (
-            <PersonnelRoster type="volunteer" isAdmin={isAdmin} />
+            <PersonnelRoster type="volunteer" canSupervise={canSupervise} />
           )}
         </>
       ) : mode === 'attendance' ? (
-        <AttendanceAdmin isAdmin={isAdmin} />
+        <AttendanceAdmin canCorrect={canSupervise} />
       ) : mode === 'teams' ? (
         <TeamsAdmin />
       ) : (
-        <PersonnelRoster type="staff" isAdmin={isAdmin} />
+        <PersonnelRoster type="staff" canSupervise={canSupervise} />
       )}
     </>
   );

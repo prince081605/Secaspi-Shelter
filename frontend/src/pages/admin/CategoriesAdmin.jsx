@@ -242,8 +242,8 @@ function CategoryList({ list }) {
 
 /**
  * Categories: one place for the lists the rest of the system offers as choices — breeds,
- * behavioral issues, medical record types, valid ID types, and the shelter's areas. Admin-only.
- * It has its own nav item and is also Settings → System data, which passes its own title.
+ * behavioral issues, medical record types, valid ID types, and the shelter's areas. The Data Admin's alone.
+ * It is the Data Admin's Categories page (Data & Reports → Categories).
  */
 export default function CategoriesAdmin({ title = 'Categories', icon: TitleIcon = Tags }) {
   const [active, setActive] = useState(LISTS[0].type);

@@ -276,7 +276,7 @@ class PaymentGatewayTest extends TestCase
         $this->postJson("/api/payments/{$abandoned}/cancel")->assertOk();
 
         // The admin sidebar badge counts work waiting on staff. Neither of these is.
-        Sanctum::actingAs(User::factory()->create(['role' => 'admin']));
+        Sanctum::actingAs(User::factory()->deskAdmin()->create());
         $this->getJson('/api/admin/dashboard/pending-counts')
             ->assertOk()
             ->assertJsonPath('donation', 0);

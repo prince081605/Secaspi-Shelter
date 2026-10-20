@@ -113,8 +113,8 @@ class TeamTest extends TestCase
             $this->assertSame(1, $this->notifications($member, 'volunteer_task'));
         }
 
-        // Each copy goes through the usual verification (an admin signs it off); the team's progress follows.
-        Sanctum::actingAs(User::factory()->admin()->create());
+        // Each copy goes through the usual verification (a Desk Admin signs it off); the team's progress follows.
+        Sanctum::actingAs(User::factory()->deskAdmin()->create());
         $this->putJson("/api/admin/volunteer-tasks/{$copies[0]->id}", ['status' => 'completed'])->assertOk();
         $this->getJson("/api/admin/teams/{$team->id}")->assertJsonPath('team.tasks.0.completed', 1);
 

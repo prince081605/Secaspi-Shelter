@@ -26,7 +26,7 @@ class AnimalArchiveOnlyTest extends TestCase
     public function test_there_is_no_way_to_delete_an_animal_even_as_admin(): void
     {
         $id = $this->animalId();
-        Sanctum::actingAs(User::factory()->admin()->create());
+        Sanctum::actingAs(User::factory()->deskAdmin()->create());
 
         $this->deleteJson("/api/animals/{$id}")->assertStatus(405);
 

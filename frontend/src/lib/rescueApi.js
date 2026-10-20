@@ -25,7 +25,11 @@ export async function adminMarkRescueReportRead(id) {
   return api.post(`/api/rescue-reports/${id}/read`);
 }
 
-// ---- Admin: reporters who send fake reports ----
+// ---- System Admin (Security): reporters who send fake reports ----
+
+export async function adminListFlaggedReporters() {
+  return api.get('/api/admin/security/flagged-reporters');
+}
 
 export async function adminBlockReporter(reportId, reason) {
   return api.post(`/api/rescue-reports/${reportId}/block`, { reason });

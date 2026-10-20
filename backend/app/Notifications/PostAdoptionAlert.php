@@ -6,7 +6,7 @@ use App\Models\AdoptionReturn;
 use App\Models\AdoptionUpdate;
 
 /**
- * To staff and admins, when an adopter needs the shelter: an update saying they need help, or a
+ * To staff and Desk Admins, when an adopter needs the shelter: an update saying they need help, or a
  * request to return the animal. Everything else waits quietly on the Post-adoption page.
  */
 class PostAdoptionAlert extends AppNotification

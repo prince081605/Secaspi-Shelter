@@ -52,10 +52,10 @@ function money(n) {
  * the proof screenshot — so the screenshot is what the panel leads with, and Verify/Reject sit
  * underneath it rather than on the row where they could be pressed without it ever being seen.
  *
- * Staff can open the panel; only admins get the decision footer (the list is role:staff, the
- * verify endpoint is admin-only), which is why the Actions column is no longer conditional.
+ * Staff can open the panel; only a Desk Admin gets the decision footer (the list is desk.operate,
+ * the verify endpoint desk.supervise), which is why the Actions column is no longer conditional.
  */
-function DonationRow({ donation: d, isAdmin, onChanged }) {
+function DonationRow({ donation: d, canVerify, onChanged }) {
   const confirm = useConfirm();
   const isMobile = useIsMobile();
   const [expanded, setExpanded] = useState(false);
@@ -128,7 +128,7 @@ function DonationRow({ donation: d, isAdmin, onChanged }) {
         )}
       </div>
 
-      {isAdmin && d.status === 'pending' && (
+      {canVerify && d.status === 'pending' && (
         <div className="dashActionRow">
           <button className="dashBtn dashBtnDanger" onClick={() => handleVerify('rejected')}>Reject</button>
           <button className="dashBtn dashBtnPrimary" onClick={() => handleVerify('verified')}>Verify</button>
@@ -225,7 +225,7 @@ function StatsCards() {
   );
 }
 
-export default function DonationsAdmin({ isAdmin = false }) {
+export default function DonationsAdmin({ canVerify = false }) {
   const isMobile = useIsMobile();
   const [donations, setDonations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -285,7 +285,7 @@ export default function DonationsAdmin({ isAdmin = false }) {
       ) : isMobile ? (
         <div className="dashCardList">
           {donations.map((d) => (
-            <DonationRow key={d.id} donation={d} isAdmin={isAdmin} onChanged={refresh} />
+            <DonationRow key={d.id} donation={d} canVerify={canVerify} onChanged={refresh} />
           ))}
         </div>
       ) : (
@@ -301,13 +301,13 @@ export default function DonationsAdmin({ isAdmin = false }) {
                 <th>Category</th>
                 <th>Payment</th>
                 <th>Status</th>
-                {/* Not gated on isAdmin: staff can read a donation, they just cannot decide it. */}
+                {/* Not gated on canVerify: staff can read a donation, they just cannot decide it. */}
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {donations.map((d) => (
-                <DonationRow key={d.id} donation={d} isAdmin={isAdmin} onChanged={refresh} />
+                <DonationRow key={d.id} donation={d} canVerify={canVerify} onChanged={refresh} />
               ))}
             </tbody>
           </table>

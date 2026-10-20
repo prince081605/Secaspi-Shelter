@@ -162,7 +162,7 @@ class DonationController extends Controller
 
     public function show(Request $request, Donation $donation)
     {
-        if ($donation->user_id !== $request->user()->id && $request->user()->role !== 'admin') {
+        if ($donation->user_id !== $request->user()->id && ! $request->user()->hasPermission('desk.supervise')) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 

@@ -98,7 +98,7 @@ class AnimalLocationTest extends TestCase
         $this->postJson('/api/admin/shelter-locations', ['name' => 'Clinic'])->assertForbidden();
         $this->postJson("/api/animals/{$animal}/location", ['location_id' => $this->area('Kennel 2')->id])->assertOk();
 
-        Sanctum::actingAs(User::factory()->admin()->create());
+        Sanctum::actingAs(User::factory()->dataAdmin()->create());
         $clinic = $this->postJson('/api/admin/shelter-locations', ['name' => 'Clinic'])->assertCreated()->json('location');
         $this->postJson('/api/admin/shelter-locations', ['name' => 'Clinic'])->assertStatus(422);
         $this->putJson("/api/admin/shelter-locations/{$clinic['id']}", ['name' => 'Vet Clinic'])->assertOk()

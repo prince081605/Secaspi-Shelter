@@ -10,7 +10,7 @@ import {
   Clock, Heart, User, Pencil, Lock, ClipboardList, Dog, Trophy, LayoutDashboard,
   ArrowLeft, Menu, X, LogOut, MessageSquare, PawPrint, Bell, Inbox, HeartHandshake,
   Siren, Calendar, Wrench, HandCoins, BarChart3, Users, UsersRound, Settings,
-  ChevronRight, Receipt, Tags, House,
+  ChevronRight, Receipt, Tags, House, Database, FileUp, ShieldCheck, ServerCog,
 } from 'lucide-react';
 import AnimalsAdmin from '../admin/AnimalsAdmin';
 import AdoptionRequestsAdmin from '../admin/AdoptionRequestsAdmin';
@@ -35,6 +35,10 @@ import PostAdoptionAdmin from '../admin/PostAdoptionAdmin';
 import MyAdoptionsPanel from './MyAdoptionsPanel';
 import VisitationsAdmin from '../admin/VisitationsAdmin';
 import RemindersAdmin from '../admin/RemindersAdmin';
+import AnimalImport from '../admin/AnimalImport';
+import SecurityAdmin from '../admin/SecurityAdmin';
+import SystemSummary from '../admin/SystemSummary';
+import { can, roleLabel } from '../../lib/permissions';
 import StatusBadge from '../../components/StatusBadge';
 import NotificationBell from '../../components/NotificationBell';
 import DashCard from '../../components/DashCard';
@@ -48,26 +52,31 @@ const ITEM_CATEGORY = {
   animals: 'cat_animals', reminders: 'cat_animals',
   requests: 'cat_requests', rescues: 'cat_requests', visitations: 'cat_requests', messages: 'cat_requests',
   postadoption: 'cat_requests',
-  donations: 'cat_ops', expenses: 'cat_ops', reports: 'cat_ops', users: 'cat_ops', settings: 'cat_ops', volunteers: 'cat_ops',
-  categories: 'cat_ops',
+  donations: 'cat_ops', expenses: 'cat_ops', volunteers: 'cat_ops',
+  categories: 'cat_data', import: 'cat_data', reports: 'cat_data',
+  users: 'cat_system', security: 'cat_system', settings: 'cat_system',
 };
-const NAV_CATEGORY_KEYS = ['cat_animals', 'cat_requests', 'cat_ops'];
+const NAV_CATEGORY_KEYS = ['cat_animals', 'cat_requests', 'cat_ops', 'cat_data', 'cat_system'];
 
-// Role hierarchy (mirrors backend App\Models\User::ROLE_RANKS). Access is by minimum
-// rank: a higher role clears every gate a lower one can.
-const ROLE_RANK = { user: 1, volunteer: 2, staff: 3, admin: 4 };
-const rankOf = (r) => ROLE_RANK[r] || 0;
-const atLeast = (r, min) => rankOf(r) >= rankOf(min);
+// The ability each admin nav item needs. Who holds which ability is decided on the server
+// (App\Support\Permissions) and comes with the user as `permissions`; there is no role that
+// sees everything. Items missing here stay hidden (fail closed). Writing to the expense ledger,
+// verifying donations and the like are finer checks made inside the panels — and on the server.
+const ITEM_PERMISSION = {
+  animals: 'desk.operate', reminders: 'desk.operate',
+  requests: 'desk.operate', rescues: 'desk.operate', visitations: 'desk.operate', messages: 'desk.operate', postadoption: 'desk.operate',
+  donations: 'desk.operate', expenses: 'desk.operate', volunteers: 'desk.operate',
+  categories: 'master_data.manage', import: 'master_data.manage', reports: 'reports.view',
+  users: 'users.manage', security: 'security.manage', settings: 'settings.manage',
+};
+const ADMIN_AREA_ABILITIES = [...new Set(Object.values(ITEM_PERMISSION))];
+const hasAdminArea = (u) => ADMIN_AREA_ABILITIES.some((ability) => can(u, ability));
 
-// Minimum role required to see each admin nav item. Staff run operations; Users and
-// Settings stay admin-only. Items missing here default to admin (fail closed).
-const ITEM_MIN_ROLE = {
-  animals: 'staff', reminders: 'staff',
-  requests: 'staff', rescues: 'staff', visitations: 'staff', messages: 'staff', postadoption: 'staff',
-  // Staff can read the expense ledger; writing to it is admin-only and gated inside the panel
-  // (and on the server), the same split as Donations.
-  donations: 'staff', expenses: 'staff', reports: 'staff', volunteers: 'staff',
-  users: 'admin', settings: 'admin', categories: 'admin',
+const ADMIN_SUBTITLES = {
+  staff: 'Manage animals, requests, donations, and operations.',
+  desk_admin: 'Run the front desk: requests, records, donations, expenses and personnel.',
+  data_admin: 'Keep the dropdown lists and shelter data accurate, and run the reports.',
+  system_admin: 'Manage accounts and roles, site settings and security.',
 };
 
 
@@ -395,8 +404,9 @@ export default function Dashboard() {
   const [pendingVolunteerCount, setPendingVolunteerCount] = useState(0);
 
   // keep empty when data isn't available
-  const isAdminRole = role === 'admin';
-  const isStaffPlus = atLeast(role, 'staff'); // staff + admin: operational dashboard
+  const allowed = (ability) => can(user, ability);
+  const showAdminTab = hasAdminArea(user);   // staff and the three admin types
+  const isDesk = allowed('desk.operate');    // staff + Desk Admin: the operations dashboard and its badges
   const isVolunteer = role === 'volunteer';   // normal user dashboard + an extra "My Tasks" module
   const isStaff = role === 'staff';           // staff dashboard + their own "My Tasks" module
 
@@ -418,9 +428,9 @@ export default function Dashboard() {
         setUser(u);
         const r = safeRoleFromUser(data);
         setRole(r);
-        // Land each role on its primary dashboard: staff/admin → operations, everyone else
-        // (users and volunteers) → the user dashboard.
-        setTab(atLeast(r, 'staff') && !requestedNav ? 'admin' : 'user');
+        // Land each role on its primary dashboard: staff and the admin types → their admin
+        // area, everyone else (users and volunteers) → the user dashboard.
+        setTab(hasAdminArea(u) && !requestedNav ? 'admin' : 'user');
       } catch {
         if (!mounted) return;
         setRole(fallbackRole);
@@ -459,7 +469,7 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    if (!isStaffPlus) return;
+    if (!isDesk) return;
     let mounted = true;
     adminGetOverview()
       .then((data) => {
@@ -471,7 +481,7 @@ export default function Dashboard() {
     return () => {
       mounted = false;
     };
-  }, [isStaffPlus]);
+  }, [isDesk]);
 
   const mountedRef = useRef(true);
   useEffect(() => {
@@ -480,7 +490,7 @@ export default function Dashboard() {
   }, []);
 
   const fetchPendingCounts = useCallback(() => {
-    if (!isStaffPlus) return;
+    if (!isDesk) return;
     // One aggregated request instead of 7 separate polls every 30s (audit §11).
     adminGetPendingCounts()
       .then((data) => {
@@ -495,14 +505,14 @@ export default function Dashboard() {
         setPendingPostAdoptionCount(data?.post_adoption || 0);
       })
       .catch(() => { /* leave counts unchanged on a transient failure */ });
-  }, [isStaffPlus]);
+  }, [isDesk]);
 
   useEffect(() => {
-    if (!isStaffPlus) return;
+    if (!isDesk) return;
     fetchPendingCounts();
     const interval = setInterval(fetchPendingCounts, 30000);
     return () => clearInterval(interval);
-  }, [isStaffPlus, fetchPendingCounts]);
+  }, [isDesk, fetchPendingCounts]);
 
   const userStats = useMemo(() => {
     const total = applications.length;
@@ -520,12 +530,12 @@ export default function Dashboard() {
 
   const dashboardTabs = useMemo(() => {
     // Volunteers use the normal user dashboard (plus a My Tasks nav item), so there's no
-    // separate volunteer tab — only staff/admin get an extra tab above the user one.
+    // separate volunteer tab — only staff and the admin types get an extra tab above the user one.
     return [
-      { key: 'admin', label: isAdminRole ? 'Admin Dashboard' : 'Staff Dashboard', show: isStaffPlus },
+      { key: 'admin', label: `${roleLabel(role)} Dashboard`, show: showAdminTab },
       { key: 'user', label: 'User Dashboard', show: true },
     ].filter((t) => t.show);
-  }, [isAdminRole, isStaffPlus]);
+  }, [role, showAdminTab]);
 
   const activeTab = tab;
 
@@ -552,23 +562,37 @@ export default function Dashboard() {
       items: [
         { key: 'donations', label: 'Donations', icon: HandCoins, badge: pendingDonationCount },
         { key: 'expenses', label: 'Expenses', icon: Receipt },
-        { key: 'reports', label: 'Reports', icon: BarChart3 },
-        { key: 'users', label: 'Users', icon: Users },
         { key: 'volunteers', label: 'Personnel', icon: UsersRound, badge: pendingVolunteerCount },
+      ],
+    },
+    {
+      key: 'cat_data', label: 'Data & Reports', icon: Database,
+      items: [
         { key: 'categories', label: 'Categories', icon: Tags },
+        { key: 'import', label: 'Import animals', icon: FileUp },
+        { key: 'reports', label: 'Reports', icon: BarChart3 },
+      ],
+    },
+    {
+      key: 'cat_system', label: 'System', icon: ServerCog,
+      items: [
+        { key: 'users', label: 'Users', icon: Users },
+        { key: 'security', label: 'Security', icon: ShieldCheck },
         { key: 'settings', label: 'Settings', icon: Settings },
       ],
     },
   ];
 
-  // Hide nav items above the current role (e.g. staff never see Users/Settings), then
-  // drop any category left empty. Admin sees everything.
+  // Show only the items this account's abilities allow (staff never see Users or Categories, a
+  // Data Admin never sees Animals, …), then drop any category left empty.
   const visibleNavCategories = navCategories
     .map((cat) => ({
       ...cat,
-      items: cat.items.filter((it) => atLeast(role, ITEM_MIN_ROLE[it.key] || 'admin')),
+      items: cat.items.filter((it) => allowed(ITEM_PERMISSION[it.key])),
     }))
     .filter((cat) => cat.items.length > 0);
+  // A panel mounts only when its nav item is both chosen and allowed, so a forced nav can't open it.
+  const showPanel = (key) => activeNav === key && allowed(ITEM_PERMISSION[key]);
 
   const [activeNav, setActiveNav] = useState(requestedNav || 'dashboard');
   // On phones the sidebar collapses behind a ☰ toggle; selecting a nav item closes it (see effect
@@ -615,12 +639,12 @@ export default function Dashboard() {
               <div>
                 <div className="dashBrandTitle">SECASPI</div>
                 <div className="dashBrandTitle" style={{ fontSize: 12, color: 'var(--muted)' }}>
-                  Shelter Admin
+                  Shelter Dashboard
                 </div>
               </div>
             </button>
             <div className="dashBrandRight">
-              <div className="dashRoleChip">{role ? `Role: ${role}` : 'Role: —'}</div>
+              <div className="dashRoleChip">{role ? `Role: ${roleLabel(role)}` : 'Role: —'}</div>
               <button
                 type="button"
                 className="dashMobileNavToggle"
@@ -746,7 +770,7 @@ export default function Dashboard() {
               <h1 className="dashTitle">Control Center</h1>
               <div className="dashSubtitle">
                 {activeTab === 'admin'
-                  ? 'Manage animals, requests, donations, and operations.'
+                  ? (ADMIN_SUBTITLES[role] || 'Manage animals, requests, donations, and operations.')
                   : 'Manage your adoption applications and favorites.'}
               </div>
             </div>
@@ -769,34 +793,38 @@ export default function Dashboard() {
 
           {/* Overview stat cards belong to the dashboard landing only — inside a module they're
               redundant, so they aren't rendered there (any screen size). */}
-          {activeNav === 'dashboard' && (
+          {activeNav === 'dashboard' && (activeTab === 'user' || isDesk) && (
             <OverviewCards cards={activeTab === 'admin' ? (overview?.stats || []) : userStats} />
           )}
 
           {activeTab === 'admin' ? (
             <div>
+              {/* Each type's home: the desk sees its activity, the Data Admin the analytics, the
+                  System Admin the accounts. Staff keep both of theirs. */}
               {activeNav === 'dashboard' ? (
                 <>
-                  <AnalyticsAdmin />
-                  <ActivityFeed activity={overview?.activity} />
+                  {allowed('reports.view') ? <AnalyticsAdmin /> : null}
+                  {isDesk ? <ActivityFeed activity={overview?.activity} /> : null}
+                  {allowed('users.manage') ? <SystemSummary onOpen={setActiveNav} /> : null}
                 </>
               ) : null}
-              {activeNav === 'animals' ? <AnimalsAdmin isAdmin={isAdminRole} /> : null}
-              {activeNav === 'requests' ? <AdoptionRequestsAdmin onUnreadChanged={fetchPendingCounts} /> : null}
-              {activeNav === 'postadoption' ? <PostAdoptionAdmin onChanged={fetchPendingCounts} /> : null}
-              {activeNav === 'rescues' ? <RescueReportsAdmin isAdmin={isAdminRole} onUnreadChanged={fetchPendingCounts} /> : null}
-              {activeNav === 'visitations' ? <VisitationsAdmin /> : null}
-              {activeNav === 'messages' ? <Messages staff /> : null}
-              {activeNav === 'reminders' ? <RemindersAdmin onChanged={fetchPendingCounts} /> : null}
-              {activeNav === 'donations' ? <DonationsAdmin isAdmin={isAdminRole} /> : null}
-              {activeNav === 'expenses' ? <ExpensesAdmin isAdmin={isAdminRole} /> : null}
-              {activeNav === 'volunteers' ? <VolunteersAdmin isAdmin={isAdminRole} /> : null}
+              {showPanel('animals') ? <AnimalsAdmin canBulkPhotos={allowed('desk.supervise')} /> : null}
+              {showPanel('requests') ? <AdoptionRequestsAdmin onUnreadChanged={fetchPendingCounts} /> : null}
+              {showPanel('postadoption') ? <PostAdoptionAdmin onChanged={fetchPendingCounts} /> : null}
+              {showPanel('rescues') ? <RescueReportsAdmin onUnreadChanged={fetchPendingCounts} /> : null}
+              {showPanel('visitations') ? <VisitationsAdmin /> : null}
+              {showPanel('messages') ? <Messages staff /> : null}
+              {showPanel('reminders') ? <RemindersAdmin onChanged={fetchPendingCounts} /> : null}
+              {showPanel('donations') ? <DonationsAdmin canVerify={allowed('desk.supervise')} /> : null}
+              {showPanel('expenses') ? <ExpensesAdmin canEdit={allowed('desk.supervise')} /> : null}
+              {showPanel('volunteers') ? <VolunteersAdmin canSupervise={allowed('desk.supervise')} /> : null}
               {activeNav === 'mytasks' && isStaff ? <VolunteerTasksPanel /> : null}
-              {activeNav === 'reports' ? <ReportsAdmin isAdmin={isAdminRole} /> : null}
-              {/* Users, Categories & Settings are admin-only — guarded here too so a forced nav can't mount them. */}
-              {isAdminRole && activeNav === 'users' ? <UsersAdmin currentUserId={user?.id} /> : null}
-              {isAdminRole && activeNav === 'categories' ? <CategoriesAdmin /> : null}
-              {isAdminRole && activeNav === 'settings' ? (
+              {showPanel('categories') ? <CategoriesAdmin /> : null}
+              {showPanel('import') ? <AnimalImport /> : null}
+              {showPanel('reports') ? <ReportsAdmin canFinancial={allowed('reports.financial')} /> : null}
+              {showPanel('users') ? <UsersAdmin currentUserId={user?.id} /> : null}
+              {showPanel('security') ? <SecurityAdmin /> : null}
+              {showPanel('settings') ? (
                 <SettingsPage account={<UserProfile key={user?.id} user={user} onProfileUpdated={setUser} />} />
               ) : null}
             </div>

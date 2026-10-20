@@ -147,7 +147,7 @@ class VolunteerApplicationController extends Controller
             // role isn't mass-assignable (privilege-escalation guard), so forceFill it —
             // same approach as UserController::adminUpdate.
             $user = User::find($application->user_id);
-            if ($user && $user->role !== 'admin') {
+            if ($user && ! $user->isAdmin()) {
                 $user->forceFill(['role' => 'volunteer'])->save();
             }
         }

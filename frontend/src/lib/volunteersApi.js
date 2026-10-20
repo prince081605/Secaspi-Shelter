@@ -56,6 +56,11 @@ export async function adminListVolunteers(params = {}) {
   return api.get(`/api/admin/volunteers${qs ? `?${qs}` : ''}`);
 }
 
+// Plain user accounts the desk can add as volunteers (the full Users list is the System Admin's).
+export async function adminSearchPersonnelCandidates(q = '') {
+  return api.get(`/api/admin/volunteers/candidates${q ? `?q=${encodeURIComponent(q)}` : ''}`);
+}
+
 export async function adminCreateVolunteer(payload) {
   return api.post('/api/admin/volunteers', payload);
 }

@@ -1,8 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureActive;
-use App\Http\Middleware\EnsureAdmin;
-use App\Http\Middleware\EnsureRole;
+use App\Http\Middleware\EnsurePermission;
 use App\Http\Middleware\VerifyHuman;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
@@ -10,6 +9,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\HandleCors;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -28,13 +28,17 @@ return Application::configure(basePath: dirname(__DIR__))
         // detected. Trusting all proxies is appropriate when the proxy is the only ingress.
         $middleware->trustProxies(at: '*');
         $middleware->alias([
-            'admin' => EnsureAdmin::class,
             'active' => EnsureActive::class,
-            // Parameterised minimum-role gate, e.g. ->middleware('role:staff').
-            'role' => EnsureRole::class,
+            // Ability gate, e.g. ->middleware('perm:desk.operate'); see App\Support\Permissions.
+            'perm' => EnsurePermission::class,
             // Honeypot + CAPTCHA on the public forms.
             'human' => VerifyHuman::class,
         ]);
+        // Check who is asking before loading what they asked for: a suspended account, or a role
+        // without the ability, gets its 403 before route-model binding — so a forbidden caller
+        // can't tell which ids exist (404 vs 403).
+        $middleware->prependToPriorityList(SubstituteBindings::class, EnsureActive::class);
+        $middleware->prependToPriorityList(SubstituteBindings::class, EnsurePermission::class);
         // API-only app with no `login` route. Returning null here stops the auth middleware from
         // trying to redirect unauthenticated guests to route('login') (which would throw a 500);
         // with no redirect target the request resolves to a clean 401 JSON instead.

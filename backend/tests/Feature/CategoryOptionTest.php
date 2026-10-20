@@ -22,9 +22,15 @@ class CategoryOptionTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function actingAsAdmin(): void
+    // The Data Admin owns the lists; the desk only uses them (staff here, who also see reports).
+    private function actingAsDataAdmin(): void
     {
-        Sanctum::actingAs(User::factory()->admin()->create());
+        Sanctum::actingAs(User::factory()->dataAdmin()->create());
+    }
+
+    private function actingAsDesk(): void
+    {
+        Sanctum::actingAs(User::factory()->staff()->create());
     }
 
     private function option(string $type, string $value): CategoryOption
@@ -64,13 +70,13 @@ class CategoryOptionTest extends TestCase
         $this->postJson('/api/admin/categories/dog_breed', ['label' => 'Askal'])->assertForbidden();
         $this->putJson('/api/admin/categories/dog_breed/'.$this->option('dog_breed', 'Beagle')->id, ['is_active' => false])->assertForbidden();
 
-        $this->actingAsAdmin();
+        $this->actingAsDataAdmin();
         $this->getJson('/api/admin/categories/not_a_list')->assertNotFound();
     }
 
     public function test_an_added_option_is_offered_and_accepted(): void
     {
-        $this->actingAsAdmin();
+        $this->actingAsDataAdmin();
 
         $this->postJson('/api/admin/categories/medical_record_type', ['label' => '  Dental   cleaning '])->assertCreated()
             ->assertJsonPath('option.value', 'dental_cleaning')
@@ -83,6 +89,7 @@ class CategoryOptionTest extends TestCase
             ->assertStatus(422)->assertJsonPath('message', '"DENTAL CLEANING" is already on the list.');
         $this->postJson('/api/admin/categories/dog_breed', ['label' => '   '])->assertStatus(422);
 
+        $this->actingAsDesk();
         $animal = $this->animal([]);
         $this->postJson("/api/animals/{$animal}/medical-records", ['type' => 'dental_cleaning', 'record_date' => '2026-10-01'])
             ->assertCreated();
@@ -92,7 +99,7 @@ class CategoryOptionTest extends TestCase
 
     public function test_renaming_a_breed_updates_animals_of_that_species_only(): void
     {
-        $this->actingAsAdmin();
+        $this->actingAsDataAdmin();
         $dogA = $this->animal(['breed' => 'Mixed breed']);
         $dogB = $this->animal(['breed' => 'mixed BREED']);
         $cat = $this->animal(['species' => 'cat', 'breed' => 'Mixed breed']);
@@ -119,7 +126,7 @@ class CategoryOptionTest extends TestCase
 
     public function test_renaming_a_behavioral_issue_updates_the_animals_that_have_it(): void
     {
-        $this->actingAsAdmin();
+        $this->actingAsDataAdmin();
         $id = $this->animal(['behavioral_assessment' => json_encode(['excessive barking', 'extreme shyness'])]);
         $this->animal(['behavioral_assessment' => json_encode(['extreme shyness'])]);
 
@@ -132,7 +139,7 @@ class CategoryOptionTest extends TestCase
 
     public function test_renaming_a_keyed_option_changes_only_its_label(): void
     {
-        $this->actingAsAdmin();
+        $this->actingAsDataAdmin();
         $animal = $this->animal([]);
         $record = MedicalRecord::create(['animal_id' => $animal, 'type' => 'checkup', 'record_date' => '2026-10-01']);
 
@@ -140,6 +147,7 @@ class CategoryOptionTest extends TestCase
             ->assertOk()->assertJsonPath('records_updated', 0)->assertJsonPath('option.value', 'checkup');
 
         $this->assertSame('checkup', $record->fresh()->type);
+        $this->actingAsDesk();
         $this->getJson("/api/admin/animals/{$animal}")->assertJsonPath('animal.medical_records.0.type_label', 'Wellness check');
         $this->getJson("/api/animals/{$animal}")->assertJsonPath('animal.medical_records.0.type_label', 'Wellness check');
         $this->assertContains(['label' => 'Wellness check', 'value' => 1], $this->getJson('/api/admin/reports/medical')->json('summary'));
@@ -147,7 +155,7 @@ class CategoryOptionTest extends TestCase
 
     public function test_hiding_an_option_stops_new_use_but_keeps_existing_records_valid(): void
     {
-        $this->actingAsAdmin();
+        $this->actingAsDataAdmin();
         $animal = $this->animal([]);
         $record = MedicalRecord::create(['animal_id' => $animal, 'type' => 'surgery', 'record_date' => '2026-10-01']);
         $surgery = $this->option('medical_record_type', 'surgery');
@@ -155,12 +163,14 @@ class CategoryOptionTest extends TestCase
         $this->putJson("/api/admin/categories/medical_record_type/{$surgery->id}", ['is_active' => false])
             ->assertOk()->assertJsonPath('option.hidden', true);
 
+        $this->actingAsDesk();
         $this->postJson("/api/animals/{$animal}/medical-records", ['type' => 'surgery', 'record_date' => '2026-10-02'])
             ->assertStatus(422)->assertJsonValidationErrors('type');
         $this->putJson("/api/medical-records/{$record->id}", ['type' => 'surgery', 'description' => 'Spay'])->assertOk();
         $this->assertContains(['value' => 'surgery', 'label' => 'Surgery', 'hidden' => true], $this->getJson('/api/categories')->json('categories.medical_record_type'));
 
         // A hidden ID type is no longer accepted on an application.
+        $this->actingAsDataAdmin();
         $this->putJson('/api/admin/categories/valid_id_type/'.$this->option('valid_id_type', 'passport')->id, ['is_active' => false])->assertOk();
         Storage::fake();
         Sanctum::actingAs(User::factory()->create());
@@ -171,14 +181,15 @@ class CategoryOptionTest extends TestCase
         ])->assertStatus(422)->assertJsonValidationErrors('valid_id_type');
 
         // Restoring brings it back.
-        $this->actingAsAdmin();
+        $this->actingAsDataAdmin();
         $this->putJson("/api/admin/categories/medical_record_type/{$surgery->id}", ['is_active' => true])->assertOk();
+        $this->actingAsDesk();
         $this->postJson("/api/animals/{$animal}/medical-records", ['type' => 'surgery', 'record_date' => '2026-10-03'])->assertCreated();
     }
 
     public function test_only_an_unused_option_can_be_deleted(): void
     {
-        $this->actingAsAdmin();
+        $this->actingAsDataAdmin();
         $animal = $this->animal([]);
         MedicalRecord::create(['animal_id' => $animal, 'type' => 'emergency', 'record_date' => '2026-10-01']);
 
@@ -196,7 +207,7 @@ class CategoryOptionTest extends TestCase
 
     public function test_the_last_visible_option_of_a_list_stays_visible(): void
     {
-        $this->actingAsAdmin();
+        $this->actingAsDataAdmin();
         CategoryOption::where('type', 'medical_record_type')->where('value', '!=', 'checkup')->update(['is_active' => false]);
 
         $this->putJson('/api/admin/categories/medical_record_type/'.$this->option('medical_record_type', 'checkup')->id, ['is_active' => false])

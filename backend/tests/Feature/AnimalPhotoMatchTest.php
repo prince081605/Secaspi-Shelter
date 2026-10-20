@@ -20,7 +20,7 @@ class AnimalPhotoMatchTest extends TestCase
 
     public function test_file_names_match_by_id_or_name(): void
     {
-        Sanctum::actingAs(User::factory()->admin()->create());
+        Sanctum::actingAs(User::factory()->deskAdmin()->create());
         $brownie = Animal::create(['name' => 'Brownie', 'species' => 'dog', 'status' => 'available']);
         $mingDog = Animal::create(['name' => 'Ming', 'species' => 'dog', 'status' => 'available']);
         Animal::create(['name' => 'Ming', 'species' => 'cat', 'status' => 'available']);
@@ -44,7 +44,7 @@ class AnimalPhotoMatchTest extends TestCase
         $this->assertCount(4, $response->json('animals'));
     }
 
-    public function test_only_admins_match_photos(): void
+    public function test_only_desk_admins_match_photos(): void
     {
         Sanctum::actingAs(User::factory()->staff()->create());
         $this->postJson('/api/admin/animals/photos/match', ['files' => ['a.jpg']])->assertForbidden();
@@ -53,7 +53,7 @@ class AnimalPhotoMatchTest extends TestCase
     public function test_a_new_photo_can_become_the_main_one(): void
     {
         Storage::fake();
-        Sanctum::actingAs(User::factory()->admin()->create());
+        Sanctum::actingAs(User::factory()->deskAdmin()->create());
         $animal = Animal::create(['name' => 'Brownie', 'species' => 'dog', 'status' => 'available']);
 
         $this->post("/api/animals/{$animal->id}/photos", ['photos' => [UploadedFile::fake()->image('a.jpg')]], ['Accept' => 'application/json'])->assertCreated();

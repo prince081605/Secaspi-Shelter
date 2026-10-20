@@ -35,7 +35,7 @@ class AnimalImportTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->admin = User::factory()->admin()->create();
+        $this->admin = User::factory()->dataAdmin()->create();
         Sanctum::actingAs($this->admin);
     }
 
@@ -389,7 +389,7 @@ class AnimalImportTest extends TestCase
         Exceptions::assertReported(RuntimeException::class);
     }
 
-    public function test_only_admins_can_use_the_import(): void
+    public function test_only_the_data_admin_can_use_the_import(): void
     {
         $file = $this->xlsx([$this->row(['name' => 'Brownie', 'species' => 'dog'])]);
 

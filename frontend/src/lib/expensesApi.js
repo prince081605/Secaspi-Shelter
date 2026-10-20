@@ -1,6 +1,6 @@
 import { api } from './api';
 
-// The shelter's expense ledger. Reads are staff-accessible; writes are admin-only (the same line
+// The shelter's expense ledger. Reads are staff-accessible; writes are the Desk Admin's (the same line
 // the backend draws at donation verification), so a staff session will see 403s from create/
 // update/delete — the panel hides those controls rather than letting them fail.
 

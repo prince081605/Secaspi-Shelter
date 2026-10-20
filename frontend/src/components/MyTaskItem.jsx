@@ -27,12 +27,12 @@ const styles = `
 
 // A 'requested' task has not been approved yet and a 'completed' one is closed. Everything in
 // between is work the person can report on, including 'submitted', so a blurry photo can be
-// replaced while it is still waiting for an admin.
+// replaced while it is still waiting for a Desk Admin.
 const CAN_SEND_PROOF = ['assigned', 'ongoing', 'submitted'];
 
 const STATUS_LINE = {
   requested: 'Awaiting confirmation',
-  submitted: 'Proof sent — waiting for an admin to verify',
+  submitted: 'Proof sent — waiting for a Desk Admin to verify',
   completed: 'Verified complete',
 };
 
@@ -109,7 +109,7 @@ export function MyTaskList({ children }) {
  * One of the signed-in volunteer's or staff member's own tasks. "Update" opens the task's
  * completion details (the proof photo, when it was sent, and who verified it) and,
  * while the task is still open, the form to send or replace that proof. Sending proof never
- * completes the task — it parks it as 'submitted' until an admin verifies it.
+ * completes the task — it parks it as 'submitted' until a Desk Admin verifies it.
  */
 export default function MyTaskItem({ task, onUpdated }) {
   const [open, setOpen] = useState(false);
@@ -181,10 +181,10 @@ export default function MyTaskItem({ task, onUpdated }) {
             <h3 className="myTaskPanelTitle">Completion details</h3>
             {task.status === 'completed' && (
               <div className="myTaskVerified" style={{ marginBottom: '0.7rem' }}>
-                Verified by {task.verified_by || 'an admin'} on {formatDateTime(task.verified_at)}.
+                Verified by {task.verified_by || 'a Desk Admin'} on {formatDateTime(task.verified_at)}.
               </div>
             )}
-            {sent && <div className="ui-notice">Proof sent. An admin will verify it and complete the task.</div>}
+            {sent && <div className="ui-notice">Proof sent. A Desk Admin will verify it and complete the task.</div>}
             <dl className="myTaskDetails">
               <dt>Status</dt><dd><StatusBadge status={task.status} /></dd>
               <dt>Scheduled</dt><dd>{task.assigned_date || '—'}</dd>

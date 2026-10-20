@@ -74,7 +74,7 @@ class ValidationRulesTest extends TestCase
 
     public function test_health_records_and_expenses_cannot_be_dated_in_the_future(): void
     {
-        Sanctum::actingAs(User::factory()->admin()->create());
+        Sanctum::actingAs(User::factory()->deskAdmin()->create());
         $animal = Animal::create(['name' => 'Buddy', 'species' => 'dog', 'status' => 'available']);
         $tomorrow = now('Asia/Manila')->addDay()->toDateString();
 

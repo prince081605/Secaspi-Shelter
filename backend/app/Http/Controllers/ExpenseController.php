@@ -15,8 +15,8 @@ use Illuminate\Validation\Rule;
  * The shelter's expense ledger.
  *
  * Gating mirrors donations: staff can *see* the money (adminIndex, adminStats) because they need
- * it to do their jobs, but only an admin may write to the ledger — the same line
- * DonationController draws at verify() and ReportController draws at the financial report.
+ * it to do their jobs, but only a Desk Admin may write to the ledger — the same line
+ * DonationController draws at verify().
  */
 class ExpenseController extends Controller
 {

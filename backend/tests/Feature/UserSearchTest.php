@@ -27,7 +27,7 @@ class UserSearchTest extends TestCase
             DB::statement('PRAGMA case_sensitive_like = ON;');
         }
 
-        Sanctum::actingAs(User::factory()->admin()->create());
+        Sanctum::actingAs(User::factory()->systemAdmin()->create());
 
         $target = User::factory()->create([
             'full_name' => 'Maria Santos',

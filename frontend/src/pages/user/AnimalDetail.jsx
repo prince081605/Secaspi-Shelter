@@ -6,6 +6,7 @@ import Reveal from '../../components/Reveal';
 import SiteNav from '../../components/SiteNav';
 import AnimalLocationPanel from '../../components/AnimalLocationPanel';
 import { auth } from '../../lib/auth';
+import { can } from '../../lib/permissions';
 import { getAuthToken } from '../../lib/api';
 
 const styles = `
@@ -226,8 +227,8 @@ export default function AnimalDetail() {
     let mounted = true;
     auth.me()
       .then((data) => {
-        const role = String(data?.user?.role || data?.role || '').toLowerCase();
-        if (mounted) setIsStaff(role === 'staff' || role === 'admin');
+        // The desk (staff and Desk Admins) sees where the animal is and can move it.
+        if (mounted) setIsStaff(can(data, 'desk.operate'));
       })
       .catch(() => {});
     return () => { mounted = false; };

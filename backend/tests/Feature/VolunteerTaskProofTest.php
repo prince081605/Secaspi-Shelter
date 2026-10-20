@@ -150,7 +150,7 @@ class VolunteerTaskProofTest extends TestCase
         Sanctum::actingAs($user);
         $this->postJson("/api/volunteer/tasks/{$task->id}/proof", ['proof_image' => $this->photo()])->assertOk();
 
-        $admin = User::factory()->admin()->create();
+        $admin = User::factory()->deskAdmin()->create();
         Sanctum::actingAs($admin);
         $this->putJson("/api/admin/volunteer-tasks/{$task->id}", ['status' => 'completed'])
             ->assertOk()
@@ -171,7 +171,7 @@ class VolunteerTaskProofTest extends TestCase
     {
         Storage::fake();
         [, $task] = $this->volunteerWithTask('submitted');
-        Sanctum::actingAs(User::factory()->admin()->create());
+        Sanctum::actingAs(User::factory()->deskAdmin()->create());
 
         $this->putJson("/api/admin/volunteer-tasks/{$task->id}", ['status' => 'completed'])->assertOk();
         $this->putJson("/api/admin/volunteer-tasks/{$task->id}", ['status' => 'ongoing'])->assertOk();

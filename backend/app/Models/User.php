@@ -1,6 +1,8 @@
 <?php
 namespace App\Models;
 
+use App\Support\Permissions;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -97,22 +99,34 @@ class User extends Authenticatable
     }
 
     /**
-     * Role hierarchy, lowest to highest. Access is granted by *minimum* rank, so a
-     * higher role automatically clears every gate a lower role can (admin passes all).
+     * Whether this account's role holds $ability (see App\Support\Permissions). There is no
+     * role hierarchy: each admin type is limited to its own area, so no role passes every check.
      */
-    public const ROLE_RANKS = ['user' => 1, 'volunteer' => 2, 'staff' => 3, 'admin' => 4];
-
-    public function roleRank(): int
+    public function hasPermission(string $ability): bool
     {
-        return self::ROLE_RANKS[$this->role] ?? 0; // unknown/null role ranks below everything
+        return Permissions::allows($this->role, $ability);
     }
 
-    /**
-     * True if this user's role is at least $role in the hierarchy. An unknown
-     * threshold fails closed (no one clears it) rather than open.
-     */
-    public function hasRoleAtLeast(string $role): bool
+    /** @return list<string> */
+    public function permissions(): array
     {
-        return $this->roleRank() >= (self::ROLE_RANKS[$role] ?? PHP_INT_MAX);
+        return Permissions::forRole($this->role);
+    }
+
+    /** Desk, Data or System Admin. */
+    public function isAdmin(): bool
+    {
+        return in_array($this->role, Permissions::ADMIN_ROLES, true);
+    }
+
+    public function roleLabel(): string
+    {
+        return Permissions::label($this->role);
+    }
+
+    /** Active accounts whose role holds $ability — e.g. who to notify about a new message. */
+    public function scopeWithPermission(Builder $query, string $ability): Builder
+    {
+        return $query->whereIn('role', Permissions::rolesFor($ability))->where('status', 'active');
     }
 }

@@ -48,7 +48,7 @@ class AuthTest extends TestCase
             'email' => 'sneaky@example.com',
             'password' => 'password123',
             'password_confirmation' => 'password123',
-            'role' => 'admin',
+            'role' => 'system_admin',
         ])->assertCreated();
 
         $this->assertSame('user', User::where('email', 'sneaky@example.com')->value('role'));
@@ -177,7 +177,7 @@ class AuthTest extends TestCase
 
     public function test_suspending_a_user_revokes_their_existing_tokens(): void
     {
-        $admin = User::factory()->admin()->create();
+        $admin = User::factory()->systemAdmin()->create();
         $target = User::factory()->create();
         $target->createToken('auth_token');
         $this->assertSame(1, $target->tokens()->count());
@@ -193,7 +193,7 @@ class AuthTest extends TestCase
 
     public function test_reactivating_a_user_clears_the_suspension_reason(): void
     {
-        $admin = User::factory()->admin()->create();
+        $admin = User::factory()->systemAdmin()->create();
         $target = User::factory()->suspended()->create(['suspension_reason' => 'Old reason']);
 
         Sanctum::actingAs($admin);
@@ -221,7 +221,7 @@ class AuthTest extends TestCase
         $user = User::factory()->create();
         Sanctum::actingAs($user);
 
-        $this->putJson('/api/profile', ['full_name' => 'Renamed', 'role' => 'admin'])
+        $this->putJson('/api/profile', ['full_name' => 'Renamed', 'role' => 'system_admin'])
             ->assertOk();
 
         $user->refresh();

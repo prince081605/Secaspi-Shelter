@@ -22,7 +22,7 @@ const TYPE_LABEL = { volunteer: 'Volunteer', staff: 'Staff' };
 
 const minutesSince = (value) => Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 60000));
 
-/** Add a shift for someone, or correct an existing one. Admin only. */
+/** Add a shift for someone, or correct an existing one. Desk Admin only. */
 function RecordForm({ record, onCancel, onSaved }) {
   const isEdit = Boolean(record);
   const [people, setPeople] = useState([]);
@@ -100,9 +100,9 @@ function RecordForm({ record, onCancel, onSaved }) {
 
 /**
  * Personnel → Attendance. Who's on duty right now, and the shift log with date / type filters.
- * Staff can look; admins can add, correct, close and delete records.
+ * Staff can look; Desk Admins can add, correct, close and delete records.
  */
-export default function AttendanceAdmin({ isAdmin = false }) {
+export default function AttendanceAdmin({ canCorrect = false }) {
   const confirm = useConfirm();
   const isMobile = useIsMobile();
   const [filters, setFilters] = useState({ from: '', to: '', type: '' });
@@ -182,7 +182,7 @@ export default function AttendanceAdmin({ isAdmin = false }) {
     }
   };
 
-  const actions = (r) => (isAdmin ? (
+  const actions = (r) => (canCorrect ? (
     <>
       {!r.time_out && <button className="dashBtn dashBtnPrimary" onClick={() => closeShift(r)}>Time out</button>}
       <button className="dashBtn" onClick={() => { setEditing(r); setAdding(false); }}>Edit</button>
@@ -210,7 +210,7 @@ export default function AttendanceAdmin({ isAdmin = false }) {
                 { label: 'Since', value: formatTime(r.time_in) },
                 { label: 'So far', value: formatDuration(minutesSince(r.time_in)) },
               ]}
-              actions={isAdmin ? <button className="dashBtn dashBtnPrimary" onClick={() => closeShift(r)}>Time out</button> : null}
+              actions={canCorrect ? <button className="dashBtn dashBtnPrimary" onClick={() => closeShift(r)}>Time out</button> : null}
             />
           ))}
         </div>
@@ -234,7 +234,7 @@ export default function AttendanceAdmin({ isAdmin = false }) {
             <option value="staff">Staff</option>
           </select>
         </label>
-        {isAdmin && (
+        {canCorrect && (
           <button className="dashBtn dashBtnPrimary" onClick={() => { setAdding((v) => !v); setEditing(null); }}>
             {adding ? 'Close' : '+ Add record'}
           </button>
@@ -277,7 +277,7 @@ export default function AttendanceAdmin({ isAdmin = false }) {
                 <th>Time out</th>
                 <th>Duration</th>
                 <th>Note</th>
-                {isAdmin && <th></th>}
+                {canCorrect && <th></th>}
               </tr>
             </thead>
             <tbody>
@@ -292,7 +292,7 @@ export default function AttendanceAdmin({ isAdmin = false }) {
                     {r.notes || '—'}
                     {r.recorded_by && <div className="ui-muted" style={{ fontSize: 12 }}>Recorded by {r.recorded_by}</div>}
                   </td>
-                  {isAdmin && <td className="dashActionsCell"><span className="dashActionsRow">{actions(r)}</span></td>}
+                  {canCorrect && <td className="dashActionsCell"><span className="dashActionsRow">{actions(r)}</span></td>}
                 </tr>
               ))}
             </tbody>

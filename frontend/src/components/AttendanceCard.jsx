@@ -118,7 +118,7 @@ export default function AttendanceCard({ onChanged }) {
         </details>
       )}
       <p className="ui-muted" style={{ fontSize: '0.75rem', margin: '0.7rem 0 0' }}>
-        A shift counts for up to {data.max_self_hours} hours. If you forget to time out, ask an admin to correct it.
+        A shift counts for up to {data.max_self_hours} hours. If you forget to time out, ask a Desk Admin to correct it.
       </p>
     </div>
   );

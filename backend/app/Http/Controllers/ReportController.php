@@ -35,7 +35,7 @@ class ReportController extends Controller
         'rescue' => 'Rescue Reports Report',
     ];
 
-    /** Report types that expose shelter finances, and so are admin-only wherever they appear. */
+    /** Report types that expose shelter finances, and so need reports.financial wherever they appear. */
     private const FINANCIAL_TYPES = ['donations', 'expenses'];
 
     public function adoption(Request $request)
@@ -144,10 +144,10 @@ class ReportController extends Controller
             abort(422, 'Unknown or missing report type.');
         }
 
-        // The exports are staff-accessible (route gate), but financial data is admin-only:
-        // block exporting the donations and expenses reports for anyone below admin. Mirrors the
-        // admin-only gates on GET /admin/reports/donations and /admin/reports/expenses.
-        if (in_array($request->query('type'), self::FINANCIAL_TYPES, true) && ! $request->user()->hasRoleAtLeast('admin')) {
+        // The exports are open to reports.view (route gate), but financial data is the Data
+        // Admin's alone: block exporting the donations and expenses reports without
+        // reports.financial. Mirrors the gates on GET /admin/reports/donations and /expenses.
+        if (in_array($request->query('type'), self::FINANCIAL_TYPES, true) && ! $request->user()->hasPermission('reports.financial')) {
             abort(403, 'Forbidden');
         }
 

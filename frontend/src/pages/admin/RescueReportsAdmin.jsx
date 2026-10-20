@@ -3,11 +3,8 @@ import { MapPin, Siren } from 'lucide-react';
 import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import {
-  adminBlockReporter,
-  adminListBlockedReporters,
   adminListRescueReports,
   adminMarkRescueReportRead,
-  adminUnblockReporter,
   adminUpdateRescueReport,
 } from '../../lib/rescueApi';
 import { adminListTeams } from '../../lib/volunteersApi';
@@ -156,114 +153,6 @@ function InvalidForm({ report, onSaved, onCancel }) {
   );
 }
 
-// Admins only: the contact number and/or account behind a report — never a shared connection —
-// so a reporter who keeps sending fake reports is turned away with the shelter's number.
-function BlockReporterButton({ report, onBlocked }) {
-  const confirm = useConfirm();
-  const [error, setError] = useState('');
-
-  if (report.reporter_blocked) return null;
-
-  const block = async () => {
-    const ok = await confirm({
-      title: 'Block this reporter?',
-      message: 'Their new rescue reports will be refused, with the shelter’s phone number to call instead. Earlier reports are kept. You can unblock them from the list below.',
-      confirmLabel: 'Block reporter',
-      tone: 'danger',
-      summary: [
-        { label: 'Contact', value: report.contact_number || '' },
-        { label: 'Account', value: report.reporter_account || '' },
-        { label: 'Fake reports so far', value: String(report.reporter_history?.fake || 0) },
-      ],
-    });
-    if (!ok) return;
-    const reason = window.prompt('Why are you blocking this reporter? (kept for other admins)', '');
-    if (reason === null) return;
-    setError('');
-    try {
-      await adminBlockReporter(report.id, reason.trim() || null);
-      onBlocked();
-    } catch (err) {
-      setError(err?.message || 'Failed to block the reporter.');
-    }
-  };
-
-  return (
-    <>
-      <button
-        className="dashBtn dashBtnDanger"
-        type="button"
-        onClick={block}
-        disabled={!report.can_block}
-        title={report.can_block ? '' : 'This report has no contact number or account to block.'}
-      >
-        Block reporter
-      </button>
-      {error && <span className="ui-error" style={{ margin: 0 }}>{error}</span>}
-    </>
-  );
-}
-
-// Admins only: everyone blocked from sending reports, and unblocking.
-function BlockedReporters({ refreshKey, onChanged }) {
-  const confirm = useConfirm();
-  const [blocked, setBlocked] = useState([]);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    let mounted = true;
-    adminListBlockedReporters()
-      .then((res) => { if (mounted) setBlocked(res?.blocked || []); })
-      .catch((err) => { if (mounted) setError(err?.message || 'Failed to load blocked reporters.'); });
-    return () => { mounted = false; };
-  }, [refreshKey]);
-
-  const unblock = async (entry) => {
-    const ok = await confirm({
-      title: 'Unblock this reporter?',
-      message: 'Their new rescue reports will be accepted again.',
-      confirmLabel: 'Unblock',
-      summary: [{ label: 'Reporter', value: entry.label }, { label: 'Reason', value: entry.reason || '' }],
-    });
-    if (!ok) return;
-    try {
-      await adminUnblockReporter(entry.id);
-      onChanged();
-    } catch (err) {
-      setError(err?.message || 'Failed to unblock.');
-    }
-  };
-
-  return (
-    <details className="rr-blocked">
-      <summary>Blocked reporters ({blocked.length})</summary>
-      {error && <div className="ui-error">{error}</div>}
-      {blocked.length === 0 ? (
-        <div className="ui-empty">Nobody is blocked. Block a reporter from a report’s Triage panel.</div>
-      ) : (
-        <div className="dashTableWrap">
-          <table className="dashTable">
-            <thead>
-              <tr><th>Reporter</th><th>Reason</th><th>Blocked by</th><th>Since</th><th>Actions</th></tr>
-            </thead>
-            <tbody>
-              {blocked.map((b) => (
-                <tr key={b.id}>
-                  <td>{b.label}{b.report_id ? <span className="ui-muted"> · from report #{b.report_id}</span> : null}</td>
-                  <td>{b.reason || '—'}</td>
-                  <td>{b.blocked_by || '—'}</td>
-                  <td className="dashNowrap">{shortDate(b.created_at)}</td>
-                  <td><button className="dashBtn" type="button" onClick={() => unblock(b)}>Unblock</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </details>
-  );
-}
-
 // Small flags beside the reporter's name in the list.
 function ReportFlags({ report }) {
   const fake = report.reporter_history?.fake || 0;
@@ -328,7 +217,7 @@ function DetailPanel({ report }) {
 // that was typed in then.
 const assignedLabel = (report) => report.team?.name || report.assigned_to || '—';
 
-function TriagePanel({ report, teams, onSaved, isAdmin }) {
+function TriagePanel({ report, teams, onSaved }) {
   const confirm = useConfirm();
   const [closing, setClosing] = useState(false);
   const [teamId, setTeamId] = useState(report.team_id ? String(report.team_id) : '');
@@ -447,14 +336,17 @@ function TriagePanel({ report, teams, onSaved, isAdmin }) {
               )}
             </>
           )}
-          {isAdmin && <BlockReporterButton report={report} onBlocked={onSaved} />}
+          {/* Blocking is a security call, made by a System Admin on the Security page. */}
+          {report.status === 'invalid' && report.invalid_reason === 'fake' && report.can_block && !report.reporter_blocked && (
+            <span className="ui-muted" style={{ fontSize: '0.85rem' }}>A System Admin can block this reporter from System → Security.</span>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-function ReportRow({ report, teams, onChanged, onUnreadChanged, isMobile, isAdmin }) {
+function ReportRow({ report, teams, onChanged, onUnreadChanged, isMobile }) {
   const [mode, setMode] = useState(''); // '' | 'triage' | 'detail'
   const isUnread = !report.read_at;
 
@@ -484,7 +376,7 @@ function ReportRow({ report, teams, onChanged, onUnreadChanged, isMobile, isAdmi
   );
   const panel = mode === 'detail'
     ? <DetailPanel report={report} />
-    : <TriagePanel report={report} teams={teams} onSaved={handleInteracted} isAdmin={isAdmin} />;
+    : <TriagePanel report={report} teams={teams} onSaved={handleInteracted} />;
 
   if (isMobile) {
     return (
@@ -533,7 +425,7 @@ function ReportRow({ report, teams, onChanged, onUnreadChanged, isMobile, isAdmi
   );
 }
 
-export default function RescueReportsAdmin({ onUnreadChanged, isAdmin = false }) {
+export default function RescueReportsAdmin({ onUnreadChanged }) {
   const isMobile = useIsMobile();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -612,7 +504,7 @@ export default function RescueReportsAdmin({ onUnreadChanged, isAdmin = false })
       ) : isMobile ? (
         <div className="dashCardList">
           {reports.map((r) => (
-            <ReportRow key={r.id} report={r} teams={teams} onChanged={refresh} onUnreadChanged={onUnreadChanged} isMobile isAdmin={isAdmin} />
+            <ReportRow key={r.id} report={r} teams={teams} onChanged={refresh} onUnreadChanged={onUnreadChanged} isMobile />
           ))}
         </div>
       ) : (
@@ -631,7 +523,7 @@ export default function RescueReportsAdmin({ onUnreadChanged, isAdmin = false })
             </thead>
             <tbody>
               {reports.map((r) => (
-                <ReportRow key={r.id} report={r} teams={teams} onChanged={refresh} onUnreadChanged={onUnreadChanged} isAdmin={isAdmin} />
+                <ReportRow key={r.id} report={r} teams={teams} onChanged={refresh} onUnreadChanged={onUnreadChanged} />
               ))}
             </tbody>
           </table>
@@ -640,7 +532,6 @@ export default function RescueReportsAdmin({ onUnreadChanged, isAdmin = false })
 
       {!loading && reports.length > 0 && <Pagination meta={meta} onPage={setPage} />}
 
-      {isAdmin && <BlockedReporters refreshKey={refreshKey} onChanged={refresh} />}
     </>
   );
 }

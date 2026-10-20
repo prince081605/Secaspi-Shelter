@@ -12,7 +12,7 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Throwable;
 
 /**
- * Admin-only bulk import of animals from an Excel workbook, in two steps: preview (read and check
+ * The Data Admin's bulk import of animals from an Excel workbook, in two steps: preview (read and check
  * every row, save nothing) and import. The import step is sent the same file again and checks it
  * again from scratch — it never trusts the preview the browser is holding, and it catches anything
  * that changed in between (another admin adding one of the same animals, an area being removed).

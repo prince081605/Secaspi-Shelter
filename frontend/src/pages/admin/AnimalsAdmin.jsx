@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from 'react';
-import { PawPrint, Dog, Syringe, Pill, Search, X, MapPin, FileSpreadsheet, Images } from 'lucide-react';
+import { PawPrint, Dog, Syringe, Pill, Search, X, MapPin, Images } from 'lucide-react';
 import {
   adminListAnimals,
   adminGetAnimalStats,
@@ -24,9 +24,7 @@ import IntakesAdmin from './IntakesAdmin';
 import { SPECIES, isKnownSpecies } from '../../lib/species';
 import { listShelterLocations } from '../../lib/locationsApi';
 import AnimalLocationPanel from '../../components/AnimalLocationPanel';
-import ShelterLocationsManager from './ShelterLocationsManager';
 import ActionMenu from '../../components/ActionMenu';
-import AnimalImport from './AnimalImport';
 import AnimalPhotoBulk from './AnimalPhotoBulk';
 import BreedInput from '../../components/BreedInput';
 import PhotoInput from '../../components/PhotoInput';
@@ -709,7 +707,9 @@ function MedicalManager({ animalId, onChanged }) {
   );
 }
 
-export default function AnimalsAdmin({ isAdmin = false }) {
+// Shelter areas and Import from Excel are the Data Admin's (Categories → Shelter areas, and
+// Import animals); bulk photo updates are the Desk Admin's (`canBulkPhotos`).
+export default function AnimalsAdmin({ canBulkPhotos = false }) {
   const confirm = useConfirm();
   const isMobile = useIsMobile();
   const [animals, setAnimals] = useState([]);
@@ -722,8 +722,6 @@ export default function AnimalsAdmin({ isAdmin = false }) {
   const [medicalOpenFor, setMedicalOpenFor] = useState(null);
   const [qrOpenFor, setQrOpenFor] = useState(null);
   const [locationOpenFor, setLocationOpenFor] = useState(null);
-  const [showLocations, setShowLocations] = useState(false);
-  const [showImport, setShowImport] = useState(false);
   const [showBulkPhotos, setShowBulkPhotos] = useState(false);
   const [locations, setLocations] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -867,46 +865,30 @@ export default function AnimalsAdmin({ isAdmin = false }) {
 
       <div className="aa-header" style={{ marginTop: 24 }}>
         <div>
-          <span className="aa-eyebrow">Admin · Animal Management</span>
+          <span className="aa-eyebrow">Animal Management</span>
           <h2>Manage Animal Listings</h2>
           <p>Create, edit, and retire adoption profiles for Aspins currently in shelter care.</p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {isAdmin && (
-            <button className="dashBtn" onClick={() => setShowLocations((v) => !v)}>
-              <MapPin size={15} style={{ verticalAlign: '-3px' }} /> {showLocations ? 'Close areas' : 'Manage locations'}
-            </button>
-          )}
-          {isAdmin && (
-            <button
-              className="dashBtn"
-              aria-expanded={showImport}
-              onClick={() => { setShowImport((v) => !v); setShowCreate(false); setShowBulkPhotos(false); }}
-            >
-              <FileSpreadsheet size={15} style={{ verticalAlign: '-3px' }} /> {showImport ? 'Close import' : 'Import from Excel'}
-            </button>
-          )}
-          {isAdmin && (
+          {canBulkPhotos && (
             <button
               className="dashBtn"
               aria-expanded={showBulkPhotos}
-              onClick={() => { setShowBulkPhotos((v) => !v); setShowImport(false); setShowCreate(false); }}
+              onClick={() => { setShowBulkPhotos((v) => !v); setShowCreate(false); }}
             >
               <Images size={15} style={{ verticalAlign: '-3px' }} /> {showBulkPhotos ? 'Close photos' : 'Update photos in bulk'}
             </button>
           )}
           <button
             className="dashBtn dashBtnPrimary"
-            onClick={() => { setShowCreate((v) => !v); setEditingAnimal(null); setShowImport(false); setShowBulkPhotos(false); }}
+            onClick={() => { setShowCreate((v) => !v); setEditingAnimal(null); setShowBulkPhotos(false); }}
           >
             {showCreate ? 'Close' : '+ Add Animal'}
           </button>
         </div>
       </div>
 
-      {isAdmin && showLocations && <ShelterLocationsManager onChanged={refresh} />}
-      {isAdmin && showImport && <AnimalImport onImported={refresh} onClose={() => setShowImport(false)} onAddPhotos={() => { setShowImport(false); setShowBulkPhotos(true); }} />}
-      {isAdmin && showBulkPhotos && <AnimalPhotoBulk onUploaded={refresh} onClose={() => setShowBulkPhotos(false)} />}
+      {canBulkPhotos && showBulkPhotos && <AnimalPhotoBulk onUploaded={refresh} onClose={() => setShowBulkPhotos(false)} />}
 
       {error && <div className="ui-error">{error}</div>}
 

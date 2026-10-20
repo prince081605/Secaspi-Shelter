@@ -4,7 +4,7 @@ import { createShelterLocation, deleteShelterLocation, listShelterLocations, ren
 import useConfirm from '../../lib/useConfirm';
 
 /**
- * Admin-only list of the shelter's areas (House 1, Kennel 2, ...): add, rename, remove. An area
+ * The Data Admin's list of the shelter's areas (House 1, Kennel 2, ...): add, rename, remove. An area
  * with animals in it can't be removed (the server refuses and says so).
  */
 export default function ShelterLocationsManager({ onChanged }) {

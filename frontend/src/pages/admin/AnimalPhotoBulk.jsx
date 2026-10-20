@@ -36,7 +36,7 @@ function Spinner() {
 const animalLabel = (a) => `${a.name} — ${a.species || 'animal'}, #${a.id}${a.status === 'archived' ? ' (archived)' : ''}`;
 
 /**
- * Admin-only bulk photo update: pick many photos at once, each named after its animal
+ * The Desk Admin's bulk photo update: pick many photos at once, each named after its animal
  * ("Brownie.jpg", "Brownie-2.jpg") or its ID ("42.jpg"). The server matches the names first; the
  * admin checks the matches, fixes any it couldn't make, and only then are the photos sent — one
  * at a time, through the same upload as Manage → Photos.

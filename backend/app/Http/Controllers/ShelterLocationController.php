@@ -8,8 +8,8 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
 /**
- * The shelter's named areas (House 1, Kennel 2, ...). Staff read the list to move animals
- * around; only admins add, rename or remove areas.
+ * The shelter's named areas (House 1, Kennel 2, ...). The desk reads the list to move animals
+ * around; only the Data Admin adds, renames or removes areas.
  */
 class ShelterLocationController extends Controller
 {

@@ -1,7 +1,7 @@
 import { api } from './api';
 
 // ---- In-shelter locations (House 1, Kennel 2, ...) ----
-// Staff can read the list and move animals; only admins add, rename or remove areas.
+// The desk reads the list and moves animals; only the Data Admin adds, renames or removes areas.
 
 export async function listShelterLocations() {
   return api.get('/api/admin/shelter-locations');

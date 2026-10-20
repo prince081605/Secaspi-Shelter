@@ -42,6 +42,8 @@ class ProfileController extends Controller
                 'email' => $user->email,
                 'phone' => $user->phone,
                 'role' => $user->role,
+                'role_label' => $user->roleLabel(),
+                'permissions' => $user->permissions(),
             ],
         ]);
     }

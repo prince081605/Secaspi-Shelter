@@ -14,7 +14,7 @@ export async function clockOut() {
   return api.post('/api/volunteer/attendance/clock-out');
 }
 
-// ---- Admin: the attendance log (staff can read; only admins write) ----
+// ---- The attendance log (staff can read; only Desk Admins write) ----
 
 export async function adminListAttendance(params = {}) {
   const search = new URLSearchParams();

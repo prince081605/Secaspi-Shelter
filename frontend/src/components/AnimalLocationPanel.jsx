@@ -107,7 +107,7 @@ export default function AnimalLocationPanel({ animalId, source = 'admin', onMove
               <li key={h.id}>
                 <div>{nameOf(h.from)} → <strong>{nameOf(h.to)}</strong>{h.note ? ` — ${h.note}` : ''}</div>
                 <div className="alpMeta">
-                  {formatWhen(h.created_at)} · by {h.moved_by || 'unknown'} · {h.source === 'qr_page' ? 'via QR scan page' : 'via admin panel'}
+                  {formatWhen(h.created_at)} · by {h.moved_by || 'unknown'} · {h.source === 'qr_page' ? 'via QR scan page' : 'via the Animals page'}
                 </div>
               </li>
             ))}

@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Support\Permissions;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -25,6 +26,9 @@ class DatabaseSeeder extends Seeder
 
     /**
      * The first admin on a brand-new database, from ADMIN_EMAIL / ADMIN_PASSWORD.
+     *
+     * It is a System Admin: only a System Admin can hand out roles, so the first account has to
+     * be one to make anyone else a Desk or Data Admin. (No admin type can do everything.)
      *
      * Credentials come from the environment and never from the repo: this project is
      * public, so a committed default password would be a published admin login on every
@@ -66,13 +70,13 @@ class DatabaseSeeder extends Seeder
             'username' => User::generateUsername($fullName),
             'email' => $email,
             'password' => Hash::make($password),
-            'role' => 'admin',
+            'role' => Permissions::SYSTEM_ADMIN,
             'status' => 'active',
             'email_verified' => 1,
             'created_at' => now(),
         ]]);
 
-        $this->command?->info("Created admin {$email}.");
+        $this->command?->info("Created System Admin {$email}.");
     }
 
     /**

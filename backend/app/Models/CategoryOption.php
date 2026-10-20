@@ -6,8 +6,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * One entry in an admin-managed list (a "category"): a dog breed, a behavioral issue, a medical
- * record type, a valid ID type. Admins add, rename, hide and restore them on the Categories page
+ * One entry in a dropdown list (a "category"): a dog breed, a behavioral issue, a medical
+ * record type, a valid ID type. The Data Admin adds, renames, hides and restores them on the Categories page
  * (CategoryOptionController); everything else reads them through the helpers below.
  */
 class CategoryOption extends Model

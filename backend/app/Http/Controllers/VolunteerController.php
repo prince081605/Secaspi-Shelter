@@ -136,6 +136,34 @@ class VolunteerController extends Controller
         return response()->json(['task' => $this->toTaskItem($task->fresh())]);
     }
 
+    /**
+     * People the desk can add as volunteers: plain user accounts only (not personnel already, and
+     * not an admin type), newest first, optionally searched by name, username or email. Just what
+     * picking someone needs — the full Users list (and changing roles there) is the System Admin's.
+     */
+    public function candidates(Request $request)
+    {
+        $query = User::where('role', 'user');
+
+        if ($q = trim((string) $request->query('q'))) {
+            // LOWER() on both sides: LIKE is case-sensitive on Postgres (prod), as in UserController.
+            $needle = '%'.mb_strtolower($q).'%';
+            $query->where(fn ($w) => $w->whereRaw('LOWER(full_name) LIKE ?', [$needle])
+                ->orWhereRaw('LOWER(username) LIKE ?', [$needle])
+                ->orWhereRaw('LOWER(email) LIKE ?', [$needle]));
+        }
+
+        return response()->json([
+            'users' => $query->orderByDesc('id')->limit(20)->get()->map(fn (User $u) => [
+                'id' => $u->id,
+                'full_name' => $u->full_name,
+                'email' => $u->email,
+                'role' => $u->role,
+                'role_label' => $u->roleLabel(),
+            ])->values(),
+        ]);
+    }
+
     public function adminIndex(Request $request)
     {
         $query = Volunteer::query()->with(['user', 'tasks.verifier', 'tasks.team']);
@@ -179,11 +207,12 @@ class VolunteerController extends Controller
             $data['categories'] = array_values(array_unique($data['categories'] ?? [])) ?: null;
         }
 
-        // Granting staff-level access promotes the account's role to `staff`, so it's an
-        // admin-only action — a staff member must not be able to mint more staff (privilege
-        // -escalation boundary). Adding volunteers stays open to staff (route role:staff).
-        if ($data['type'] === 'staff' && ! $request->user()->hasRoleAtLeast('admin')) {
-            return response()->json(['message' => 'Only an admin can add staff members.'], 403);
+        // Granting staff-level access promotes the account's role to `staff`, and handing out
+        // roles is the System Admin's job, done from Users (which adds the personnel record too).
+        // So nobody mints staff here — the desk must not be able to (privilege-escalation
+        // boundary). Adding volunteers stays open to the desk (route perm:desk.operate).
+        if ($data['type'] === 'staff') {
+            return response()->json(['message' => 'Staff are added by a System Admin, from Users.'], 403);
         }
 
         $volunteer = Volunteer::create($data);
@@ -191,7 +220,7 @@ class VolunteerController extends Controller
         // role isn't mass-assignable (privilege-escalation guard), so forceFill it —
         // same approach as UserController::adminUpdate.
         $user = User::find($volunteer->user_id);
-        if ($user && $user->role !== 'admin') {
+        if ($user && ! $user->isAdmin()) {
             $user->forceFill(['role' => $volunteer->type])->save();
         }
 
@@ -215,10 +244,10 @@ class VolunteerController extends Controller
         $data = $validator->validated();
 
         // Hours come from attendance now; overriding the total is a correction to someone's
-        // record (and staff work shifts themselves), so it's kept for admins.
+        // record (and staff work shifts themselves), so it's kept for Desk Admins.
         if (array_key_exists('hours_rendered', $data)) {
-            if (! $request->user()->hasRoleAtLeast('admin')) {
-                return response()->json(['message' => 'Only an admin can change hours rendered.'], 403);
+            if (! $request->user()->hasPermission('desk.supervise')) {
+                return response()->json(['message' => 'Only a Desk Admin can change hours rendered.'], 403);
             }
             $volunteer->setTotalHours((float) $data['hours_rendered']);
             unset($data['hours_rendered']);
@@ -294,11 +323,11 @@ class VolunteerController extends Controller
         $data = $validator->validated();
         $completing = ($data['status'] ?? null) === 'completed' && $task->status !== 'completed';
 
-        // Completing a task is the admin verifying the work (usually against the proof photo).
+        // Completing a task is a Desk Admin verifying the work (usually against the proof photo).
         // Staff run the rest of the task flow, but they also do tasks themselves, so letting
         // them complete tasks would let them verify their own work.
-        if ($completing && ! $request->user()->hasRoleAtLeast('admin')) {
-            return response()->json(['message' => 'Only an admin can verify a task as completed.'], 403);
+        if ($completing && ! $request->user()->hasPermission('desk.supervise')) {
+            return response()->json(['message' => 'Only a Desk Admin can verify a task as completed.'], 403);
         }
 
         $task->fill($data);

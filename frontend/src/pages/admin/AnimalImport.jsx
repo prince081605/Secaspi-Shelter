@@ -53,10 +53,12 @@ function Step({ number, title, children }) {
 }
 
 /**
- * Admin-only bulk import of animals from an Excel workbook, in plain steps for shelter staff:
- * download the template, upload the filled-in copy, review every row the server checked, then
- * import. Nothing is saved until the admin confirms; rows with problems and possible duplicates
- * are skipped (a duplicate can be ticked "Import anyway"). Photos are added afterwards, per animal.
+ * The Data Admin's bulk import of animals from an Excel workbook (its own "Import animals" page),
+ * in plain steps: download the template, upload the filled-in copy, review every row the server
+ * checked, then import. Nothing is saved until the Data Admin confirms; rows with problems and
+ * possible duplicates are skipped (a duplicate can be ticked "Import anyway"). Photos are added
+ * afterwards by a Desk Admin. `onClose` and `onAddPhotos` are optional: without them the page
+ * has no close button and points to the Desk Admin for photos.
  */
 export default function AnimalImport({ onImported, onClose, onAddPhotos }) {
   const confirm = useConfirm();
@@ -198,9 +200,11 @@ export default function AnimalImport({ onImported, onClose, onAddPhotos }) {
           <h3><FileSpreadsheet size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />Import animals from Excel</h3>
           <p className="ui-muted">Add many animals at once from a spreadsheet. Every row is checked before anything is saved.</p>
         </div>
-        <button type="button" className="dashBtn" onClick={onClose} disabled={phase === 'importing'} aria-label="Close import">
-          <X size={14} />
-        </button>
+        {onClose && (
+          <button type="button" className="dashBtn" onClick={onClose} disabled={phase === 'importing'} aria-label="Close import">
+            <X size={14} />
+          </button>
+        )}
       </div>
 
       <Step number={1} title="Download the template">
@@ -437,12 +441,15 @@ function ImportResult({ result, onAgain, onClose, onAddPhotos }) {
         )}
 
         <p className="ui-muted">
-          Next: add photos for the new animals, all at once with “Update photos in bulk” or one by one from Manage → Photos. Each animal’s QR code is created automatically.
+          {onAddPhotos
+            ? 'Next: add photos for the new animals, all at once with “Update photos in bulk” or one by one from Manage → Photos.'
+            : 'Next: a Desk Admin adds photos for the new animals, all at once from Animals → “Update photos in bulk”.'}
+          {' '}Each animal’s QR code is created automatically.
         </p>
         <div className="aa-import-actions">
           {onAddPhotos && <button type="button" className="dashBtn dashBtnPrimary" onClick={onAddPhotos}>Add their photos</button>}
           <button type="button" className="dashBtn" onClick={onAgain}>Import another file</button>
-          <button type="button" className="dashBtn" onClick={onClose}>Close</button>
+          {onClose && <button type="button" className="dashBtn" onClick={onClose}>Close</button>}
         </div>
       </div>
     </section>

@@ -42,11 +42,11 @@ class ExpenseTest extends TestCase
         ], $overrides);
     }
 
-    // ---- Authorization: staff read, admin write -------------------------------------------
+    // ---- Authorization: staff read, Desk Admin writes----------------------------------------
 
-    public function test_admin_can_record_an_expense(): void
+    public function test_desk_admin_can_record_an_expense(): void
     {
-        Sanctum::actingAs(User::factory()->admin()->create());
+        Sanctum::actingAs(User::factory()->deskAdmin()->create());
 
         $this->postJson('/api/admin/expenses', $this->payload())
             ->assertCreated()
@@ -86,7 +86,7 @@ class ExpenseTest extends TestCase
 
     public function test_category_must_be_one_of_the_donation_categories(): void
     {
-        Sanctum::actingAs(User::factory()->admin()->create());
+        Sanctum::actingAs(User::factory()->deskAdmin()->create());
 
         $this->postJson('/api/admin/expenses', $this->payload(['category' => 'yacht_fund']))
             ->assertStatus(422)
@@ -95,7 +95,7 @@ class ExpenseTest extends TestCase
 
     public function test_expense_requires_a_positive_amount(): void
     {
-        Sanctum::actingAs(User::factory()->admin()->create());
+        Sanctum::actingAs(User::factory()->deskAdmin()->create());
 
         $this->postJson('/api/admin/expenses', $this->payload(['amount' => 0]))
             ->assertStatus(422)
@@ -107,7 +107,7 @@ class ExpenseTest extends TestCase
     public function test_update_replaces_the_receipt_and_deletes_the_old_file(): void
     {
         Storage::fake('local');
-        $admin = User::factory()->admin()->create();
+        $admin = User::factory()->deskAdmin()->create();
         Sanctum::actingAs($admin);
 
         $created = $this->postJson('/api/admin/expenses', $this->payload([
@@ -132,7 +132,7 @@ class ExpenseTest extends TestCase
     public function test_destroy_removes_the_row_and_its_receipt(): void
     {
         Storage::fake('local');
-        Sanctum::actingAs(User::factory()->admin()->create());
+        Sanctum::actingAs(User::factory()->deskAdmin()->create());
 
         $id = $this->postJson('/api/admin/expenses', $this->payload([
             'receipt' => $this->receipt(),
@@ -148,7 +148,7 @@ class ExpenseTest extends TestCase
 
     public function test_index_filters_by_category_and_date_range(): void
     {
-        Sanctum::actingAs(User::factory()->admin()->create());
+        Sanctum::actingAs(User::factory()->deskAdmin()->create());
 
         Expense::create($this->payload(['category' => 'animal_care', 'spent_at' => '2026-08-10']));
         Expense::create($this->payload(['category' => 'facility', 'spent_at' => '2026-08-10']));
@@ -167,7 +167,7 @@ class ExpenseTest extends TestCase
 
     public function test_stats_report_totals_and_a_full_category_breakdown(): void
     {
-        Sanctum::actingAs(User::factory()->admin()->create());
+        Sanctum::actingAs(User::factory()->deskAdmin()->create());
 
         Expense::create($this->payload(['category' => 'animal_care', 'amount' => 1000]));
         Expense::create($this->payload(['category' => 'facility', 'amount' => 500]));
@@ -254,7 +254,7 @@ class ExpenseTest extends TestCase
 
     public function test_expenses_report_merges_ledger_rows_with_medical_costs(): void
     {
-        $admin = User::factory()->admin()->create();
+        $admin = User::factory()->dataAdmin()->create();
         Sanctum::actingAs($admin);
 
         Expense::create($this->payload(['category' => 'facility', 'amount' => 2000, 'description' => 'Roof repair']));
@@ -280,7 +280,7 @@ class ExpenseTest extends TestCase
         $this->assertSame('₱5,500.00', $summary['Total spent']);
     }
 
-    public function test_expenses_report_and_export_are_admin_only(): void
+    public function test_expenses_report_and_export_are_the_data_admins_only(): void
     {
         Sanctum::actingAs(User::factory()->staff()->create());
 
@@ -291,9 +291,9 @@ class ExpenseTest extends TestCase
         $this->get('/api/admin/reports/export/csv?type=expenses')->assertForbidden();
     }
 
-    public function test_expenses_export_produces_csv_and_pdf_for_an_admin(): void
+    public function test_expenses_export_produces_csv_and_pdf_for_the_data_admin(): void
     {
-        Sanctum::actingAs(User::factory()->admin()->create());
+        Sanctum::actingAs(User::factory()->dataAdmin()->create());
 
         Expense::create($this->payload(['description' => 'Dog food']));
 

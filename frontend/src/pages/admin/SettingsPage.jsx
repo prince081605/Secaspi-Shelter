@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Database, Settings, UserRound } from 'lucide-react';
+import { Settings, UserRound } from 'lucide-react';
 import SettingsAdmin from './SettingsAdmin';
-import CategoriesAdmin from './CategoriesAdmin';
 import './SettingsPage.css';
 
+// The dropdown lists (the old "System data" tab) are the Data Admin's, on Categories — the
+// System Admin, who owns Settings, can't change them.
 const SECTIONS = [
   { key: 'general', label: 'Shelter info', icon: Settings },
-  { key: 'data', label: 'System data', icon: Database },
   { key: 'account', label: 'My account', icon: UserRound },
 ];
 
@@ -22,8 +22,7 @@ function savedSection() {
 }
 
 /**
- * The admin Settings page: the shelter's public info, the system's data lists (breeds,
- * behavioral issues, record and ID types, shelter areas), and the admin's own account.
+ * The System Admin's Settings page: the shelter's public info and their own account.
  * `account` is the profile form, which lives with the dashboard.
  */
 export default function SettingsPage({ account }) {
@@ -59,7 +58,6 @@ export default function SettingsPage({ account }) {
 
       <div id="set-panel" role="tabpanel" aria-labelledby={`set-tab-${section}`}>
         {section === 'general' && <SettingsAdmin />}
-        {section === 'data' && <CategoriesAdmin title="System data" icon={Database} />}
         {section === 'account' && account}
       </div>
     </div>

@@ -9,12 +9,49 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 /**
- * Admin-only: blocking the contact number and/or account behind a rescue report (after fake
- * reports), the list of blocked reporters, and unblocking. A blocked reporter's new reports are
- * refused with the shelter's phone number; their earlier reports are untouched.
+ * The System Admin's Security page: reporters behind reports the desk closed as fake, blocking
+ * the contact number and/or account behind one of those reports, the list of blocked reporters,
+ * and unblocking. A blocked reporter's new reports are refused with the shelter's phone number;
+ * their earlier reports are untouched.
  */
 class BlockedReporterController extends Controller
 {
+    /**
+     * Reporters with reports closed as fake, most offending first — one row per contact number
+     * (or account, for reports without one), the same basis ReportScreening::history() uses.
+     * `report_id` is their latest fake report, which is what store() blocks by.
+     */
+    public function flagged()
+    {
+        $fake = RescueReport::with('user:id,full_name')
+            ->where('status', 'invalid')
+            ->where('invalid_reason', 'fake')
+            ->where(fn ($q) => $q->whereNotNull('contact_hash')->orWhereNotNull('user_id'))
+            ->orderByDesc('created_at')
+            ->get();
+
+        $reporters = $fake
+            ->groupBy(fn (RescueReport $r) => $r->contact_hash ? 'contact:'.$r->contact_hash : 'user:'.$r->user_id)
+            ->map(function ($reports) {
+                $latest = $reports->first();
+
+                return [
+                    'report_id' => $latest->id,
+                    'label' => collect([
+                        $latest->contact_number ? ReportScreening::maskContact($latest->contact_number) : null,
+                        $latest->user?->full_name ? "account: {$latest->user->full_name}" : null,
+                    ])->filter()->implode(' · ') ?: 'Reporter of report #'.$latest->id,
+                    'fake_reports' => $reports->count(),
+                    'last_report_at' => $latest->created_at,
+                    'blocked' => (bool) ReportScreening::blockFor($latest->contact_hash, $latest->user_id),
+                ];
+            })
+            ->sortByDesc('fake_reports')
+            ->values();
+
+        return response()->json(['reporters' => $reporters]);
+    }
+
     public function index()
     {
         $blocked = BlockedReporter::with('blocker:id,full_name')->orderByDesc('id')->get();

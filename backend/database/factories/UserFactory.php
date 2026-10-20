@@ -34,9 +34,21 @@ class UserFactory extends Factory
         ];
     }
 
-    public function admin(): static
+    // The three admin types (App\Support\Permissions). There is no all-powerful admin state on
+    // purpose: a test acts as whichever admin type owns the action it exercises.
+    public function deskAdmin(): static
     {
-        return $this->state(fn () => ['role' => 'admin']);
+        return $this->state(fn () => ['role' => 'desk_admin']);
+    }
+
+    public function dataAdmin(): static
+    {
+        return $this->state(fn () => ['role' => 'data_admin']);
+    }
+
+    public function systemAdmin(): static
+    {
+        return $this->state(fn () => ['role' => 'system_admin']);
     }
 
     public function staff(): static

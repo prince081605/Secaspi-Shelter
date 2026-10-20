@@ -26,7 +26,7 @@ class VolunteerCategoryTest extends TestCase
             ->assertOk()
             ->assertJsonPath('categories.volunteer_category.0', ['value' => 'rescue', 'label' => 'Rescue', 'hidden' => false]);
 
-        Sanctum::actingAs(User::factory()->admin()->create());
+        Sanctum::actingAs(User::factory()->dataAdmin()->create());
         $this->postJson('/api/admin/categories/volunteer_category', ['label' => 'Dog walking'])
             ->assertCreated()
             ->assertJsonPath('option.value', 'dog_walking');
@@ -77,15 +77,17 @@ class VolunteerCategoryTest extends TestCase
 
     public function test_a_hidden_category_stays_on_people_who_have_it_and_cant_be_deleted(): void
     {
-        $admin = User::factory()->admin()->create();
-        Sanctum::actingAs($admin);
+        $dataAdmin = User::factory()->dataAdmin()->create();
+        Sanctum::actingAs($dataAdmin);
         $person = Volunteer::create(['user_id' => User::factory()->create()->id, 'type' => 'volunteer', 'categories' => ['events']]);
         $events = CategoryOption::where('type', 'volunteer_category')->where('value', 'events')->first();
 
         $this->putJson("/api/admin/categories/volunteer_category/{$events->id}", ['is_active' => false])->assertOk();
-        // Saving their other categories keeps the hidden one valid.
+        // Saving their other categories (desk work) keeps the hidden one valid.
+        Sanctum::actingAs(User::factory()->deskAdmin()->create());
         $this->putJson("/api/admin/volunteers/{$person->id}", ['categories' => ['events', 'media']])->assertOk();
 
+        Sanctum::actingAs($dataAdmin);
         $this->deleteJson("/api/admin/categories/volunteer_category/{$events->id}")
             ->assertStatus(422)
             ->assertJsonPath('message', fn ($m) => str_contains($m, 'used by 1 person'));

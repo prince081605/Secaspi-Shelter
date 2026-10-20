@@ -134,17 +134,17 @@ class MessageController extends Controller
 
     private function canAccess(User $user, Conversation $conversation): bool
     {
-        return $user->hasRoleAtLeast('staff') || $conversation->user_id === $user->id;
+        return $user->hasPermission('desk.operate') || $conversation->user_id === $user->id;
     }
 
     /**
-     * Notify whoever didn't send this message: if the member sent it, ping the staff pool;
-     * if staff sent it, ping the member who owns the conversation.
+     * Notify whoever didn't send this message: if the member sent it, ping the desk (staff and
+     * Desk Admins); if the desk sent it, ping the member who owns the conversation.
      */
     private function notifyOtherParty(Conversation $conversation, User $sender, Message $message): void
     {
         if ($sender->id === $conversation->user_id) {
-            $recipients = User::whereIn('role', ['staff', 'admin'])->where('id', '!=', $sender->id)->get();
+            $recipients = User::withPermission('desk.operate')->where('id', '!=', $sender->id)->get();
         } else {
             $recipients = User::where('id', $conversation->user_id)->get();
         }

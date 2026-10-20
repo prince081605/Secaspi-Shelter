@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Setting;
+use App\Support\Permissions;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -116,7 +117,7 @@ class MockDataSeeder extends Seeder
             'email' => 'prince.estrella16@gmail.com',
             'password' => Hash::make('prince13161729'),
             'phone' => '09171234567',
-            'role' => 'admin',
+            'role' => Permissions::SYSTEM_ADMIN,
             'status' => 'active',
             'email_verified' => 1,
             'created_at' => now(),
@@ -175,6 +176,12 @@ class MockDataSeeder extends Seeder
         }
         for ($i = 0; $i < 3; $i++) {
             $staff[] = $make('staff');
+        }
+        // One Desk Admin and one Data Admin (the seeded admin above is the System Admin), so every
+        // role can be signed into locally. Always active — they're there to be logged in as.
+        foreach ([Permissions::DESK_ADMIN, Permissions::DATA_ADMIN] as $adminRole) {
+            DB::table('users')->where('id', $make($adminRole))
+                ->update(['status' => 'active', 'suspension_reason' => null, 'email_verified' => 1]);
         }
 
         return [

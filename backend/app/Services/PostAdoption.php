@@ -175,11 +175,11 @@ class PostAdoption
     public function alertStaff(AdoptionUpdate|AdoptionReturn $item): void
     {
         $item->loadMissing(['animal', 'user']);
-        User::whereIn('role', ['staff', 'admin'])->get()
+        User::withPermission('desk.operate')->get()
             ->each(fn (User $member) => (new PostAdoptionAlert($item))->sendTo($member));
     }
 
-    /** Show the check-in in Health Reminders too (and so in its daily email to admins). */
+    /** Show the check-in in Health Reminders too (and so in its daily email to Desk Admins). */
     private function mirrorReminder(AdoptionFollowUp $followUp): void
     {
         $followUp->loadMissing(['animal', 'application']);

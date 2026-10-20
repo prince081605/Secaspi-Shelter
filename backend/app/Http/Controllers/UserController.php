@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BlockedReporter;
 use App\Models\User;
 use App\Models\Volunteer;
+use App\Support\Permissions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
@@ -42,6 +45,7 @@ class UserController extends Controller
             'email' => $u->email,
             'phone' => $u->phone,
             'role' => $u->role,
+            'role_label' => $u->roleLabel(),
             'status' => $u->status,
             'suspension_reason' => $u->suspension_reason,
             'email_verified' => (bool) $u->email_verified,
@@ -53,7 +57,7 @@ class UserController extends Controller
     public function adminUpdate(Request $request, User $user)
     {
         $validator = Validator::make($request->all(), [
-            'role' => ['sometimes', 'in:admin,staff,volunteer,user'],
+            'role' => ['sometimes', Rule::in(array_keys(Permissions::LABELS))],
             'status' => ['sometimes', 'in:active,suspended,pending'],
             'suspension_reason' => ['sometimes', 'nullable', 'string', 'max:500'],
         ]);
@@ -64,10 +68,12 @@ class UserController extends Controller
 
         $data = $validator->validated();
 
-        if ($user->id === $request->user()->id && (
-            (array_key_exists('role', $data) && $data['role'] !== 'admin')
-            || (array_key_exists('status', $data) && $data['status'] !== 'active')
-        )) {
+        $changesRole = array_key_exists('role', $data) && $data['role'] !== $user->role;
+        $deactivates = array_key_exists('status', $data) && $data['status'] !== 'active';
+
+        // This also keeps at least one active System Admin, the only role that can hand out roles:
+        // a System Admin can be demoted or suspended only by another, active, System Admin.
+        if ($user->id === $request->user()->id && ($changesRole || $deactivates)) {
             return response()->json(['message' => 'You cannot change your own role or suspend your own account.'], 422);
         }
 
@@ -94,7 +100,7 @@ class UserController extends Controller
 
         // Keep the personnel roster in sync with the role so the Users and Personnel
         // modules can't disagree: promoting to "volunteer" or "staff" adds them to the roster,
-        // demoting to "user"/"admin" removes their personnel record (and any tasks).
+        // any other role (user, or one of the admin types) removes their personnel record (and any tasks).
         if (array_key_exists('role', $data)) {
             if ($user->role === 'volunteer' || $user->role === 'staff') {
                 Volunteer::firstOrCreate(
@@ -118,10 +124,29 @@ class UserController extends Controller
                 'email' => $user->email,
                 'phone' => $user->phone,
                 'role' => $user->role,
+                'role_label' => $user->roleLabel(),
                 'status' => $user->status,
                 'suspension_reason' => $user->suspension_reason,
                 'email_verified' => (bool) $user->email_verified,
             ],
+        ]);
+    }
+
+    /** The System Admin's home: accounts by role and status, and the reporter block list size. */
+    public function summary()
+    {
+        $byRole = User::query()->selectRaw('role, COUNT(*) AS total')->groupBy('role')->pluck('total', 'role');
+
+        return response()->json([
+            'roles' => collect(Permissions::LABELS)->map(fn (string $label, string $role) => [
+                'role' => $role,
+                'label' => $label,
+                'count' => (int) ($byRole[$role] ?? 0),
+            ])->values(),
+            'total' => (int) $byRole->sum(),
+            'suspended' => User::where('status', 'suspended')->count(),
+            'unverified' => User::where('email_verified', 0)->count(),
+            'blocked_reporters' => BlockedReporter::count(),
         ]);
     }
 }

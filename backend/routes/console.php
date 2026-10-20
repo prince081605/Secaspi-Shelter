@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Notifications\CheckInDue;
 use App\Notifications\ReminderDue;
 use App\Services\PaymongoGateway;
+use App\Support\Permissions;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Hash;
@@ -20,15 +21,23 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 /**
- * Create an admin, or promote and unlock an existing account. The way back in when a
- * database has no admin and you would rather not redeploy to change ADMIN_* env vars.
+ * Create a Desk, Data or System Admin, or promote and unlock an existing account. The way back
+ * in when a database has no System Admin (only they can hand out roles) and you would rather
+ * not redeploy to change ADMIN_* env vars. The type is required — no admin type is the default.
  *
  * The password is prompted for, never passed as an argument — arguments end up in shell
  * history and in the process list, where other users on the host can read them.
  *
- * Usage: php artisan secaspi:make-admin you@example.com
+ * Usage: php artisan secaspi:make-admin you@example.com system   (desk | data | system)
  */
-Artisan::command('secaspi:make-admin {email} {--name=Shelter Admin}', function (string $email) {
+Artisan::command('secaspi:make-admin {email} {type : desk, data or system} {--name=Shelter Admin}', function (string $email, string $type) {
+    $role = ['desk' => Permissions::DESK_ADMIN, 'data' => Permissions::DATA_ADMIN, 'system' => Permissions::SYSTEM_ADMIN][$type] ?? null;
+    if (! $role) {
+        $this->error('Type must be desk, data or system.');
+        return 1;
+    }
+    $label = Permissions::label($role);
+
     $password = $this->secret('New password (min 8 characters, input hidden)');
 
     if (strlen((string) $password) < 8) {
@@ -48,7 +57,7 @@ Artisan::command('secaspi:make-admin {email} {--name=Shelter Admin}', function (
         // User model — the same escalation guard UserController::adminUpdate works around.
         $user->forceFill([
             'password' => Hash::make($password),
-            'role' => 'admin',
+            'role' => $role,
             'status' => 'active',
             'suspension_reason' => null,
             'email_verified' => 1,
@@ -56,7 +65,7 @@ Artisan::command('secaspi:make-admin {email} {--name=Shelter Admin}', function (
 
         $user->tokens()->delete();   // old sessions should not survive a password reset
 
-        $this->info("Promoted {$email} to admin, reset the password, and revoked existing sessions.");
+        $this->info("Made {$email} a {$label}, reset the password, and revoked existing sessions.");
 
         return 0;
     }
@@ -68,16 +77,16 @@ Artisan::command('secaspi:make-admin {email} {--name=Shelter Admin}', function (
         'username' => User::generateUsername($name),
         'email' => $email,
         'password' => Hash::make($password),
-        'role' => 'admin',
+        'role' => $role,
         'status' => 'active',
         'email_verified' => 1,
         'created_at' => now(),
     ]]);
 
-    $this->info("Created admin {$email}.");
+    $this->info("Created {$label} {$email}.");
 
     return 0;
-})->purpose('Create an admin account, or promote and unlock an existing one');
+})->purpose('Create a Desk, Data or System Admin, or promote and unlock an existing account');
 
 /**
  * Prove the MAIL_* settings actually work, without having to trigger a real password
@@ -112,10 +121,10 @@ Artisan::command('secaspi:mail-test {email}', function (string $email) {
 })->purpose('Send a test email to verify the MAIL_* settings');
 
 /**
- * Notify admins of health reminders whose due date has arrived, then mark them sent
+ * Notify Desk Admins of health reminders whose due date has arrived, then mark them sent
  * so they aren't re-notified daily. Idempotent and safe to run repeatedly.
  *
- * Note: the admin dashboard (GET /admin/reminders) is the always-on surface and does
+ * Note: Health Reminders (GET /admin/reminders) is the always-on surface and does
  * not depend on this command running. This adds proactive email/in-app pings *if* a
  * scheduler (`php artisan schedule:work` or cron) is configured in the environment.
  */
@@ -129,7 +138,7 @@ Artisan::command('reminders:dispatch', function () {
         return;
     }
 
-    $admins = User::where('role', 'admin')->get();
+    $admins = User::withPermission('desk.supervise')->get();
 
     foreach ($due as $reminder) {
         foreach ($admins as $admin) {
@@ -138,8 +147,8 @@ Artisan::command('reminders:dispatch', function () {
         $reminder->update(['status' => 'sent']);
     }
 
-    $this->info("Dispatched {$due->count()} reminder(s) to {$admins->count()} admin(s).");
-})->purpose('Notify admins of due health reminders');
+    $this->info("Dispatched {$due->count()} reminder(s) to {$admins->count()} Desk Admin(s).");
+})->purpose('Notify Desk Admins of due health reminders');
 
 Schedule::command('reminders:dispatch')->dailyAt('08:00');
 

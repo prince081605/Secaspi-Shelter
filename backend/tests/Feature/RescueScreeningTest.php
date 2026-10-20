@@ -55,7 +55,7 @@ class RescueScreeningTest extends TestCase
 
     public function test_a_blocked_number_is_refused_with_the_shelter_phone(): void
     {
-        $admin = User::factory()->admin()->create();
+        $admin = User::factory()->systemAdmin()->create();
         $this->report()->assertCreated();
         $report = RescueReport::first();
 
@@ -76,7 +76,7 @@ class RescueScreeningTest extends TestCase
         $this->report(['location' => 'Somewhere else'])->assertCreated();
     }
 
-    public function test_only_admins_block_and_only_reports_with_a_number_or_account(): void
+    public function test_only_the_system_admin_blocks_and_only_reports_with_a_number_or_account(): void
     {
         $this->report(['contact_number' => null])->assertCreated();
         $anonymous = RescueReport::first();
@@ -84,7 +84,7 @@ class RescueScreeningTest extends TestCase
         Sanctum::actingAs(User::factory()->staff()->create());
         $this->postJson("/api/rescue-reports/{$anonymous->id}/block")->assertForbidden();
 
-        Sanctum::actingAs(User::factory()->admin()->create());
+        Sanctum::actingAs(User::factory()->systemAdmin()->create());
         $this->postJson("/api/rescue-reports/{$anonymous->id}/block")
             ->assertStatus(422)
             ->assertJsonPath('message', 'This report has no contact number or account to block.');

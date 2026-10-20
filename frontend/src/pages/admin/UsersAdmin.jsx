@@ -5,9 +5,18 @@ import StatusBadge from '../../components/StatusBadge';
 import useConfirm from '../../lib/useConfirm';
 import DashCard from '../../components/DashCard';
 import useIsMobile from '../../lib/useIsMobile';
+import { ADMIN_ROLE_SUMMARIES, ROLES, isAdminRole, roleLabel } from '../../lib/permissions';
 
-const ROLES = ['admin', 'staff', 'volunteer', 'user'];
 const STATUSES = ['active', 'suspended', 'pending'];
+
+// What the person will be able to do after the change, in the confirm dialog. There's no role
+// with full access: each admin type is limited to its own area.
+function roleChangeMessage(newRole) {
+  if (isAdminRole(newRole)) return `As a ${roleLabel(newRole)}: ${ADMIN_ROLE_SUMMARIES[newRole]}`;
+  if (newRole === 'staff') return 'Staff run day-to-day shelter work and see the operational reports. They are added to Personnel.';
+  if (newRole === 'volunteer') return 'Volunteers get tasks and attendance on their dashboard. They are added to Personnel.';
+  return 'A plain account: their own adoptions, donations and messages.';
+}
 
 export default function UsersAdmin({ currentUserId }) {
   const confirm = useConfirm();
@@ -47,15 +56,13 @@ export default function UsersAdmin({ currentUserId }) {
   const handleRoleChange = async (user, newRole, selectEl) => {
     const ok = await confirm({
       title: `Change ${user.full_name}’s role?`,
-      message: newRole === 'admin'
-        ? 'Admins can manage every part of the shelter, including other users’ roles.'
-        : 'This changes what they can see and do in the dashboard the next time they load it.',
+      message: `${roleChangeMessage(newRole)} It applies the next time they load the dashboard.`,
       confirmLabel: 'Change role',
-      tone: newRole === 'admin' ? 'danger' : 'default',
+      tone: newRole === 'system_admin' ? 'danger' : 'default',
       summary: [
         { label: 'User', value: user.full_name },
-        { label: 'From', value: user.role },
-        { label: 'To', value: newRole },
+        { label: 'From', value: roleLabel(user.role) },
+        { label: 'To', value: roleLabel(newRole) },
       ],
     });
     if (!ok) {
@@ -94,14 +101,14 @@ export default function UsersAdmin({ currentUserId }) {
 
     const ok = await confirm({
       title: `Suspend ${user.full_name}?`,
-      message: 'They are locked out of their account until an admin reactivates them. You will be asked for a reason next.',
+      message: 'They are locked out of their account until a System Admin reactivates them. You will be asked for a reason next.',
       confirmLabel: 'Suspend account',
       tone: 'danger',
       summary: [{ label: 'User', value: user.full_name }, { label: 'Email', value: user.email }],
     });
     if (!ok) return;
 
-    // Suspending: ask the admin why. Cancelling the prompt aborts the suspension.
+    // Suspending: ask why. Cancelling the prompt aborts the suspension.
     const reason = window.prompt(`Why are you suspending ${user.full_name}? (shown to the user when they try to log in)`, '');
     if (reason === null) return;
 
@@ -120,9 +127,9 @@ export default function UsersAdmin({ currentUserId }) {
 
       <div className="dashFilterBar">
         <input className="ui-input" style={{ maxWidth: 220 }} placeholder="Search name/email" aria-label="Search users by name or email" value={q} onChange={(e) => setQ(e.target.value)} />
-        <select className="ui-input" style={{ maxWidth: 150 }} aria-label="Filter users by role" value={role} onChange={(e) => setRole(e.target.value)}>
+        <select className="ui-input" style={{ maxWidth: 170 }} aria-label="Filter users by role" value={role} onChange={(e) => setRole(e.target.value)}>
           <option value="">All roles</option>
-          {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+          {ROLES.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}
         </select>
         <select className="ui-input" style={{ maxWidth: 150 }} aria-label="Filter users by status" value={status} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="">All statuses</option>
@@ -146,7 +153,7 @@ export default function UsersAdmin({ currentUserId }) {
                 aria-label={`Change role for ${u.full_name}`}
                 onChange={(e) => handleRoleChange(u, e.target.value, e.target)}
               >
-                {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                {ROLES.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}
               </select>
             );
             const statusVal = (
@@ -208,13 +215,13 @@ export default function UsersAdmin({ currentUserId }) {
                     <td>
                       <select
                         className="ui-input"
-                        style={{ minWidth: 125, maxWidth: 140 }}
+                        style={{ minWidth: 135, maxWidth: 160 }}
                         value={u.role}
                         disabled={isSelf}
                         aria-label={`Change role for ${u.full_name}`}
                         onChange={(e) => handleRoleChange(u, e.target.value, e.target)}
                       >
-                        {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                        {ROLES.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}
                       </select>
                     </td>
                     <td>

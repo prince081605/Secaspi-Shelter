@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Validator;
 
 /**
  * Volunteer & staff attendance. People clock themselves in and out; staff can see the log and
- * who is on duty; admins can add, correct or remove records. Every change to a closed shift
+ * who is on duty; Desk Admins can add, correct or remove records. Every change to a closed shift
  * recalculates the person's hours rendered (see Volunteer::recalculateHours).
  */
 class AttendanceController extends Controller

@@ -30,20 +30,20 @@ class LoginDetailsTest extends TestCase
             ->assertJsonPath('message', 'Enter your email or username.');
     }
 
-    public function test_the_admin_signs_in_with_a_username(): void
+    public function test_an_admin_signs_in_with_a_username(): void
     {
-        User::factory()->admin()->create(['email' => 'admin@gmail.com', 'username' => 'Admin']);
+        User::factory()->systemAdmin()->create(['email' => 'admin@gmail.com', 'username' => 'Admin']);
 
         $this->postJson('/api/login', ['login' => 'Admin', 'password' => 'password'])
             ->assertOk()
-            ->assertJsonPath('user.role', 'admin');
+            ->assertJsonPath('user.role', 'system_admin');
     }
 
     public function test_emails_are_not_changed_from_the_admin_side_or_the_profile(): void
     {
         $user = User::factory()->create(['email' => 'mine@example.com']);
 
-        Sanctum::actingAs(User::factory()->admin()->create());
+        Sanctum::actingAs(User::factory()->systemAdmin()->create());
         $this->putJson("/api/admin/users/{$user->id}/login", ['email' => 'new@example.com', 'username' => 'Someone'])->assertNotFound();
         $this->putJson("/api/admin/users/{$user->id}", ['email' => 'new@example.com'])->assertOk();
 
