@@ -7,6 +7,7 @@ use App\Models\Intake;
 use App\Models\IntakeDocument;
 use App\Rules\NotInFuture;
 use App\Rules\PhilippinePhone;
+use App\Support\AnimalAge;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -127,10 +128,16 @@ class IntakeController extends Controller
             return response()->json(['message' => 'This intake has already been converted.'], 409);
         }
 
+        // The intake's estimated age is free text ("~2 years", "3 months"); carry it over when it reads as an age.
+        $age = AnimalAge::parse($intake->estimated_age);
+
         $animal = Animal::create([
             'name' => $intake->animal_name ?: 'Unnamed',
             'species' => $intake->species,
             'breed' => $intake->breed,
+            'birth_date' => $age && ! AnimalAge::problem($age['value'], $age['unit'])
+                ? AnimalAge::birthDate($age['value'], $age['unit'])->toDateString()
+                : null,
             'gender' => $intake->gender,
             'status' => 'quarantine',
             'rescue_story' => $intake->description,

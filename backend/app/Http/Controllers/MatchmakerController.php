@@ -42,6 +42,7 @@ class MatchmakerController extends Controller
                         'species' => $animal->species,
                         'breed' => $animal->breed,
                         'age' => $animal->age,
+                        'age_label' => $animal->ageLabel(),
                         'size' => $animal->size,
                         'photo' => optional($animal->mainPhoto)->photo_url
                             ? Storage::url($animal->mainPhoto->photo_url) : null,

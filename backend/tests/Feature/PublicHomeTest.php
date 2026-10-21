@@ -72,7 +72,7 @@ class PublicHomeTest extends TestCase
 
     public function test_home_featured_animals_returns_one_card_per_animal(): void
     {
-        $animal = DB::table('animals')->insertGetId(['name' => 'Buddy', 'species' => 'dog', 'age' => 2, 'status' => 'available', 'created_at' => now()]);
+        $animal = DB::table('animals')->insertGetId(['name' => 'Buddy', 'species' => 'dog', 'birth_date' => now('Asia/Manila')->subYears(2)->subMonth()->toDateString(), 'status' => 'available', 'created_at' => now()]);
         // Two photo rows for the same animal must not fan out into duplicate cards.
         DB::table('animal_photos')->insert([
             ['animal_id' => $animal, 'photo_url' => 'animals/secondary.jpg', 'is_main' => false],
@@ -86,7 +86,7 @@ class PublicHomeTest extends TestCase
         $animals = $res->json('animals');
         $this->assertCount(1, $animals);
         $this->assertSame('Buddy', $animals[0]['name']);
-        $this->assertSame('2 yrs', $animals[0]['age']);
+        $this->assertSame('2 years', $animals[0]['age']);
         $this->assertStringContainsString('animals/main.jpg', $animals[0]['photo']); // prefers is_main
     }
 }

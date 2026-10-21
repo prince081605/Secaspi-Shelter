@@ -229,7 +229,8 @@ class MockDataSeeder extends Seeder
                 'name' => $this->pick($names),
                 'species' => 'dog',
                 'breed' => $this->pick($breeds),
-                'age' => mt_rand(0, 12),
+                // Estimated birth date: anything from a 2-month-old puppy to a 12-year-old senior.
+                'birth_date' => now()->subMonths(mt_rand(2, 144))->toDateString(),
                 'gender' => $this->pick(['male', 'female']),
                 'size' => $this->pick(['small', 'medium', 'large']),
                 'weight' => mt_rand(30, 350) / 10,

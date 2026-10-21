@@ -239,6 +239,7 @@ class AdoptionApplicationController extends Controller
                 'species' => $a->animal->species,
                 'breed' => $a->animal->breed,
                 'age' => $a->animal->age,
+                'age_label' => $a->animal->ageLabel(),
                 'photo' => optional($a->animal->mainPhoto)->photo_url ? Storage::url($a->animal->mainPhoto->photo_url) : null,
             ] : null,
             'applicant' => $a->user ? [

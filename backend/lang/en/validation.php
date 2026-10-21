@@ -14,5 +14,8 @@ return [
         'follow_up_date' => 'follow-up date',
         'next_due' => 'next due date',
         'company_website' => 'website',
+        'age_value' => 'age',
+        'age_unit' => 'age unit',
+        'birth_date' => 'birth date',
     ],
 ];

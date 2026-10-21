@@ -332,7 +332,7 @@ export default function AnimalDetail() {
     ? [
         ['Species', animal.species],
         ['Breed', animal.breed],
-        ['Age', animal.age ? `${animal.age} yrs` : null],
+        ['Age', animal.age_label || null],
         ['Gender', animal.gender],
         ['Size', animal.size],
         ['Weight', animal.weight ? `${animal.weight} kg` : null],
@@ -412,7 +412,7 @@ export default function AnimalDetail() {
                     <div className="detMeta">
                       <span>{animal.species}</span>
                       {animal.breed && <span>{animal.breed}</span>}
-                      {animal.age && <span>{animal.age} yrs</span>}
+                      {animal.age_label && <span>{animal.age_label}</span>}
                       {animal.gender && <span>{animal.gender}</span>}
                     </div>
                   </div>

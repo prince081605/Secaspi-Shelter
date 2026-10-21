@@ -110,13 +110,13 @@ class ValidationRulesTest extends TestCase
     {
         Sanctum::actingAs(User::factory()->staff()->create());
 
-        $this->postJson('/api/animals', ['name' => 'Old Timer', 'species' => 'dog', 'age' => 120])
-            ->assertStatus(422)->assertJsonValidationErrors('age');
+        $this->postJson('/api/animals', ['name' => 'Old Timer', 'species' => 'dog', 'age_value' => 120, 'age_unit' => 'years'])
+            ->assertStatus(422)->assertJsonPath('message', 'That is more than 40 years. Check the age.');
 
         $this->postJson('/api/animals', ['name' => 'Heavy', 'species' => 'dog', 'weight' => 900])
             ->assertStatus(422)->assertJsonValidationErrors('weight');
 
-        $this->postJson('/api/animals', ['name' => 'Normal', 'species' => 'dog', 'age' => 12, 'weight' => 30])
+        $this->postJson('/api/animals', ['name' => 'Normal', 'species' => 'dog', 'age_value' => 12, 'age_unit' => 'years', 'weight' => 30])
             ->assertCreated();
     }
 }

@@ -1,6 +1,10 @@
 <?php
 namespace App\Models;
 
+use App\Rules\NotInFuture;
+use App\Rules\ValidAge;
+use App\Support\AnimalAge;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\Rule;
 
@@ -25,7 +29,9 @@ class Animal extends Model
         'name',
         'species',
         'breed',
-        'age',
+        // Estimated. The age is worked out from it whenever it's shown, so a puppy grows up on
+        // its own (see App\Support\AnimalAge); staff enter an age, which becomes this date.
+        'birth_date',
         'gender',
         'size',
         'weight',
@@ -37,7 +43,64 @@ class Animal extends Model
 
     protected $casts = [
         'behavioral_assessment' => 'array',
+        'birth_date' => 'date',
     ];
+
+    /**
+     * How an age is entered: a whole number with its unit ("3 months", "6 weeks", "2 years"), or
+     * an estimated birth date. Either becomes birth_date (ageToBirthDate()). Shared by the Add
+     * Animal form, editing, and the Excel import.
+     */
+    public static function ageRules(): array
+    {
+        return [
+            'age_value' => ['bail', 'nullable', 'integer', 'min:0', new ValidAge],
+            'age_unit' => ['nullable', 'required_with:age_value', Rule::in(AnimalAge::UNITS)],
+            'birth_date' => ['nullable', 'date', new NotInFuture, 'after:'.AnimalAge::today()->subYears(AnimalAge::MAX_YEARS)->toDateString()],
+        ];
+    }
+
+    /**
+     * Validated input with the entered age turned into birth_date: an explicit birth date wins,
+     * otherwise age_value + age_unit (an empty age clears it). Untouched when neither was sent.
+     */
+    public static function ageToBirthDate(array $data): array
+    {
+        if (! empty($data['birth_date'])) {
+            // keep the date as given
+        } elseif (array_key_exists('age_value', $data)) {
+            $data['birth_date'] = $data['age_value'] === null || $data['age_value'] === ''
+                ? null
+                : AnimalAge::birthDate((int) $data['age_value'], $data['age_unit'])->toDateString();
+        }
+        unset($data['age_value'], $data['age_unit']);
+
+        return $data;
+    }
+
+    /** Whole years old today (null when unknown) — for anything that still thinks in years. */
+    protected function age(): Attribute
+    {
+        return Attribute::get(fn () => $this->birth_date ? intdiv(AnimalAge::months($this->birth_date), 12) : null);
+    }
+
+    /** "8 weeks", "5 months", "3 years" — or null when the age isn't known. */
+    public function ageLabel(): ?string
+    {
+        return AnimalAge::label($this->birth_date);
+    }
+
+    /** The age as staff would type it (value + unit), to fill the edit form. */
+    public function ageParts(): ?array
+    {
+        return AnimalAge::parts($this->birth_date);
+    }
+
+    /** puppy / adult / senior, for matching care guides. */
+    public function lifeStage(): ?string
+    {
+        return AnimalAge::lifeStage($this->birth_date);
+    }
 
     /**
      * Validation rules for a new animal's own fields. Shared by the Add Animal form
@@ -50,8 +113,7 @@ class Animal extends Model
             'name' => ['required', 'string', 'max:100'],
             'species' => ['required', Rule::in(self::SPECIES)],
             'breed' => ['nullable', 'string', 'max:100'],
-            // Whole years. No dog or cat on record has lived past 40, so more is a typo.
-            'age' => ['nullable', 'integer', 'min:0', 'max:40'],
+            ...self::ageRules(),
             'gender' => ['nullable', Rule::in(self::GENDERS)],
             'size' => ['nullable', Rule::in(self::SIZES)],
             // Kilograms. The heaviest breeds top out near 100 kg, so anything past 200 is a typo.

@@ -40,7 +40,7 @@ function printAdoptionContract(application, settings = {}) {
   const animalName = escapeHtml(application.animal?.name || 'Unknown');
   const animalSpecies = escapeHtml(application.animal?.species);
   const animalBreed = escapeHtml(application.animal?.breed);
-  const animalAge = application.animal?.age != null ? escapeHtml(`${application.animal.age} yrs`) : '—';
+  const animalAge = application.animal?.age_label ? escapeHtml(application.animal.age_label) : '—';
   const reference = escapeHtml(application.reference_no);
   const today = new Date().toLocaleDateString();
 

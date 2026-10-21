@@ -6,6 +6,7 @@ use App\Models\AdoptionUpdate;
 use App\Models\Animal;
 use App\Models\Expense;
 use App\Services\PostAdoption;
+use App\Support\AnimalAge;
 use App\Support\DonationCategories;
 use App\Support\PublicStats;
 use Illuminate\Support\Carbon;
@@ -246,7 +247,7 @@ class PublicHomeController extends Controller
                     'animals.id as id',
                     'animals.name',
                     'animals.species',
-                    'animals.age',
+                    'animals.birth_date',
                     'animals.status',
                 ])
                 ->whereNotIn('animals.status', ['archived', 'adopted', 'deceased'])
@@ -283,7 +284,8 @@ class PublicHomeController extends Controller
                         'id' => (int) $a->id,
                         'name' => $a->name ?? 'Unnamed',
                         'species' => $a->species ?? 'Unknown',
-                        'age' => is_numeric($a->age) ? ($a->age.' yrs') : ($a->age ?? 'N/A'),
+                        // "8 weeks", "3 years"… worked out today from the estimated birth date; '' if unknown.
+                        'age' => $a->birth_date ? (string) AnimalAge::label(Carbon::parse($a->birth_date)) : '',
                         'status' => $statusToLabel($a->status),
                         // Keep backward-compatible key expected by frontend. Resolve the
                         // stored key to an absolute URL so it works on any disk (local/S3).

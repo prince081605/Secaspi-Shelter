@@ -95,13 +95,6 @@ function tagVariant(status) {
   return 'ui-tag-muted';
 }
 
-// "Under 1 yr" for 0, nothing at all when the age isn't known (rather than "N/A").
-function ageLabel(age) {
-  if (age === null || age === undefined || age === '') return null;
-  const n = Number(age);
-  if (n === 0) return 'Under 1 yr';
-  return `${n} yr${n === 1 ? '' : 's'}`;
-}
 
 const STATUS_OPTIONS = ['available', 'fostered', 'medical', 'quarantine'];
 const GENDER_OPTIONS = ['male', 'female'];
@@ -266,7 +259,7 @@ export default function Adoption() {
                     <div className="adoptName">{a?.name || 'Unnamed'}</div>
                     <div className="adoptMeta">
                       <span>{a?.species || 'Unknown species'}</span>
-                      {ageLabel(a?.age) && <span>{ageLabel(a.age)}</span>}
+                      {a?.age_label && <span>{a.age_label}</span>}
                     </div>
                     {/* Hidden until hover/focus. stopPropagation stays: the card itself is
                         also clickable, and without it the card's handler would fire too. */}

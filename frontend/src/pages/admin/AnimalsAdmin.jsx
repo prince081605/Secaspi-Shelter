@@ -42,7 +42,11 @@ const emptyForm = {
   name: '',
   species: '',
   breed: '',
-  age: '',
+  // The age as entered ("3 months"), or an estimated birth date. The server keeps a birth date
+  // and works the age out from it, so a puppy grows up on its own.
+  age_value: '',
+  age_unit: 'years',
+  birth_date: '',
   gender: '',
   size: '',
   weight: '',
@@ -75,6 +79,10 @@ function AnimalForm({ initial, onCancel, onSaved }) {
   });
   const [photoFiles, setPhotoFiles] = useState(null);
   const [state, setState] = useState({ status: 'idle', error: '' });
+  // 'age' (a number and a unit) or 'date' (a known birth date). An edit only sends the age when
+  // it was touched, so saving other fields never shifts a birth date.
+  const [ageMode, setAgeMode] = useState('age');
+  const [ageTouched, setAgeTouched] = useState(false);
   const categories = useCategories();
   // The admin-managed issue list, plus any issue this animal already has that has since been
   // hidden on the Categories page — shown (and still ticked) so it can be kept or removed.
@@ -105,6 +113,9 @@ function AnimalForm({ initial, onCancel, onSaved }) {
         for (const key of Object.keys(emptyForm)) {
           if (merged[key] === null || merged[key] === undefined) merged[key] = emptyForm[key];
         }
+        // The age as staff would type it today, e.g. { value: 5, unit: 'months' }.
+        merged.age_value = full.age_parts ? String(full.age_parts.value) : '';
+        merged.age_unit = full.age_parts?.unit || 'years';
         setForm(merged);
       })
       .catch(() => { /* keep the list-row values already shown */ });
@@ -112,6 +123,13 @@ function AnimalForm({ initial, onCancel, onSaved }) {
   }, [initial?.id]);
 
   const setField = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+  const setAgeField = (key) => (e) => { setAgeTouched(true); setForm((f) => ({ ...f, [key]: e.target.value })); };
+  const switchAgeMode = () => { setAgeTouched(true); setAgeMode((m) => (m === 'age' ? 'date' : 'age')); };
+  // What the server needs for the age: an explicit birth date, or a number with its unit
+  // (an empty age_value clears it).
+  const agePayload = () => (ageMode === 'date'
+    ? (form.birth_date ? { birth_date: form.birth_date } : { age_value: null })
+    : { age_value: form.age_value === '' ? null : Number(form.age_value), age_unit: form.age_unit });
 
   const toggleBehavioralIssue = (issue) => {
     setForm((f) => {
@@ -133,7 +151,7 @@ function AnimalForm({ initial, onCancel, onSaved }) {
           name: form.name,
           species: form.species,
           breed: form.breed || null,
-          age: form.age === '' ? null : Number(form.age),
+          ...(ageTouched ? agePayload() : {}),
           gender: form.gender || null,
           size: form.size || null,
           weight: form.weight === '' ? null : Number(form.weight),
@@ -146,7 +164,7 @@ function AnimalForm({ initial, onCancel, onSaved }) {
         fd.append('name', form.name);
         fd.append('species', form.species);
         if (form.breed) fd.append('breed', form.breed);
-        if (form.age !== '') fd.append('age', form.age);
+        Object.entries(agePayload()).forEach(([key, value]) => { if (value !== null && value !== '') fd.append(key, value); });
         if (form.gender) fd.append('gender', form.gender);
         if (form.size) fd.append('size', form.size);
         if (form.weight !== '') fd.append('weight', form.weight);
@@ -234,7 +252,7 @@ function AnimalForm({ initial, onCancel, onSaved }) {
                 <div>
                   {duplicate.species}
                   {duplicate.breed ? ` • ${duplicate.breed}` : ''}
-                  {duplicate.age ? ` • ${duplicate.age} yrs` : ''}
+                  {duplicate.age_label ? ` • ${duplicate.age_label}` : ''}
                 </div>
                 <div>Status: {duplicate.status}</div>
               </div>
@@ -269,8 +287,25 @@ function AnimalForm({ initial, onCancel, onSaved }) {
           />
         </div>
         <div className="ui-field">
-          <label className="ui-label">Age (years)</label>
-          <input className="ui-input" type="number" min="0" value={form.age} onChange={setField('age')} />
+          <label className="ui-label" htmlFor="animal-age">{ageMode === 'age' ? 'Age' : 'Birth date'}</label>
+          {ageMode === 'age' ? (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input id="animal-age" className="ui-input" type="number" min="0" step="1" style={{ maxWidth: 110 }} placeholder="e.g. 3" value={form.age_value} onChange={setAgeField('age_value')} />
+              <select className="ui-input" aria-label="Age unit" value={form.age_unit} onChange={setAgeField('age_unit')}>
+                <option value="weeks">weeks</option>
+                <option value="months">months</option>
+                <option value="years">years</option>
+              </select>
+            </div>
+          ) : (
+            <input id="animal-age" className="ui-input" type="date" max={todayLocal()} value={form.birth_date} onChange={setAgeField('birth_date')} />
+          )}
+          <div className="ui-muted" style={{ fontSize: 12, marginTop: 4 }}>
+            {ageMode === 'age' ? 'An estimate is fine — puppies in weeks or months.' : 'An estimate is fine.'} The age updates itself as time passes.{' '}
+            <button type="button" onClick={switchAgeMode} style={{ background: 'none', border: 0, padding: 0, color: 'var(--brand)', textDecoration: 'underline', cursor: 'pointer', font: 'inherit' }}>
+              {ageMode === 'age' ? 'I know the birth date' : 'Enter an age instead'}
+            </button>
+          </div>
         </div>
         <div className="ui-field">
           <label className="ui-label">Gender</label>
@@ -967,7 +1002,7 @@ export default function AnimalsAdmin({ canBulkPhotos = false }) {
                 title={a.name}
                 subtitle={`${a.species}${a.breed ? ` • ${a.breed}` : ''}`}
                 fields={[
-                  { label: 'Age', value: a.age ? `${a.age} yrs` : '—' },
+                  { label: 'Age', value: a.age_label || '—' },
                   { label: 'Sex', value: a.gender || '—' },
                   { label: 'Size', value: a.size || '—' },
                   { label: 'Status', value: <StatusBadge status={a.status} /> },
@@ -1008,7 +1043,7 @@ export default function AnimalsAdmin({ canBulkPhotos = false }) {
                         </div>
                       </div>
                     </td>
-                    <td>{a.age ? `${a.age} yrs` : '—'}</td>
+                    <td className="dashNowrap">{a.age_label || '—'}</td>
                     <td>{a.gender || '—'}</td>
                     <td>{a.size || '—'}</td>
                     <td><StatusBadge status={a.status} /></td>
@@ -1035,7 +1070,7 @@ export default function AnimalsAdmin({ canBulkPhotos = false }) {
               <div className="dashAnimalBody">
                 <div className="dashAnimalName">{a.name}</div>
                 <div className="dashAnimalMeta">
-                  {a.species} {a.breed ? `• ${a.breed}` : ''} {a.age ? `• ${a.age} yrs` : ''}
+                  {a.species} {a.breed ? `• ${a.breed}` : ''} {a.age_label ? `• ${a.age_label}` : ''}
                 </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                   <StatusBadge status={a.status} />

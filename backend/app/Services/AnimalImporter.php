@@ -8,6 +8,7 @@ use App\Models\AnimalLocationLog;
 use App\Models\CategoryOption;
 use App\Models\ShelterLocation;
 use App\Models\User;
+use App\Support\AnimalAge;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -56,7 +57,7 @@ class AnimalImporter
         'name' => ['Name *', false, 22, "Required. The animal's name."],
         'species' => ['Species *', true, 12, 'Required. Dog or Cat.'],
         'breed' => ['Breed', false, 18, 'Optional. Pick a common breed from the list, or type any breed, e.g. Shih Tzu mix.'],
-        'age' => ['Age (years)', false, 12, 'Optional. Whole years, e.g. 3. Use 0 for under a year.'],
+        'age' => ['Age', false, 14, 'Optional. With its unit, e.g. 3 months, 6 weeks or 2 years. A plain number means years.'],
         'gender' => ['Gender', true, 11, 'Optional. Male or Female.'],
         'size' => ['Size', true, 11, 'Optional. Small, Medium or Large.'],
         'weight' => ['Weight (kg)', false, 12, 'Optional. Kilograms, e.g. 12.5.'],
@@ -430,16 +431,19 @@ class AnimalImporter
             $errors[$key][] = $this->label($key).' '.$problem.'.';
         }
 
-        $age = $raw['age'];
-        if (is_float($age) && floor($age) === $age) {
-            $age = (int) $age; // Excel stores every number as a float; 3.0 years is 3.
+        // "3 months", "6 weeks", "2 years", or a plain number (years). Excel hands numbers over as floats.
+        $ageText = $raw['age'];
+        $age = ($ageText === null || $ageText === '') ? null : AnimalAge::parse($ageText);
+        if ($ageText !== null && $ageText !== '' && $age === null) {
+            $errors['age'][] = 'Age "'.$this->quote((string) $this->text($ageText)).'" isn’t an age. Write it like 3 months, 6 weeks or 2 years.';
         }
 
         $data = [
             'name' => $this->text($raw['name']),
             'species' => $this->choice($raw['species']),
             'breed' => $this->text($raw['breed']),
-            'age' => $age,
+            'age_value' => $age['value'] ?? null,
+            'age_unit' => $age['unit'] ?? null,
             'gender' => $this->choice($raw['gender']),
             'size' => $this->choice($raw['size']),
             'weight' => $raw['weight'],
@@ -478,6 +482,7 @@ class AnimalImporter
         $validator = Validator::make($data, Animal::rules(), $this->messages($raw));
         foreach ($validator->errors()->messages() as $field => $messages) {
             $key = explode('.', $field)[0];
+            $key = in_array($key, ['age_value', 'age_unit', 'birth_date'], true) ? 'age' : $key;
             // A cell already reported as unusable (an Excel error, TRUE/FALSE) was read as blank;
             // don't also complain that it's blank.
             if (! isset($cellErrors[$key])) {
@@ -493,7 +498,7 @@ class AnimalImporter
 
         return [
             // Only ever saved when $ordered is empty, i.e. when it passed Animal::rules().
-            'data' => [...$data, 'location_id' => $locationId],
+            'data' => [...Animal::ageToBirthDate($data), 'location_id' => $locationId],
             // What the preview table shows: a recognised choice in its proper form ("DOG" → "Dog"),
             // anything else exactly as typed so the problem is visible.
             'display' => [
@@ -544,9 +549,8 @@ class AnimalImporter
             'species.required' => 'Species is required. Use '.$this->choices(Animal::SPECIES).'.',
             'species.in' => 'Species '.$said('species').' is not valid. Use '.$this->choices(Animal::SPECIES).'.',
             'breed.max' => 'Breed is longer than 100 characters.',
-            'age.integer' => 'Age '.$said('age').' must be a whole number of years, e.g. 3.',
-            'age.min' => 'Age cannot be negative.',
-            'age.max' => 'Age '.$said('age').' is more than 40 years. Check the number.',
+            'age_value.integer' => 'Age '.$said('age').' isn’t an age. Write it like 3 months, 6 weeks or 2 years.',
+            'age_value.min' => 'Age cannot be negative.',
             'gender.in' => 'Gender '.$said('gender').' is not valid. Use '.$this->choices(Animal::GENDERS).'.',
             'size.in' => 'Size '.$said('size').' is not valid. Use '.$this->choices(Animal::SIZES).'.',
             'weight.numeric' => 'Weight '.$said('weight').' must be a number of kilograms, e.g. 12.5.',
@@ -667,16 +671,14 @@ class AnimalImporter
             $this->applyRule($sheet, 'breed', $validation);
         }
 
-        // Same limits as Animal::rules().
-        foreach (['age' => [DataValidation::TYPE_WHOLE, '40'], 'weight' => [DataValidation::TYPE_DECIMAL, '200']] as $key => [$type, $max]) {
-            $validation = $this->cellRule($key, $type)
-                ->setOperator(DataValidation::OPERATOR_BETWEEN)
-                ->setFormula1('0')
-                ->setFormula2($max)
-                ->setErrorTitle('Not a valid number')
-                ->setError($key === 'age' ? 'Age is a whole number of years, from 0 to 40.' : 'Weight is a number of kilograms, from 0 to 200.');
-            $this->applyRule($sheet, $key, $validation);
-        }
+        // Same limit as Animal::rules(). (Age is text with its unit, "3 months", so it's checked on upload.)
+        $validation = $this->cellRule('weight', DataValidation::TYPE_DECIMAL)
+            ->setOperator(DataValidation::OPERATOR_BETWEEN)
+            ->setFormula1('0')
+            ->setFormula2('200')
+            ->setErrorTitle('Not a valid number')
+            ->setError('Weight is a number of kilograms, from 0 to 200.');
+        $this->applyRule($sheet, 'weight', $validation);
     }
 
     private function cellRule(string $key, string $type): DataValidation
@@ -705,7 +707,7 @@ class AnimalImporter
             '1. Go to the "'.self::SHEET.'" sheet and fill in one animal per row, starting on row 2. Keep the header row as it is.',
             '2. Name and Species are required. Every other column is optional and can be left blank.',
             '3. Use the dropdowns for Species, Gender, Size, Status and Shelter Area. The full lists are on the "Allowed Values" sheet. Breed also lists common breeds, but you can type any breed.',
-            '4. Age is in whole years (e.g. 3; use 0 for under a year). Weight is in kilograms (e.g. 12.5).',
+            '4. Age: write it with its unit, e.g. 3 months, 6 weeks or 2 years (a plain number means years). An estimate is fine — the age keeps itself up to date. Weight is in kilograms (e.g. 12.5).',
             '5. Status: leave it blank for Available. Available animals appear on the public adoption page as soon as they are imported.',
             '6. Behavioral Issues: type one or more issues exactly as written on the "Allowed Values" sheet, separated by commas.',
             '7. Shelter Area: the area of the shelter the animal is kept in. Leave it blank if the animal has not been assigned one yet.',
@@ -733,9 +735,9 @@ class AnimalImporter
         $issues = fn (array $wanted) => implode(', ', array_intersect($wanted, $active)) ?: ($active[0] ?? null);
 
         $sheet->fromArray([
-            ['Brownie', 'Dog', 'Aspin', 3, 'Male', 'Medium', 12.5, 'Available', $areas[0] ?? null, $issues(['excessive barking', 'pulling on leash']), 'Found wandering near the public market. Friendly with people.'],
-            ['Mingming', 'Cat', 'Puspin', 1, 'Female', 'Small', 3.2, 'Medical', $areas[1] ?? $areas[0] ?? null, $issues(['extreme shyness']), 'Rescued from a drainage canal during heavy rain.'],
-            ['Bantay', 'Dog', 'Aspin', 6, 'Male', 'Large', 20, null, null, null, null],
+            ['Brownie', 'Dog', 'Aspin', '3 years', 'Male', 'Medium', 12.5, 'Available', $areas[0] ?? null, $issues(['excessive barking', 'pulling on leash']), 'Found wandering near the public market. Friendly with people.'],
+            ['Mingming', 'Cat', 'Puspin', '8 months', 'Female', 'Small', 3.2, 'Medical', $areas[1] ?? $areas[0] ?? null, $issues(['extreme shyness']), 'Rescued from a drainage canal during heavy rain.'],
+            ['Bantay', 'Dog', 'Aspin', '10 weeks', 'Male', 'Large', 20, null, null, null, null],
         ], null, 'A2', true);
     }
 

@@ -26,7 +26,7 @@ class AnimalImportTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const HEADERS = ['Name *', 'Species *', 'Breed', 'Age (years)', 'Gender', 'Size', 'Weight (kg)', 'Status', 'Shelter Area', 'Behavioral Issues', 'Rescue Story'];
+    private const HEADERS = ['Name *', 'Species *', 'Breed', 'Age', 'Gender', 'Size', 'Weight (kg)', 'Status', 'Shelter Area', 'Behavioral Issues', 'Rescue Story'];
 
     private const KEYS = ['name', 'species', 'breed', 'age', 'gender', 'size', 'weight', 'status', 'area', 'behavior', 'story'];
 
@@ -131,7 +131,7 @@ class AnimalImportTest extends TestCase
             $this->row(['name' => 'Brownie', 'species' => 'DOG', 'breed' => 'Aspin', 'age' => 3.0, 'gender' => 'Male', 'size' => 'medium',
                 'weight' => 12.5, 'area' => 'kennel 1', 'behavior' => 'Excessive barking, pulling on leash', 'story' => 'Found near the market.']),
             $this->row(['name' => ' Mingming ', 'species' => ' Cat ', 'status' => 'Medical']),
-            $this->row(['name' => 'Bantay', 'species' => 'dog', 'age' => 0]),
+            $this->row(['name' => 'Bantay', 'species' => 'dog', 'age' => '10 weeks']),
         ]);
 
         $this->preview($file)->assertOk()
@@ -152,6 +152,9 @@ class AnimalImportTest extends TestCase
         $this->assertSame('male', $brownie->gender);
         $this->assertSame('medium', $brownie->size);
         $this->assertSame(3, (int) $brownie->age);
+        $this->assertSame('3 years', $brownie->ageLabel());
+        $this->assertSame('10 weeks', Animal::where('name', 'Bantay')->firstOrFail()->ageLabel());
+        $this->assertNull(Animal::where('name', 'Mingming')->firstOrFail()->birth_date);
         $this->assertSame('available', $brownie->status);
         $this->assertSame(['excessive barking', 'pulling on leash'], $brownie->behavioral_assessment);
         $this->assertSame($kennel->id, (int) $brownie->current_location_id);
@@ -189,12 +192,12 @@ class AnimalImportTest extends TestCase
         $file = $this->xlsx([
             $this->row(['name' => 'Tweety', 'species' => 'Bird']),
             $this->row(['name' => 'Rex', 'species' => 'dog', 'gender' => 'Boy', 'size' => 'Huge']),
-            $this->row(['name' => 'Choco', 'species' => 'dog', 'age' => '3 yrs', 'weight' => 'heavy']),
+            $this->row(['name' => 'Choco', 'species' => 'dog', 'age' => 'three', 'weight' => 'heavy']),
             $this->row(['name' => 'Snow', 'species' => 'cat', 'age' => -1, 'weight' => -2]),
             $this->row(['name' => 'Lucky', 'species' => 'dog', 'status' => 'Missing']),
             $this->row(['name' => 'Blacky', 'species' => 'dog', 'area' => 'Kennel 9']),
             $this->row(['name' => 'Spot', 'species' => 'dog', 'behavior' => 'extreme shyness, barks a lot']),
-            $this->row(['name' => 'Tiny', 'species' => 'cat', 'age' => 2.5, 'weight' => 5000000]),
+            $this->row(['name' => 'Tiny', 'species' => 'cat', 'age' => '50 years', 'weight' => 5000000]),
             $this->row(['name' => 'Goldie', 'species' => 'dog']),
         ]);
 
@@ -203,12 +206,12 @@ class AnimalImportTest extends TestCase
 
         $this->assertSame(['Species "Bird" is not valid. Use Dog or Cat.'], $errors[2]);
         $this->assertSame(['Gender "Boy" is not valid. Use Male or Female.', 'Size "Huge" is not valid. Use Small, Medium or Large.'], $errors[3]);
-        $this->assertSame(['Age "3 yrs" must be a whole number of years, e.g. 3.', 'Weight "heavy" must be a number of kilograms, e.g. 12.5.'], $errors[4]);
+        $this->assertSame(['Age "three" isn’t an age. Write it like 3 months, 6 weeks or 2 years.', 'Weight "heavy" must be a number of kilograms, e.g. 12.5.'], $errors[4]);
         $this->assertSame(['Age cannot be negative.', 'Weight cannot be negative.'], $errors[5]);
         $this->assertStringStartsWith('Status "Missing" is not valid. Use Available, Adopted, Fostered', $errors[6][0]);
         $this->assertStringStartsWith('Shelter area "Kennel 9" does not exist. Use one of: ', $errors[7][0]);
         $this->assertSame(['Behavioral issue "barks a lot" is not on the list. Use the exact wording from the Allowed Values sheet.'], $errors[8]);
-        $this->assertSame(['Age "2.5" must be a whole number of years, e.g. 3.', 'Weight "5000000" is too large to be a weight in kilograms.'], $errors[9]);
+        $this->assertSame(['That is more than 40 years. Check the age.', 'Weight "5000000" is too large to be a weight in kilograms.'], $errors[9]);
         $this->assertSame([], $errors[10]);
 
         $this->import($file)->assertCreated()->assertJsonPath('summary.imported', 1)->assertJsonPath('summary.rejected', 8);
@@ -223,7 +226,7 @@ class AnimalImportTest extends TestCase
         ]);
 
         $errors = $this->errorsByRow($this->preview($file)->assertOk());
-        $this->assertSame(['Age (years) contains the Excel error #DIV/0!.'], $errors[2]);
+        $this->assertSame(['Age contains the Excel error #DIV/0!.'], $errors[2]);
         $this->assertSame(['Species contains TRUE/FALSE, which is not a valid value.'], $errors[3]);
     }
 
@@ -354,7 +357,7 @@ class AnimalImportTest extends TestCase
     public function test_a_large_batch_imports_and_one_over_the_limit_is_refused(): void
     {
         $rows = array_map(fn ($i) => $this->row([
-            'name' => "Batch {$i}", 'species' => $i % 2 ? 'cat' : 'dog', 'age' => $i % 15, 'weight' => 2 + $i % 20, 'size' => 'small',
+            'name' => "Batch {$i}", 'species' => $i % 2 ? 'cat' : 'dog', 'age' => ($i % 15 + 1).' years', 'weight' => 2 + $i % 20, 'size' => 'small',
         ]), range(1, 1000));
 
         $this->import($this->xlsx($rows))->assertCreated()

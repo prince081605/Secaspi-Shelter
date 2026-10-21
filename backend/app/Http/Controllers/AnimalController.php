@@ -119,6 +119,7 @@ class AnimalController extends Controller
                 'species' => $animal->species,
                 'breed' => $animal->breed,
                 'age' => $animal->age,
+                'age_label' => $animal->ageLabel(),
                 'gender' => $animal->gender,
                 'size' => $animal->size,
                 'weight' => $animal->weight,
@@ -187,6 +188,7 @@ class AnimalController extends Controller
         $photos = $data['photos'] ?? null;
         unset($data['photos']);
         $data['status'] = $data['status'] ?? 'available';
+        $data = Animal::ageToBirthDate($data);
 
         $animal = Animal::create($data);
 
@@ -213,7 +215,8 @@ class AnimalController extends Controller
             // editing its other fields doesn't fail — but it can't be changed to anything new.
             'species' => ['sometimes', Rule::in([...Animal::SPECIES, mb_strtolower((string) $animal->species)])],
             'breed' => ['nullable', 'string', 'max:100'],
-            'age' => ['nullable', 'integer', 'min:0', 'max:40'],
+            // Sent only when the age was changed; an empty age clears it.
+            ...Animal::ageRules(),
             'gender' => ['nullable', Rule::in(Animal::GENDERS)],
             'size' => ['nullable', Rule::in(Animal::SIZES)],
             'weight' => ['nullable', 'numeric', 'min:0', 'max:200'],
@@ -227,7 +230,7 @@ class AnimalController extends Controller
             return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
         }
 
-        $animal->update($validator->validated());
+        $animal->update(Animal::ageToBirthDate($validator->validated()));
 
         return response()->json(['animal' => $this->toAdminDetail($animal)]);
     }
@@ -418,6 +421,9 @@ class AnimalController extends Controller
             'species' => $animal->species,
             'breed' => $animal->breed,
             'age' => $animal->age,
+            'age_label' => $animal->ageLabel(),
+            'age_parts' => $animal->ageParts(),
+            'birth_date' => $animal->birth_date?->toDateString(),
             'gender' => $animal->gender,
             'size' => $animal->size,
             'weight' => $animal->weight,
@@ -462,16 +468,7 @@ class AnimalController extends Controller
         $matched = [];
 
         // Determine age range
-        $ageRange = null;
-        if ($animal->age !== null) {
-            if ($animal->age < 2) {
-                $ageRange = 'puppy';
-            } elseif ($animal->age < 7) {
-                $ageRange = 'adult';
-            } else {
-                $ageRange = 'senior';
-            }
-        }
+        $ageRange = $animal->lifeStage();
 
         foreach ($guides as $guide) {
             $matchScore = 0;
@@ -555,6 +552,7 @@ class AnimalController extends Controller
             'species' => $animal->species,
             'breed' => $animal->breed,
             'age' => $animal->age,
+            'age_label' => $animal->ageLabel(),
             'gender' => $animal->gender,
             'size' => $animal->size,
             // Raw enum stays — the status filter and tag-variant logic switch on it. The
