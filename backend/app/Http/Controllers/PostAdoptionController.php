@@ -272,6 +272,8 @@ class PostAdoptionController extends Controller
                 'animal_status' => $c->animal_status,
                 'notes' => $c->notes,
                 'by' => $c->changer?->full_name,
+                // Reported by the family themselves (from My Adopted Pets), not by staff.
+                'by_adopter' => $c->changed_by !== null && (int) $c->changed_by === (int) $a->user_id,
                 'recorded_at' => $c->created_at,
             ])->values(),
         ];

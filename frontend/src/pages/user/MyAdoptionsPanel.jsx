@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { HeartHandshake, PawPrint, Send, Undo2 } from 'lucide-react';
+import { HeartHandshake, MessageCircleWarning, PawPrint, Send, Undo2 } from 'lucide-react';
 import {
   ADOPTER_WELLBEING,
   MAX_UPDATE_PHOTOS,
   getMyAdoptions,
   labelOf,
+  reportAdoptionStatus,
   requestAdoptionReturn,
   sendAdoptionUpdate,
   stopSharingUpdate,
@@ -157,6 +158,139 @@ function ReturnRequest({ adoption, onSent }) {
   );
 }
 
+// Today in the shelter's own day (Manila), for a date that can't be in the future.
+const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+
+// What the family can tell the shelter happened (the server says which apply now: can_report).
+const REPORTS = {
+  missing: {
+    label: (name) => `${name} is missing`,
+    prompt: (name) => `Where and when was ${name} last seen? Collar, marks, anything that helps people recognise ${name}.`,
+    confirm: (name) => ({
+      title: `Report ${name} as missing?`,
+      message: `The shelter is told right away and can help you search. Check-ins pause until ${name} is home — tell us here when that happens.`,
+      confirmLabel: 'Report missing',
+    }),
+  },
+  deceased: {
+    label: (name) => `${name} has passed away`,
+    prompt: () => 'If you would like to, tell us what happened.',
+    confirm: (name) => ({
+      title: `Tell the shelter ${name} has passed away?`,
+      message: `We are so sorry. This closes ${name}’s check-ins, and the shelter’s records will show ${name} has passed away.`,
+      confirmLabel: 'Let the shelter know',
+    }),
+  },
+  rehomed: {
+    label: (name) => `${name} now lives with another family`,
+    prompt: (name) => `Who looks after ${name} now, and how can the shelter reach them?`,
+    confirm: (name) => ({
+      title: `Tell the shelter ${name} has a new family?`,
+      message: `This closes ${name}’s check-ins with you. The shelter may contact you about the new family.`,
+      confirmLabel: 'Let the shelter know',
+    }),
+  },
+  in_home: {
+    label: (name) => `${name} is back home`,
+    prompt: (name) => `Where was ${name} found? Is ${name} hurt or well?`,
+    confirm: (name) => ({
+      title: `Tell the shelter ${name} is back home?`,
+      message: 'Wonderful news. The shelter is told, and the check-ins start again.',
+      confirmLabel: 'Let the shelter know',
+    }),
+  },
+};
+
+function ReportStatus({ adoption, onSent }) {
+  const confirm = useConfirm();
+  const name = adoption.animal?.name || 'your pet';
+  const choices = (adoption.can_report || []).filter((key) => REPORTS[key]);
+  const [open, setOpen] = useState(false);
+  const [status, setStatus] = useState('');
+  const [happenedOn, setHappenedOn] = useState(today());
+  const [notes, setNotes] = useState('');
+  const [state, setState] = useState({ sending: false, error: '' });
+
+  if (choices.length === 0) return null;
+
+  const close = () => { setOpen(false); setStatus(''); setNotes(''); setState({ sending: false, error: '' }); };
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!status) return;
+    const ok = await confirm({
+      ...REPORTS[status].confirm(name),
+      summary: [
+        { label: 'What happened', value: REPORTS[status].label(name) },
+        { label: 'When', value: formatDate(happenedOn) },
+      ],
+    });
+    if (!ok) return;
+    setState({ sending: true, error: '' });
+    try {
+      await reportAdoptionStatus(adoption.id, { status, happenedOn, notes });
+      close();
+      onSent();
+    } catch (err) {
+      const fieldError = Object.values(err?.data?.errors || {})[0]?.[0];
+      setState({ sending: false, error: fieldError || err?.message || 'We couldn’t send that. Please try again.' });
+    }
+  };
+
+  if (!open) {
+    return (
+      <button type="button" className="pa-link" onClick={() => setOpen(true)}>
+        <MessageCircleWarning size={14} aria-hidden="true" />{' '}
+        {adoption.post_adoption_status === 'missing' ? `Has ${name} come home?` : `Something happened to ${name}?`}
+      </button>
+    );
+  }
+
+  return (
+    <form className="pa-form pa-return-form" onSubmit={submit}>
+      <p className="ui-muted">Let the shelter know what happened. It updates {name}’s record straight away, and the shelter will reach out if they can help.</p>
+      {state.error && <div className="ui-error">{state.error}</div>}
+      <fieldset className="pa-choice">
+        <legend className="ui-label ui-label-required">What happened?</legend>
+        {choices.map((key) => (
+          <label key={key} className={status === key ? 'is-on' : ''}>
+            <input type="radio" name={`report-${adoption.id}`} value={key} checked={status === key} onChange={() => setStatus(key)} required />
+            {REPORTS[key].label(name)}
+          </label>
+        ))}
+      </fieldset>
+      <div className="ui-field">
+        <label className="ui-label" htmlFor={`report-date-${adoption.id}`}>When did it happen?</label>
+        <input
+          id={`report-date-${adoption.id}`}
+          className="ui-input"
+          type="date"
+          value={happenedOn}
+          onChange={(e) => setHappenedOn(e.target.value)}
+          max={today()}
+          min={adoption.completed_at ? String(adoption.completed_at).slice(0, 10) : undefined}
+        />
+      </div>
+      <div className="ui-field">
+        <label className="ui-label" htmlFor={`report-notes-${adoption.id}`}>Anything else the shelter should know?</label>
+        <textarea
+          id={`report-notes-${adoption.id}`}
+          className="ui-textarea"
+          rows={3}
+          maxLength={2000}
+          placeholder={status ? REPORTS[status].prompt(name) : ''}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+        />
+      </div>
+      <div className="pa-actions">
+        <button className="dashBtn dashBtnPrimary" type="submit" disabled={state.sending || !status}>{state.sending ? 'Sending…' : 'Send to the shelter'}</button>
+        <button className="dashBtn" type="button" onClick={close} disabled={state.sending}>Cancel</button>
+      </div>
+    </form>
+  );
+}
+
 // What the family sees when the shelter has recorded a change (in their words, not the staff's).
 const STATUS_NOTICES = {
   lost_contact: (name) => `We’ve had trouble reaching you about ${name}. Send us an update so we know you’re both doing well.`,
@@ -258,6 +392,7 @@ function AdoptionCard({ adoption, onChanged }) {
       )}
 
       {canReturn && ret?.status !== 'pending' && <ReturnRequest adoption={adoption} onSent={onChanged} />}
+      {isActive && <ReportStatus adoption={adoption} onSent={onChanged} />}
     </article>
   );
 }

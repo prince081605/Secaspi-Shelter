@@ -6,6 +6,7 @@ use App\Models\AdoptionApplication;
 use App\Models\AdoptionFollowUp;
 use App\Models\AdoptionReturn;
 use App\Models\AdoptionUpdate;
+use App\Rules\NotInFuture;
 use App\Services\PostAdoption;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -117,6 +118,44 @@ class MyAdoptionController extends Controller
         return response()->json(['return' => $this->toReturnItem($return->fresh())], 201);
     }
 
+    /**
+     * The family tells the shelter what happened: the animal is missing, has passed away, lives
+     * with another family now, or (after going missing) is home again. It takes effect at once —
+     * the same change staff would make — and the desk is alerted.
+     */
+    public function reportStatus(Request $request, AdoptionApplication $application, PostAdoption $postAdoption)
+    {
+        $this->authorizeOwner($request, $application);
+        $allowed = $application->status === 'completed' ? PostAdoption::adopterReports($application->post_adoption_status) : [];
+        if ($allowed === []) {
+            return response()->json(['message' => 'There’s nothing to report for this adoption. Message the shelter if you need anything.'], 422);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'status' => ['required', Rule::in($allowed)],
+            'happened_on' => array_filter(['nullable', 'date', new NotInFuture,
+                $application->completed_at ? 'after_or_equal:'.$application->completed_at->toDateString() : null]),
+            'notes' => ['nullable', 'string', 'max:2000'],
+        ], [
+            'status.required' => 'Choose what happened.',
+            'status.in' => 'That can’t be reported for this adoption right now.',
+            'happened_on.after_or_equal' => 'The date can’t be before the adoption.',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
+        }
+
+        $change = $postAdoption->changeStatus(
+            $application,
+            $request->input('status'),
+            $validator->safe()->only(['happened_on', 'notes']),
+            $request->user(),
+        );
+        $postAdoption->alertStaff($change);
+
+        return response()->json(['adoption' => $this->toItem($application->fresh(['animal.mainPhoto', 'followUps', 'updates', 'returns']))]);
+    }
+
     /** Someone else's adoption is reported as not found, rather than confirming it exists. */
     private function authorizeOwner(Request $request, AdoptionApplication $application): void
     {
@@ -136,6 +175,7 @@ class MyAdoptionController extends Controller
             'post_adoption_status_label' => PostAdoption::STATUSES[$a->post_adoption_status] ?? null,
             'can_send_update' => $a->status === 'completed' && in_array($a->post_adoption_status, PostAdoption::ADOPTER_CAN_UPDATE, true),
             'can_request_return' => $a->status === 'completed' && in_array($a->post_adoption_status, PostAdoption::ADOPTER_CAN_RETURN, true),
+            'can_report' => $a->status === 'completed' ? PostAdoption::adopterReports($a->post_adoption_status) : [],
             'animal' => $a->animal ? [
                 'id' => $a->animal->id,
                 'name' => $a->animal->name,

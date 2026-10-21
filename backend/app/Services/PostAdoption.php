@@ -57,6 +57,24 @@ class PostAdoption
     /** Happy Tails show "where they are now", so only stories from animals still in their homes. */
     public const ON_HAPPY_TAILS = ['in_home', 'lost_contact'];
 
+    /**
+     * What the family can report themselves from My Adopted Pets (status => the statuses it can
+     * be reported from). It takes effect at once and the desk is alerted; staff can correct it.
+     * Returned stays a return request that staff decide, and Lost contact is the staff's call.
+     */
+    public const ADOPTER_CAN_REPORT = [
+        'missing' => ['in_home', 'lost_contact'],
+        'deceased' => ['in_home', 'lost_contact', 'missing'],
+        'rehomed' => ['in_home', 'lost_contact'],
+        'in_home' => ['missing'], // found again
+    ];
+
+    /** The reports the family can make about an adoption that's currently in $current. */
+    public static function adopterReports(?string $current): array
+    {
+        return array_keys(array_filter(self::ADOPTER_CAN_REPORT, fn (array $from) => in_array($current, $from, true)));
+    }
+
     /** Roughly how far ahead an adopter's update still counts as answering a check-in. */
     private const UPDATE_ANSWERS_WITHIN_DAYS = 7;
 
@@ -285,9 +303,9 @@ class PostAdoption
         return $update;
     }
 
-    public function alertStaff(AdoptionUpdate|AdoptionReturn $item): void
+    public function alertStaff(AdoptionUpdate|AdoptionReturn|AdoptionStatusChange $item): void
     {
-        $item->loadMissing(['animal', 'user']);
+        $item->loadMissing(['animal', $item instanceof AdoptionStatusChange ? 'changer' : 'user']);
         User::withPermission('desk.operate')->get()
             ->each(fn (User $member) => (new PostAdoptionAlert($item))->sendTo($member));
     }

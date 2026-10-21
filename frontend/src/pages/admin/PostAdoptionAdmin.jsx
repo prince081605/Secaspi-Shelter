@@ -279,7 +279,7 @@ function StatusTimeline({ history }) {
             <StatusBadge status={h.to} />
             <strong>{h.to_label}</strong>
             <span className="ui-muted">{h.happened_on ? formatDate(h.happened_on) : 'date not recorded'}</span>
-            <span className="ui-muted">· {h.by ? `by ${h.by}` : 'automatic'}</span>
+            <span className="ui-muted">· {h.by_adopter ? `reported by the family (${h.by})` : h.by ? `by ${h.by}` : 'automatic'}</span>
           </div>
           {h.animal_status && <div className="ui-muted pa-sub">Went {labelOf(RETURN_DESTINATIONS, h.animal_status).toLowerCase()}.</div>}
           {h.notes && <p>{h.notes}</p>}

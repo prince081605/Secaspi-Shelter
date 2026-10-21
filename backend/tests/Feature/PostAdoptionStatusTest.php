@@ -212,6 +212,66 @@ class PostAdoptionStatusTest extends TestCase
         $this->putJson("/api/admin/post-adoption/adoptions/{$pending->id}/status", ['status' => 'missing'])->assertStatus(422);
     }
 
+    private function report(array $payload): TestResponse
+    {
+        Sanctum::actingAs($this->adopter);
+
+        return $this->postJson("/api/my-adoptions/{$this->application->id}/status", $payload);
+    }
+
+    public function test_the_family_reports_their_pet_missing_and_then_home(): void
+    {
+        $this->travelTo('2026-10-10 09:00:00');
+        Sanctum::actingAs($this->adopter);
+        $this->getJson('/api/my-adoptions')->assertJsonPath('adoptions.0.can_report', ['missing', 'deceased', 'rehomed']);
+
+        $this->report(['status' => 'missing', 'happened_on' => '2026-10-09', 'notes' => 'Ran off at the plaza; brown collar.'])->assertOk()
+            ->assertJsonPath('adoption.post_adoption_status', 'missing')
+            ->assertJsonPath('adoption.can_report', ['deceased', 'in_home']);
+        $this->assertSame([], $this->pendingCheckIns());
+        $this->assertSame(1, DB::table('app_notifications')->where('user_id', $this->desk->id)->where('type', 'post_adoption_alert')
+            ->where('title', 'Adopted animal reported missing')->count());
+
+        // Staff see it on the timeline as the family's report.
+        Sanctum::actingAs($this->desk);
+        $this->getJson('/api/admin/post-adoption/adoptions')
+            ->assertJsonPath('data.0.history.0.to', 'missing')
+            ->assertJsonPath('data.0.history.0.by', 'Juan Dela Cruz')
+            ->assertJsonPath('data.0.history.0.by_adopter', true)
+            ->assertJsonPath('data.0.history.0.notes', 'Ran off at the plaza; brown collar.');
+
+        $this->travelTo('2026-10-20 09:00:00');
+        $this->report(['status' => 'in_home', 'notes' => 'A neighbour found him.'])->assertOk()
+            ->assertJsonPath('adoption.post_adoption_status', 'in_home');
+        $this->assertSame(['1 month', '3 months', '6 months'], $this->pendingCheckIns());
+        $this->assertSame(1, DB::table('app_notifications')->where('user_id', $this->desk->id)->where('title', 'Missing adopted animal is home')->count());
+    }
+
+    public function test_the_family_reports_their_pet_has_passed_away(): void
+    {
+        $this->report(['status' => 'deceased', 'notes' => 'Old age.'])->assertOk()
+            ->assertJsonPath('adoption.can_report', [])
+            ->assertJsonPath('adoption.can_send_update', false);
+        $this->assertSame('deceased', $this->animalStatus());
+        $this->assertSame([], $this->pendingCheckIns());
+
+        // Closed now: nothing more to report.
+        $this->report(['status' => 'in_home'])->assertStatus(422);
+    }
+
+    public function test_what_the_family_can_report_is_checked(): void
+    {
+        $this->report(['status' => 'returned'])->assertStatus(422);       // a return request, decided by staff
+        $this->report(['status' => 'lost_contact'])->assertStatus(422);   // the staff's call
+        $this->report(['status' => 'in_home'])->assertStatus(422);        // only after going missing
+        $this->report(['status' => 'missing', 'happened_on' => '2026-10-08'])->assertStatus(422); // tomorrow
+        $this->assertSame('in_home', $this->application->fresh()->post_adoption_status);
+
+        // Someone else can't report on this adoption.
+        Sanctum::actingAs(User::factory()->create());
+        $this->postJson("/api/my-adoptions/{$this->application->id}/status", ['status' => 'missing'])->assertNotFound();
+    }
+
     public function test_the_list_filters_by_status_and_searches(): void
     {
         $this->setStatus(['status' => 'missing'])->assertOk();

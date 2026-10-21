@@ -111,6 +111,8 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('/my-adoptions/{application}/updates', [MyAdoptionController::class, 'storeUpdate'])->middleware('throttle:10,1');
     Route::post('/my-adoptions/{application}/updates/{update}/stop-sharing', [MyAdoptionController::class, 'stopSharing']);
     Route::post('/my-adoptions/{application}/return', [MyAdoptionController::class, 'requestReturn'])->middleware('throttle:5,1');
+    // The family reports their pet missing, passed away, rehomed, or home again (takes effect at once).
+    Route::post('/my-adoptions/{application}/status', [MyAdoptionController::class, 'reportStatus'])->middleware('throttle:5,1');
     // Staff: check-ins, updates and Happy Tails review, return requests.
     Route::get('/admin/post-adoption/summary', [PostAdoptionController::class, 'summaryIndex'])->middleware('perm:desk.operate');
     // Every adopted animal and where it is now (in home, missing, deceased, …), and changing that.

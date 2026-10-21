@@ -61,6 +61,10 @@ export const stopSharingUpdate = (applicationId, updateId) =>
 export const requestAdoptionReturn = (applicationId, reason) =>
   api.post(`/api/my-adoptions/${applicationId}/return`, { reason });
 
+// The family reports their pet missing, passed away, rehomed, or home again. Takes effect at once.
+export const reportAdoptionStatus = (applicationId, { status, happenedOn, notes }) =>
+  api.post(`/api/my-adoptions/${applicationId}/status`, { status, happened_on: happenedOn || null, notes: notes || null });
+
 // ---- Public ----
 
 export const getHappyTails = () => api.get('/api/home/happy-tails');

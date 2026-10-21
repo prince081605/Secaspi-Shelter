@@ -24,6 +24,11 @@ class AdoptionStatusChange extends Model
         return $this->belongsTo(AdoptionApplication::class, 'adoption_application_id');
     }
 
+    public function animal()
+    {
+        return $this->belongsTo(Animal::class, 'animal_id');
+    }
+
     public function changer()
     {
         return $this->belongsTo(User::class, 'changed_by');
