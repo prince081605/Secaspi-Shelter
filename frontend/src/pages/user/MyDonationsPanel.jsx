@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import ActionMenu from '../../components/ActionMenu';
 import { useNavigate } from 'react-router-dom';
 import { HandCoins } from 'lucide-react';
 import { listDonations } from '../../lib/donationsApi';
@@ -60,14 +61,14 @@ export default function MyDonationsPanel() {
   };
 
   const actions = (d) => (
-    <>
-      {RESUMABLE.includes(d.status) && (
-        <button className="dashBtn dashBtnPrimary" onClick={() => handleResume(d.id)} disabled={resuming === d.id}>
-          {resuming === d.id ? 'Opening…' : 'Complete payment'}
-        </button>
-      )}
-      <button className="dashBtn" onClick={() => navigate(`/donations/${d.id}`)}>Receipt</button>
-    </>
+    <ActionMenu
+      ariaLabel={`Actions for donation ${d.reference_no || ''}`}
+      disabled={resuming === d.id}
+      items={[
+        RESUMABLE.includes(d.status) && { label: resuming === d.id ? 'Opening…' : 'Complete payment', tone: 'primary', onClick: () => handleResume(d.id) },
+        { label: 'Receipt', onClick: () => navigate(`/donations/${d.id}`) },
+      ]}
+    />
   );
 
   return (

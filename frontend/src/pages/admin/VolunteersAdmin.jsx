@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Users, Handshake, Briefcase, ClipboardList, Inbox, X, Clock, UsersRound } from 'lucide-react';
+import ActionMenu from '../../components/ActionMenu';
+import { Users, Handshake, Briefcase, ClipboardList, Inbox, Clock, UsersRound } from 'lucide-react';
 import AttendanceAdmin from './AttendanceAdmin';
 import TeamsAdmin from './TeamsAdmin';
 import {
@@ -272,19 +273,19 @@ function TasksPanel({ volunteer, onChanged, canSupervise }) {
     const next = nextStatusFor(t, canSupervise);
     return (
       <>
-        {t.status === 'requested' && (
-          <button className="dashBtn dashBtnPrimary" onClick={() => setStatus(t, 'assigned')}>Confirm</button>
-        )}
-        {next && (
-          <button className="dashBtn dashBtnPrimary" onClick={() => advanceTask(t)}>{nextStatusLabel(t, next)}</button>
-        )}
-        {canSupervise && t.status === 'submitted' && (
-          <button className="dashBtn" onClick={() => setStatus(t, 'ongoing')}>Send back</button>
-        )}
         {!canSupervise && t.status === 'submitted' && (
           <span className="ui-muted" style={{ fontSize: 12 }}>Awaiting Desk Admin verification</span>
         )}
-        <button className="dashBtn dashBtnDanger" aria-label={t.status === 'requested' ? 'Decline task' : 'Delete task'} onClick={() => deleteTask(t)}><X size={14} /></button>
+        <ActionMenu
+          ariaLabel={`Actions for the task ${t.task_name}`}
+          items={[
+            t.status === 'requested' && { label: 'Confirm', tone: 'primary', onClick: () => setStatus(t, 'assigned') },
+            next && { label: nextStatusLabel(t, next), tone: 'primary', onClick: () => advanceTask(t) },
+            canSupervise && t.status === 'submitted' && { label: 'Send back', onClick: () => setStatus(t, 'ongoing') },
+            { divider: true },
+            { label: t.status === 'requested' ? 'Decline task' : 'Delete task', tone: 'danger', onClick: () => deleteTask(t) },
+          ]}
+        />
       </>
     );
   };
@@ -480,10 +481,14 @@ function PersonnelRow({ personnel, onChanged, canSupervise }) {
     <span>{Number(personnel.hours_rendered || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
   );
   const actions = (
-    <>
-      <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Manage'}</button>
-      <button type="button" className="dashBtn dashBtnDanger" onClick={remove}>Remove</button>
-    </>
+    <ActionMenu
+      ariaLabel={`Actions for ${personnel.user?.full_name || 'this person'}`}
+      items={[
+        { label: expanded ? 'Hide tasks & categories' : 'Tasks & categories', onClick: () => setExpanded((v) => !v) },
+        { divider: true },
+        { label: 'Remove from Personnel', tone: 'danger', onClick: remove },
+      ]}
+    />
   );
   const panel = (
     <>
@@ -631,8 +636,15 @@ function RequestRow({ application, onChanged }) {
       </div>
       {application.status === 'pending' && (
         <div className="dashActionRow">
-          <button className="dashBtn dashBtnDanger" onClick={() => decide('rejected')}>Reject</button>
-          <button className="dashBtn dashBtnPrimary" onClick={() => decide('approved')}>Approve</button>
+          <ActionMenu
+            label="Decide"
+            ariaLabel={`Decide on ${application.applicant?.full_name || 'this'} application`}
+            items={[
+              { label: 'Approve', tone: 'primary', onClick: () => decide('approved') },
+              { divider: true },
+              { label: 'Reject', tone: 'danger', onClick: () => decide('rejected') },
+            ]}
+          />
         </div>
       )}
     </div>

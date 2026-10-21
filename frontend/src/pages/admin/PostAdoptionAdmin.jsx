@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import ActionMenu from '../../components/ActionMenu';
 import { HeartHandshake, PawPrint } from 'lucide-react';
 import {
   ADOPTER_WELLBEING,
@@ -339,14 +340,20 @@ function AdoptionsTab({ onChanged }) {
                       <StatusBadge status={a.post_adoption_status} />
                       {since && <span className="ui-muted">since {formatDate(since)}</span>}
                     </div>
-                    {!closed && (
-                      <button className="dashBtn dashBtnPrimary" type="button" aria-expanded={open.id === a.id && open.panel === 'status'} onClick={() => toggle(a.id, 'status')}>
-                        Update status
-                      </button>
-                    )}
-                    <button className="dashBtn" type="button" aria-expanded={open.id === a.id && open.panel === 'history'} onClick={() => toggle(a.id, 'history')}>
-                      History ({a.history.length})
-                    </button>
+                    <ActionMenu
+                      ariaLabel={`Actions for ${a.animal?.name || 'this adoption'}`}
+                      items={[
+                        !closed && {
+                          label: open.id === a.id && open.panel === 'status' ? 'Close the status form' : 'Update status',
+                          tone: 'primary',
+                          onClick: () => toggle(a.id, 'status'),
+                        },
+                        {
+                          label: open.id === a.id && open.panel === 'history' ? 'Hide history' : `History (${a.history.length})`,
+                          onClick: () => toggle(a.id, 'history'),
+                        },
+                      ]}
+                    />
                   </div>
                 </div>
                 <p className="ui-muted pa-sub pa-row-foot">
@@ -437,13 +444,14 @@ function UpdatesTab({ storiesOnly, onChanged }) {
                   {u.share_publicly ? (u.story_status === 'approved' ? 'On Happy Tails.' : u.story_status === 'declined' ? 'Not published.' : 'Offered for Happy Tails.') : ''}
                 </span>
                 <div className="pa-actions">
-                  {u.share_publicly && u.story_status === 'pending' && (
-                    <>
-                      <button className="dashBtn dashBtnPrimary" type="button" onClick={() => review(u, 'approved')}>Publish on Happy Tails</button>
-                      <button className="dashBtn" type="button" onClick={() => review(u, 'declined')}>Don’t publish</button>
-                    </>
-                  )}
-                  {!u.read && <button className="dashBtn" type="button" onClick={() => act(() => adminMarkAdoptionUpdateRead(u.id), 'Could not mark it read.')}>Mark as read</button>}
+                  <ActionMenu
+                    ariaLabel={`Actions for the update about ${u.animal?.name || 'this animal'}`}
+                    items={[
+                      u.share_publicly && u.story_status === 'pending' && { label: 'Publish on Happy Tails', tone: 'primary', onClick: () => review(u, 'approved') },
+                      u.share_publicly && u.story_status === 'pending' && { label: 'Don’t publish', onClick: () => review(u, 'declined') },
+                      !u.read && { label: 'Mark as read', onClick: () => act(() => adminMarkAdoptionUpdateRead(u.id), 'Could not mark it read.') },
+                    ]}
+                  />
                 </div>
               </div>
             </li>
@@ -496,8 +504,16 @@ function ResolveReturn({ request, onDone, onCancel }) {
         <textarea className="ui-textarea" rows={2} maxLength={2000} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Hand-over arrangements, or the support you can offer instead…" />
       </label>
       <div className="pa-actions">
-        <button className="dashBtn dashBtnPrimary" type="button" disabled={state.saving} onClick={() => decide('accepted')}>Accept return</button>
-        <button className="dashBtn" type="button" disabled={state.saving} onClick={() => decide('declined')}>Decline</button>
+        <ActionMenu
+          label="Decide"
+          ariaLabel={`Decide on the return of ${name}`}
+          disabled={state.saving}
+          items={[
+            { label: 'Accept return', tone: 'primary', onClick: () => decide('accepted') },
+            { divider: true },
+            { label: 'Decline', tone: 'danger', onClick: () => decide('declined') },
+          ]}
+        />
         <button className="dashBtn" type="button" disabled={state.saving} onClick={onCancel}>Cancel</button>
       </div>
     </div>

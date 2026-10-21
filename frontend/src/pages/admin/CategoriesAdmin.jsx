@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Brain, Cat, Check, Dog, Eye, EyeOff, HandHeart, IdCard, MapPin, Pencil, Plus, Search, Stethoscope, Tags, Trash2, X } from 'lucide-react';
+import ActionMenu from '../../components/ActionMenu';
+import { Brain, Cat, Check, Dog, HandHeart, IdCard, MapPin, Plus, Search, Stethoscope, Tags, X } from 'lucide-react';
 import {
   adminAddCategoryOption,
   adminDeleteCategoryOption,
@@ -218,17 +219,16 @@ function CategoryList({ list }) {
                     <span className="usage">{usedBy(option.usage)}</span>
                   </div>
                   <div className="cat-actions">
-                    <button className="dashBtn" type="button" disabled={busy} onClick={() => setEditing({ id: option.id, label: option.label })} aria-label={`Rename ${option.label}`}>
-                      <Pencil size={14} aria-hidden="true" /> Rename
-                    </button>
-                    <button className="dashBtn" type="button" disabled={busy} onClick={() => toggleHidden(option)} aria-label={`${option.hidden ? 'Show' : 'Hide'} ${option.label}`}>
-                      {option.hidden ? <Eye size={14} aria-hidden="true" /> : <EyeOff size={14} aria-hidden="true" />} {option.hidden ? 'Show' : 'Hide'}
-                    </button>
-                    {option.usage === 0 && (
-                      <button className="dashBtn dashBtnDanger" type="button" disabled={busy} onClick={() => remove(option)} aria-label={`Delete ${option.label}`}>
-                        <Trash2 size={14} aria-hidden="true" />
-                      </button>
-                    )}
+                    <ActionMenu
+                      ariaLabel={`Actions for ${option.label}`}
+                      disabled={busy}
+                      items={[
+                        { label: 'Rename', onClick: () => setEditing({ id: option.id, label: option.label }) },
+                        { label: option.hidden ? 'Show in the list again' : 'Hide from the list', onClick: () => toggleHidden(option) },
+                        option.usage === 0 && { divider: true },
+                        option.usage === 0 && { label: 'Delete', tone: 'danger', onClick: () => remove(option) },
+                      ]}
+                    />
                   </div>
                 </>
               )}

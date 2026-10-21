@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X } from 'lucide-react';
+import ActionMenu from '../../components/ActionMenu';
 import { createShelterLocation, deleteShelterLocation, listShelterLocations, renameShelterLocation } from '../../lib/locationsApi';
 import useConfirm from '../../lib/useConfirm';
 
@@ -88,8 +88,14 @@ export default function ShelterLocationsManager({ onChanged }) {
               <>
                 <span style={{ flex: 1, fontWeight: 600 }}>{loc.name}</span>
                 <span className="ui-muted" style={{ fontSize: 13 }}>{loc.animal_count} animal{loc.animal_count === 1 ? '' : 's'}</span>
-                <button className="dashBtn" onClick={() => setEditing({ id: loc.id, name: loc.name })}>Rename</button>
-                <button className="dashBtn dashBtnDanger" aria-label={`Remove ${loc.name}`} onClick={() => remove(loc)}><X size={14} /></button>
+                <ActionMenu
+                  ariaLabel={`Actions for ${loc.name}`}
+                  items={[
+                    { label: 'Rename', onClick: () => setEditing({ id: loc.id, name: loc.name }) },
+                    { divider: true },
+                    { label: 'Remove', tone: 'danger', onClick: () => remove(loc) },
+                  ]}
+                />
               </>
             )}
           </li>

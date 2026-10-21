@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import ActionMenu from '../../components/ActionMenu';
 import { Receipt, Plus, X } from 'lucide-react';
 import {
   adminListExpenses,
@@ -308,10 +309,14 @@ export default function ExpensesAdmin({ canEdit = false }) {
   };
 
   const rowActions = (e) => (
-    <>
-      <button className="dashBtn" onClick={() => startEdit(e)}>Edit</button>
-      <button className="dashBtn dashBtnDanger" onClick={() => handleDelete(e)}>Delete</button>
-    </>
+    <ActionMenu
+      ariaLabel={`Actions for expense: ${e.description || ''}`}
+      items={[
+        { label: 'Edit', onClick: () => startEdit(e) },
+        { divider: true },
+        { label: 'Delete', tone: 'danger', onClick: () => handleDelete(e) },
+      ]}
+    />
   );
 
   return (

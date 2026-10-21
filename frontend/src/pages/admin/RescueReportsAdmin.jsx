@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import ActionMenu from '../../components/ActionMenu';
 import { MapPin, Siren } from 'lucide-react';
 import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -326,14 +327,16 @@ function TriagePanel({ report, teams, onSaved }) {
               <button className="dashBtn" type="button" onClick={() => save()} disabled={state.status === 'loading'}>
                 {state.status === 'loading' ? 'Saving…' : 'Save assignment & notes'}
               </button>
-              {nextStatus && (
-                <button className="dashBtn dashBtnPrimary" type="button" onClick={() => save({ status: nextStatus })} disabled={state.status === 'loading'}>
-                  {NEXT_LABEL[report.status]}
-                </button>
-              )}
-              {report.status !== 'resolved' && (
-                <button className="dashBtn" type="button" onClick={() => setClosing(true)}>Mark invalid…</button>
-              )}
+              <ActionMenu
+                label="Update status"
+                ariaLabel="Update this report’s status"
+                disabled={state.status === 'loading'}
+                items={[
+                  nextStatus && { label: NEXT_LABEL[report.status], tone: 'primary', onClick: () => save({ status: nextStatus }) },
+                  report.status !== 'resolved' && { divider: true },
+                  report.status !== 'resolved' && { label: 'Mark invalid…', tone: 'danger', onClick: () => setClosing(true) },
+                ]}
+              />
             </>
           )}
           {/* Blocking is a security call, made by a System Admin on the Security page. */}
@@ -369,10 +372,13 @@ function ReportRow({ report, teams, onChanged, onUnreadChanged, isMobile }) {
   };
 
   const actions = (
-    <>
-      <button className="dashBtn" onClick={() => open('detail')}>{mode === 'detail' ? 'Hide' : 'Detail'}</button>
-      <button className="dashBtn" onClick={() => open('triage')}>{mode === 'triage' ? 'Hide' : 'Triage'}</button>
-    </>
+    <ActionMenu
+      ariaLabel="Actions for this rescue report"
+      items={[
+        { label: mode === 'detail' ? 'Hide details' : 'Details', onClick: () => open('detail') },
+        { label: mode === 'triage' ? 'Hide triage' : 'Triage', onClick: () => open('triage') },
+      ]}
+    />
   );
   const panel = mode === 'detail'
     ? <DetailPanel report={report} />
@@ -411,10 +417,7 @@ function ReportRow({ report, teams, onChanged, onUnreadChanged, isMobile }) {
         <td><StatusBadge status={report.status} /></td>
         <td>{assignedLabel(report)}</td>
         <td className="dashNowrap">{(report.created_at || '').slice(0, 10)}</td>
-        <td style={{ whiteSpace: 'nowrap' }}>
-          <button className="dashBtn" onClick={() => open('detail')}>{mode === 'detail' ? 'Hide' : 'Detail'}</button>
-          <button className="dashBtn" style={{ marginLeft: 6 }} onClick={() => open('triage')}>{mode === 'triage' ? 'Hide' : 'Triage'}</button>
-        </td>
+        <td style={{ whiteSpace: 'nowrap' }}>{actions}</td>
       </tr>
       {mode && (
         <tr>

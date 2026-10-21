@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import ActionMenu from '../../components/ActionMenu';
 import { Camera, Stethoscope, ClipboardList, X } from 'lucide-react';
 import {
   adminListIntakes,
@@ -384,15 +385,20 @@ function IntakeRow({ intake, onChanged }) {
 
   const actions = (
     <>
-      <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Details'}</button>
-      {intake.status === 'converted' ? (
+      {intake.status === 'converted' && (
         <span style={{ color: 'var(--muted)', fontSize: 12, alignSelf: 'center' }}>
           → Animal #{intake.converted_animal_id}
         </span>
-      ) : (
-        <button type="button" className="dashBtn" onClick={addToAnimals}>Add to Animals</button>
       )}
-      <button type="button" className="dashBtn dashBtnDanger" onClick={remove}>Delete</button>
+      <ActionMenu
+        ariaLabel="Actions for this intake"
+        items={[
+          { label: expanded ? 'Hide details' : 'Details', onClick: () => setExpanded((v) => !v) },
+          intake.status !== 'converted' && { label: 'Add to Animals', onClick: addToAnimals },
+          { divider: true },
+          { label: 'Delete', tone: 'danger', onClick: remove },
+        ]}
+      />
     </>
   );
 

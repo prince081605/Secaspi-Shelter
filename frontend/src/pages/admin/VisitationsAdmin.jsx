@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import ActionMenu from '../../components/ActionMenu';
 import { adminListVisitations, adminUpdateVisitation, adminMarkVisitationRead } from '../../lib/visitationsApi';
 import { Calendar } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
@@ -140,15 +141,16 @@ function VisitationRow({ visitation, onChanged }) {
           and an empty footer would still draw its divider and padding. */}
       {canDecide && (
         <div className="dashActionRow">
-          {visitation.status === 'pending' && (
-            <>
-              <button className="dashBtn dashBtnDanger" onClick={() => setStatus('rejected')}>Reject</button>
-              <button className="dashBtn dashBtnPrimary" onClick={() => setStatus('approved')}>Approve</button>
-            </>
-          )}
-          {visitation.status === 'approved' && (
-            <button className="dashBtn" onClick={() => setStatus('completed')}>Mark completed</button>
-          )}
+          <ActionMenu
+            label="Decide"
+            ariaLabel="Decide on this visit request"
+            items={[
+              visitation.status === 'pending' && { label: 'Approve', tone: 'primary', onClick: () => setStatus('approved') },
+              visitation.status === 'pending' && { divider: true },
+              visitation.status === 'pending' && { label: 'Reject', tone: 'danger', onClick: () => setStatus('rejected') },
+              visitation.status === 'approved' && { label: 'Mark completed', onClick: () => setStatus('completed') },
+            ]}
+          />
         </div>
       )}
     </div>

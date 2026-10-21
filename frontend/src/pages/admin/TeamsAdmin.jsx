@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Archive, ArchiveRestore, Crown, ListChecks, Plus, Siren, UserMinus, UsersRound } from 'lucide-react';
+import ActionMenu from '../../components/ActionMenu';
+import { Crown, ListChecks, Plus, Siren, UsersRound } from 'lucide-react';
 import {
   adminAddTeamMember,
   adminAssignTeamTask,
@@ -157,10 +158,17 @@ function TeamDetail({ teamId, personnel, onChanged }) {
         )}
         {!editing && (
           <div className="teams-actions">
-            <button className="dashBtn" type="button" onClick={() => setEditing({ name: team.name, purpose: team.purpose || '' })}>Edit</button>
-            <button className="dashBtn" type="button" disabled={busy} onClick={toggleArchive}>
-              {team.is_active ? <><Archive size={14} aria-hidden="true" /> Archive</> : <><ArchiveRestore size={14} aria-hidden="true" /> Restore</>}
-            </button>
+            <ActionMenu
+              ariaLabel={`Actions for ${team.name}`}
+              disabled={busy}
+              items={[
+                { label: 'Edit name & purpose', onClick: () => setEditing({ name: team.name, purpose: team.purpose || '' }) },
+                { divider: true },
+                team.is_active
+                  ? { label: 'Archive team', tone: 'danger', onClick: toggleArchive }
+                  : { label: 'Restore team', onClick: toggleArchive },
+              ]}
+            />
           </div>
         )}
       </div>
@@ -183,14 +191,18 @@ function TeamDetail({ teamId, personnel, onChanged }) {
                   <div className="ui-muted contact">{[m.phone, m.email].filter(Boolean).join(' · ')}</div>
                 </div>
                 <div className="teams-actions">
-                  {!m.is_leader && team.is_active && (
-                    <button className="dashBtn" type="button" disabled={busy} onClick={() => run(() => adminUpdateTeam(team.id, { leader_id: m.id }), `${m.full_name} now leads the team.`)}>
-                      <Crown size={14} aria-hidden="true" /> Make leader
-                    </button>
-                  )}
-                  <button className="dashBtn dashBtnDanger" type="button" disabled={busy} onClick={() => removeMember(m)} aria-label={`Remove ${m.full_name} from the team`}>
-                    <UserMinus size={14} aria-hidden="true" />
-                  </button>
+                  <ActionMenu
+                    ariaLabel={`Actions for ${m.full_name}`}
+                    disabled={busy}
+                    items={[
+                      !m.is_leader && team.is_active && {
+                        label: 'Make leader',
+                        onClick: () => run(() => adminUpdateTeam(team.id, { leader_id: m.id }), `${m.full_name} now leads the team.`),
+                      },
+                      !m.is_leader && team.is_active && { divider: true },
+                      { label: 'Remove from team', tone: 'danger', onClick: () => removeMember(m) },
+                    ]}
+                  />
                 </div>
               </li>
             ))}

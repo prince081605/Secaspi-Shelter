@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X } from 'lucide-react';
+import ActionMenu from '../../components/ActionMenu';
 import {
   adminCreateAttendance,
   adminDeleteAttendance,
@@ -183,11 +183,15 @@ export default function AttendanceAdmin({ canCorrect = false }) {
   };
 
   const actions = (r) => (canCorrect ? (
-    <>
-      {!r.time_out && <button className="dashBtn dashBtnPrimary" onClick={() => closeShift(r)}>Time out</button>}
-      <button className="dashBtn" onClick={() => { setEditing(r); setAdding(false); }}>Edit</button>
-      <button className="dashBtn dashBtnDanger" aria-label="Delete attendance record" onClick={() => remove(r)}><X size={14} /></button>
-    </>
+    <ActionMenu
+      ariaLabel="Actions for this attendance record"
+      items={[
+        !r.time_out && { label: 'Time out', tone: 'primary', onClick: () => closeShift(r) },
+        { label: 'Edit', onClick: () => { setEditing(r); setAdding(false); } },
+        { divider: true },
+        { label: 'Delete', tone: 'danger', onClick: () => remove(r) },
+      ]}
+    />
   ) : null);
 
   const { records, onDuty, meta } = data;

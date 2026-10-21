@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import ActionMenu from '../../components/ActionMenu';
 import { REPORT_TYPES, getReport, exportReport } from '../../lib/reportsApi';
-import { BarChart3, Download } from 'lucide-react';
+import { BarChart3 } from 'lucide-react';
 import DashCard from '../../components/DashCard';
 import useIsMobile from '../../lib/useIsMobile';
 import { DONATION_CATEGORIES } from '../../lib/donationCategories';
@@ -213,12 +214,15 @@ export default function ReportsAdmin({ canFinancial = false }) {
           </label>
         )}
 
-        <button className="dashBtn dashBtnPrimary" onClick={() => handleExport('csv')} disabled={exporting === 'csv'}>
-          {exporting === 'csv' ? 'Exporting…' : <><Download size={15} style={{ verticalAlign: '-3px' }} /> Export CSV</>}
-        </button>
-        <button className="dashBtn" onClick={() => handleExport('pdf')} disabled={exporting === 'pdf'}>
-          {exporting === 'pdf' ? 'Exporting…' : <><Download size={15} style={{ verticalAlign: '-3px' }} /> Export PDF</>}
-        </button>
+        <ActionMenu
+          label={exporting ? 'Exporting…' : 'Export'}
+          ariaLabel="Export this report"
+          disabled={Boolean(exporting)}
+          items={[
+            { label: 'Export as CSV (spreadsheet)', onClick: () => handleExport('csv') },
+            { label: 'Export as PDF', onClick: () => handleExport('pdf') },
+          ]}
+        />
       </div>
 
       {error && <div className="ui-error">{error}</div>}

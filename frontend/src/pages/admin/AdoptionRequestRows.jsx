@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ActionMenu from '../../components/ActionMenu';
 import { adminUpdateAdoptionApplication, adminMarkAdoptionApplicationRead } from '../../lib/animalsApi';
 import { settingImageUrl } from '../../lib/settingsApi';
 import { optionLabel, useCategories } from '../../lib/categoriesApi';
@@ -320,15 +321,16 @@ export function ApplicationRow({ application, onChanged, onUnreadChanged }) {
       </div>
 
       <div className="dashActionRow">
-        {application.status === 'approved' && (
-          <button className="dashBtn" onClick={() => setStatus('completed')}>Mark completed</button>
-        )}
-        {application.status !== 'declined' && (
-          <button className="dashBtn dashBtnDanger" onClick={() => setStatus('declined')}>Reject</button>
-        )}
-        {application.status !== 'approved' && (
-          <button className="dashBtn dashBtnPrimary" onClick={() => setStatus('approved')}>Approve</button>
-        )}
+        <ActionMenu
+          label="Decide"
+          ariaLabel={`Decide on application ${application.reference_no || ''}`}
+          items={[
+            application.status !== 'approved' && { label: 'Approve', tone: 'primary', onClick: () => setStatus('approved') },
+            application.status === 'approved' && { label: 'Mark completed', onClick: () => setStatus('completed') },
+            application.status !== 'declined' && { divider: true },
+            application.status !== 'declined' && { label: 'Reject', tone: 'danger', onClick: () => setStatus('declined') },
+          ]}
+        />
       </div>
     </div>
   );
@@ -432,11 +434,15 @@ export function OngoingApprovedRow({ application, onChanged }) {
   };
 
   const actions = (
-    <>
-      <button className="dashBtn" onClick={() => setExpanded((v) => !v)}>{expanded ? 'Hide' : 'Track'}</button>
-      <button className="dashBtn dashBtnDanger" onClick={reject}>Reject</button>
-      <button className="dashBtn dashBtnPrimary" onClick={markDone}>Complete adoption</button>
-    </>
+    <ActionMenu
+      ariaLabel={`Actions for adoption ${application.reference_no || ''}`}
+      items={[
+        { label: expanded ? 'Hide home visit' : 'Track home visit', onClick: () => setExpanded((v) => !v) },
+        { label: 'Complete adoption', tone: 'primary', onClick: markDone },
+        { divider: true },
+        { label: 'Reject', tone: 'danger', onClick: reject },
+      ]}
+    />
   );
   const panel = (
     <>

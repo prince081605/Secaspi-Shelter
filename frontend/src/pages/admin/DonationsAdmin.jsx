@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import ActionMenu from '../../components/ActionMenu';
 import { adminListDonations, adminGetDonationStats, adminVerifyDonation } from '../../lib/donationsApi';
 import { HandCoins } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
@@ -130,8 +131,15 @@ function DonationRow({ donation: d, canVerify, onChanged }) {
 
       {canVerify && d.status === 'pending' && (
         <div className="dashActionRow">
-          <button className="dashBtn dashBtnDanger" onClick={() => handleVerify('rejected')}>Reject</button>
-          <button className="dashBtn dashBtnPrimary" onClick={() => handleVerify('verified')}>Verify</button>
+          <ActionMenu
+            label="Decide"
+            ariaLabel={`Decide on donation ${d.reference_no || ''}`}
+            items={[
+              { label: 'Verify', tone: 'primary', onClick: () => handleVerify('verified') },
+              { divider: true },
+              { label: 'Reject', tone: 'danger', onClick: () => handleVerify('rejected') },
+            ]}
+          />
         </div>
       )}
     </div>

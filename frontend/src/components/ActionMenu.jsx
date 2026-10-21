@@ -17,6 +17,7 @@ const styles = `
   }
   .actMenuItem:hover, .actMenuItem:focus-visible { background: var(--brand-soft, #f3e3d3); outline: none; }
   .actMenuItemDanger { color: #b42318; }
+  .actMenuItem:disabled { opacity: .5; cursor: not-allowed; background: none; }
   .actMenuDivider { height: 1px; background: var(--line); margin: 4px 2px; }
 `;
 
@@ -24,17 +25,22 @@ const MENU_GAP = 6;
 const ITEM_HEIGHT = 37;
 
 /**
- * A compact "Actions ▾" button whose menu replaces a row of buttons. Items are
- * { label, onClick, tone?: 'danger', divider?: true }; a falsy item is skipped, so callers can
- * write `cond && {...}`. The menu is position:fixed so a scrolling table can't clip it, and it
- * closes on selection, outside click, Escape, scroll or resize.
+ * A compact "Actions ▾" button whose menu replaces a row of buttons — the app's rule is that
+ * two or more actions on a record (or a decision) sit in one of these. Items are
+ * { label, onClick, tone?: 'primary' | 'danger', disabled?, divider?: true }; a falsy item is
+ * skipped, so callers can write `cond && {...}`. With a single action left (a row's actions
+ * often depend on its status) it renders that action as a plain button instead, and with none
+ * it renders nothing. `disabled` greys the whole control out (e.g. while a save is running).
+ * The menu is position:fixed so a scrolling table can't clip it, and it closes on selection,
+ * outside click, Escape, scroll or resize.
  */
-export default function ActionMenu({ items, label = 'Actions', ariaLabel }) {
+export default function ActionMenu({ items, label = 'Actions', ariaLabel, disabled = false }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState(null);
   const btnRef = useRef(null);
   const menuRef = useRef(null);
   const list = items.filter(Boolean);
+  const actions = list.filter((item) => !item.divider);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -84,6 +90,19 @@ export default function ActionMenu({ items, label = 'Actions', ariaLabel }) {
     setOpen(true);
   };
 
+  if (actions.length === 0) return null;
+
+  // One action is just a button — a menu with a single item only adds a click.
+  if (actions.length === 1) {
+    const only = actions[0];
+    const tone = only.tone === 'primary' ? ' dashBtnPrimary' : only.tone === 'danger' ? ' dashBtnDanger' : '';
+    return (
+      <button type="button" className={'dashBtn' + tone} onClick={only.onClick} disabled={disabled || only.disabled}>
+        {only.label}
+      </button>
+    );
+  }
+
   return (
     <>
       <style>{styles}</style>
@@ -94,6 +113,7 @@ export default function ActionMenu({ items, label = 'Actions', ariaLabel }) {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={ariaLabel}
+        disabled={disabled}
         onClick={toggle}
       >
         {label} <ChevronDown size={14} aria-hidden="true" />
@@ -116,6 +136,7 @@ export default function ActionMenu({ items, label = 'Actions', ariaLabel }) {
               type="button"
               role="menuitem"
               className={'actMenuItem' + (item.tone === 'danger' ? ' actMenuItemDanger' : '')}
+              disabled={item.disabled}
               onClick={() => { setOpen(false); item.onClick(); }}
             >
               {item.label}

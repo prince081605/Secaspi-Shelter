@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import ActionMenu from '../../components/ActionMenu';
 import { adminListFosterApplications, adminUpdateFosterApplication } from '../../lib/animalsApi';
 import { Home } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
@@ -152,16 +153,17 @@ function ApplicationRow({ application, onChanged }) {
       <MonitoringPanel application={application} onSaved={onChanged} />
       {canDecide && (
         <div className="dashActionRow">
-          <button className="dashBtn dashBtnDanger" onClick={() => setStatus('declined')}>Decline</button>
-          {application.status === 'active' && (
-            <button className="dashBtn" onClick={() => setStatus('completed')}>Mark completed</button>
-          )}
-          {application.status === 'approved' && (
-            <button className="dashBtn dashBtnPrimary" onClick={() => setStatus('active')}>Start fostering</button>
-          )}
-          {application.status === 'pending' && (
-            <button className="dashBtn dashBtnPrimary" onClick={() => setStatus('approved')}>Approve</button>
-          )}
+          <ActionMenu
+            label="Decide"
+            ariaLabel="Decide on this foster application"
+            items={[
+              application.status === 'pending' && { label: 'Approve', tone: 'primary', onClick: () => setStatus('approved') },
+              application.status === 'approved' && { label: 'Start fostering', tone: 'primary', onClick: () => setStatus('active') },
+              application.status === 'active' && { label: 'Mark completed', onClick: () => setStatus('completed') },
+              { divider: true },
+              { label: 'Decline', tone: 'danger', onClick: () => setStatus('declined') },
+            ]}
+          />
         </div>
       )}
     </div>
